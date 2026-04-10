@@ -1,16 +1,8 @@
 package com.gomaa.healthy.domain.model
 
-import kotlinx.coroutines.flow.Flow
-
-interface WearableProvider {
-    val brand: String
+interface WearableProvider : WearableDeviceDiscoverer, WearableHeartRateMonitor {
+    override val brand: String
     val isSupported: Boolean
-    fun heartRateFlow(): Flow<Int>
-    fun connectionStatus(): Flow<ConnectionState>
-    suspend fun startMonitoring(deviceId: String)
-    suspend fun stopMonitoring()
-    suspend fun isDeviceConnected(deviceId: String): Boolean
-    suspend fun getConnectedDevices(): List<DeviceInfo>
 }
 
 sealed class ConnectionState {

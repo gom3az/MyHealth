@@ -1,6 +1,8 @@
 package com.gomaa.healthy.di
 
 import android.content.Context
+import com.gomaa.healthy.data.provider.HuaweiDeviceDiscoverer
+import com.gomaa.healthy.data.provider.HuaweiHeartRateMonitor
 import com.gomaa.healthy.data.provider.HuaweiWearProvider
 import com.gomaa.healthy.data.provider.MockWearableProvider
 import com.gomaa.healthy.domain.model.WearableProvider
@@ -28,9 +30,11 @@ object WearableModule {
     @Singleton
     @Named("huawei")
     fun provideHuaweiProvider(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        deviceDiscoverer: HuaweiDeviceDiscoverer,
+        heartRateMonitor: HuaweiHeartRateMonitor
     ): WearableProvider {
-        return HuaweiWearProvider(context)
+        return HuaweiWearProvider(context, deviceDiscoverer, heartRateMonitor)
     }
 
     @Provides

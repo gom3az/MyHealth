@@ -39,7 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneHigh
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneLow
