@@ -22,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,10 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar(effect.message)
                 }
 
+                is HomeEffect.ShowSuccess -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+
                 is HomeEffect.NavigateToSettings -> {
                     // Handle navigation
                 }
@@ -66,6 +72,7 @@ fun HomeScreen(
             paddingValues = paddingValues,
             uiState = uiState,
             onProviderSelected = { viewModel.processIntent(HomeIntent.OnSelectProvider(it)) },
+            onSwitchProvider = { viewModel.processIntent(HomeIntent.OnSwitchProvider(it)) },
             onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
             onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
             onNavigateToDashboard = onNavigateToDashboard,
@@ -81,23 +88,57 @@ private fun HomeContent(
     paddingValues: androidx.compose.foundation.layout.PaddingValues,
     uiState: HomeUiState,
     onProviderSelected: (String) -> Unit,
+    onSwitchProvider: (String) -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onNavigateToDashboard: () -> Unit,
     onNavigateToGoals: () -> Unit,
     onRefresh: () -> Unit
 ) {
+    var showProviderSwitchDialog by remember { mutableStateOf(false) }
+    var selectedNewProvider by remember { mutableStateOf<String?>(null) }
+    var showProviderSelectionDialog by remember { mutableStateOf(false) }
+
+    if (showProviderSelectionDialog) {
+        ProviderSelectionDialog(
+            currentProvider = uiState.connectedDeviceBrand,
+            availableProviders = uiState.availableProviders,
+            onProviderSelected = { newProvider ->
+                showProviderSelectionDialog = false
+                showProviderSwitchDialog = true
+                selectedNewProvider = newProvider
+            },
+            onDismiss = { showProviderSelectionDialog = false }
+        )
+    }
+
+    if (showProviderSwitchDialog && selectedNewProvider != null) {
+        SwitchProviderConfirmationDialog(
+            currentProvider = uiState.connectedDeviceBrand ?: "",
+            newProvider = selectedNewProvider ?: "",
+            onConfirm = {
+                onSwitchProvider(selectedNewProvider!!)
+                showProviderSwitchDialog = false
+                selectedNewProvider = null
+            },
+            onDismiss = {
+                showProviderSwitchDialog = false
+                selectedNewProvider = null
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("MyHealth") }
             )
         }
-    ) { paddingValues ->
+    ) { parentPaddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(parentPaddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -119,7 +160,8 @@ private fun HomeContent(
                     isConnected = uiState.connectionState == ConnectionState.Connected,
                     onConnect = onConnect,
                     onDisconnect = onDisconnect,
-                    onNavigateToDashboard = onNavigateToDashboard
+                    onNavigateToDashboard = onNavigateToDashboard,
+                    onChangeProvider = { showProviderSelectionDialog = true }
                 )
             }
 
@@ -258,20 +300,30 @@ private fun ActionButtonRow(
     isConnected: Boolean,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onNavigateToDashboard: () -> Unit
+    onNavigateToDashboard: () -> Unit,
+    onChangeProvider: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Button(
-            onClick = if (isConnected) onDisconnect else onConnect, modifier = Modifier.weight(1f)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(if (isConnected) "Disconnect" else "Connect")
+            Button(
+                onClick = if (isConnected) onDisconnect else onConnect,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (isConnected) "Disconnect" else "Connect")
+            }
+            Button(
+                onClick = onNavigateToDashboard, modifier = Modifier.weight(1f)
+            ) {
+                Text("Start Run")
+            }
         }
         Button(
-            onClick = onNavigateToDashboard, modifier = Modifier.weight(1f)
+            onClick = onChangeProvider,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Start Run")
+            Text("Change Provider")
         }
     }
 }
@@ -312,4 +364,73 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
             }
         }
     }
+}
+
+@Composable
+private fun ProviderSelectionDialog(
+    currentProvider: String?,
+    availableProviders: List<String>,
+    onProviderSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val otherProviders = availableProviders.filter { it != currentProvider }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Healthcare Provider") },
+        text = {
+            if (otherProviders.isEmpty()) {
+                Text("No other providers available for switching")
+            } else {
+                Column {
+                    Text(
+                        text = "Choose a new provider",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    otherProviders.forEach { provider ->
+                        androidx.compose.material3.TextButton(
+                            onClick = { onProviderSelected(provider) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(provider)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun SwitchProviderConfirmationDialog(
+    currentProvider: String,
+    newProvider: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Switch Provider?") },
+        text = {
+            Text("You are switching from $currentProvider to $newProvider")
+        },
+        confirmButton = {
+            androidx.compose.material3.Button(onClick = onConfirm) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

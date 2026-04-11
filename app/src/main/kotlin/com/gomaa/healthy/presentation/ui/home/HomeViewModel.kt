@@ -45,12 +45,14 @@ sealed class HomeIntent {
     data object OnLoadData : HomeIntent()
     data object OnRefresh : HomeIntent()
     data class OnSelectProvider(val brand: String) : HomeIntent()
+    data class OnSwitchProvider(val brand: String) : HomeIntent()
     data object OnConnect : HomeIntent()
     data object OnDisconnect : HomeIntent()
 }
 
 sealed class HomeEffect {
     data class ShowError(val message: String) : HomeEffect()
+    data class ShowSuccess(val message: String) : HomeEffect()
     data object NavigateToSettings : HomeEffect()
 }
 
@@ -85,6 +87,7 @@ class HomeViewModel @Inject constructor(
             is HomeIntent.OnLoadData -> loadInitialData()
             is HomeIntent.OnRefresh -> loadInitialData()
             is HomeIntent.OnSelectProvider -> selectProvider(intent.brand)
+            is HomeIntent.OnSwitchProvider -> switchProvider(intent.brand)
             is HomeIntent.OnConnect -> connect()
             is HomeIntent.OnDisconnect -> disconnect()
         }
@@ -184,6 +187,22 @@ class HomeViewModel @Inject constructor(
     private fun disconnect() {
         viewModelScope.launch {
             disconnectWearableUseCase()
+        }
+    }
+
+    private fun switchProvider(brand: String) {
+        viewModelScope.launch {
+            try {
+                disconnectWearableUseCase()
+                val provider = selectWearableProviderUseCase(brand)
+                if (provider != null) {
+                    _effect.emit(HomeEffect.ShowSuccess("Provider changed to $brand"))
+                } else {
+                    _effect.emit(HomeEffect.ShowError("Failed to switch provider"))
+                }
+            } catch (e: Exception) {
+                _effect.emit(HomeEffect.ShowError(e.message ?: "Failed to switch provider"))
+            }
         }
     }
 }
