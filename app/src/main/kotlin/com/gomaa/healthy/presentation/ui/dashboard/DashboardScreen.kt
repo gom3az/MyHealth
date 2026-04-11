@@ -22,11 +22,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -45,46 +46,60 @@ import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneHigh
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneLow
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneMedium
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneVeryHigh
-import com.gomaa.healthy.presentation.viewmodel.DashboardUiState
-import com.gomaa.healthy.presentation.viewmodel.DashboardViewModel
-import com.gomaa.healthy.presentation.viewmodel.HeartRateZone
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    viewModel: DashboardViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {}
+    viewModel: DashboardViewModel = hiltViewModel(), onNavigateToAnalytics: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.isTracking) {
-        while (uiState.isTracking) {
-            delay(1000)
-            viewModel.updateElapsedTime(uiState.elapsedTime + 1)
+    LaunchedEffect(Unit) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is DashboardEffect.ShowSaveSuccess -> {
+                    snackbarHostState.showSnackbar("Session saved successfully!")
+                }
+
+                is DashboardEffect.NavigateToAnalytics -> {
+                    onNavigateToAnalytics()
+                }
+
+                is DashboardEffect.ShowError -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+            }
         }
     }
 
-    DashboardContent(
-        uiState = uiState,
-        onStartTracking = viewModel::startTracking,
-        onStopTracking = viewModel::stopTracking,
-        onNavigateBack = onNavigateBack
-    )
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Active Pulse") }, actions = {
+            uiState.deviceBrand?.let { brand ->
+                ConnectionBadge(brand = brand)
+            }
+        })
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
+        DashboardContent(
+            paddingValues = paddingValues,
+            uiState = uiState,
+            onStartTracking = { viewModel.processIntent(DashboardIntent.OnStartTracking) },
+            onStopTracking = { viewModel.processIntent(DashboardIntent.OnStopTracking) })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardContent(
+    paddingValues: androidx.compose.foundation.layout.PaddingValues,
     uiState: DashboardUiState,
     onStartTracking: () -> Unit,
-    onStopTracking: () -> Unit,
-    onNavigateBack: () -> Unit
+    onStopTracking: () -> Unit
 ) {
     val zoneColor = getZoneColor(uiState.heartRateZone)
     val animatedColor by animateColorAsState(
-        targetValue = zoneColor,
-        animationSpec = tween(300),
-        label = "zoneColor"
+        targetValue = zoneColor, animationSpec = tween(300), label = "zoneColor"
     )
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -92,95 +107,57 @@ private fun DashboardContent(
         initialValue = 1f,
         targetValue = if (uiState.isTracking && uiState.heartRate > 0) 1.1f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(600, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Active Pulse") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Text("←")
-                    }
-                },
-                actions = {
-                    uiState.deviceBrand?.let { brand ->
-                        ConnectionBadge(brand = brand)
-                    }
-                }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+        HeartRateDisplay(
+            heartRate = uiState.heartRate,
+            zone = uiState.heartRateZone,
+            color = animatedColor,
+            scale = pulseScale
+        )
+
+        if (uiState.isTracking) {
+            TrackingStats(
+                elapsedTime = uiState.elapsedTime,
+                avgHeartRate = uiState.avgHeartRate,
+                maxHeartRate = uiState.maxHeartRate,
+                minHeartRate = uiState.minHeartRate
             )
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-            HeartRateDisplay(
-                heartRate = uiState.heartRate,
-                zone = uiState.heartRateZone,
-                color = animatedColor,
-                scale = pulseScale
-            )
 
-            if (uiState.isTracking) {
-                TrackingStats(
-                    elapsedTime = uiState.elapsedTime,
-                    avgHeartRate = uiState.avgHeartRate,
-                    maxHeartRate = uiState.maxHeartRate,
-                    minHeartRate = uiState.minHeartRate
-                )
-            }
+        ConnectionStatusRow(
+            connectionState = uiState.connectionState, deviceBrand = uiState.deviceBrand
+        )
 
-            ConnectionStatusRow(
-                connectionState = uiState.connectionState,
-                deviceBrand = uiState.deviceBrand
-            )
-
-            TrackingButton(
-                isTracking = uiState.isTracking,
-                isConnected = uiState.connectionState == com.gomaa.healthy.domain.model.ConnectionState.Connected,
-                onStart = onStartTracking,
-                onStop = onStopTracking
-            )
-
-            uiState.error?.let { error ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-            }
-        }
+        TrackingButton(
+            isTracking = uiState.isTracking,
+            isConnected = uiState.connectionState == com.gomaa.healthy.domain.model.ConnectionState.Connected,
+            onStart = onStartTracking,
+            onStop = onStopTracking
+        )
     }
 }
 
 @Composable
 private fun HeartRateDisplay(
-    heartRate: Int,
-    zone: HeartRateZone,
-    color: Color,
-    scale: Float
+    heartRate: Int, zone: HeartRateZone, color: Color, scale: Float
 ) {
     Box(
         modifier = Modifier
             .size(200.dp)
             .scale(scale)
-            .background(color.copy(alpha = 0.2f), CircleShape),
-        contentAlignment = Alignment.Center
+            .background(color.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
@@ -213,10 +190,7 @@ private fun HeartRateDisplay(
 
 @Composable
 private fun TrackingStats(
-    elapsedTime: Long,
-    avgHeartRate: Int,
-    maxHeartRate: Int,
-    minHeartRate: Int
+    elapsedTime: Long, avgHeartRate: Int, maxHeartRate: Int, minHeartRate: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -225,13 +199,11 @@ private fun TrackingStats(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Session Stats",
-                style = MaterialTheme.typography.titleMedium
+                text = "Session Stats", style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(label = "Duration", value = formatTime(elapsedTime))
                 StatItem(label = "Avg", value = "$avgHeartRate BPM")
@@ -248,8 +220,7 @@ private fun StatItem(label: String, value: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall
+            text = value, style = MaterialTheme.typography.titleSmall
         )
         Text(
             text = label,
@@ -261,8 +232,7 @@ private fun StatItem(label: String, value: String) {
 
 @Composable
 private fun ConnectionStatusRow(
-    connectionState: com.gomaa.healthy.domain.model.ConnectionState,
-    deviceBrand: String?
+    connectionState: com.gomaa.healthy.domain.model.ConnectionState, deviceBrand: String?
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -301,10 +271,7 @@ private fun ConnectionStatusRow(
 
 @Composable
 private fun TrackingButton(
-    isTracking: Boolean,
-    isConnected: Boolean,
-    onStart: () -> Unit,
-    onStop: () -> Unit
+    isTracking: Boolean, isConnected: Boolean, onStart: () -> Unit, onStop: () -> Unit
 ) {
     Button(
         onClick = if (isTracking) onStop else onStart,
@@ -326,8 +293,7 @@ private fun TrackingButton(
 @Composable
 private fun ConnectionBadge(brand: String) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.small
+        color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small
     ) {
         Text(
             text = brand,

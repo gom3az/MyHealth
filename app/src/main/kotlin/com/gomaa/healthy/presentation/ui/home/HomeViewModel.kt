@@ -1,4 +1,4 @@
-package com.gomaa.healthy.presentation.viewmodel
+package com.gomaa.healthy.presentation.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,8 +17,11 @@ import com.gomaa.healthy.domain.usecase.HasAvailableDevicesUseCase
 import com.gomaa.healthy.domain.usecase.SelectWearableProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -35,9 +38,21 @@ data class HomeUiState(
     val recentSessions: List<ExerciseSession> = emptyList(),
     val todaySteps: DailySteps? = null,
     val activeGoals: List<FitnessGoal> = emptyList(),
-    val stepGoalProgress: Float = 0f,
-    val error: String? = null
+    val stepGoalProgress: Float = 0f
 )
+
+sealed class HomeIntent {
+    data object OnLoadData : HomeIntent()
+    data object OnRefresh : HomeIntent()
+    data class OnSelectProvider(val brand: String) : HomeIntent()
+    data object OnConnect : HomeIntent()
+    data object OnDisconnect : HomeIntent()
+}
+
+sealed class HomeEffect {
+    data class ShowError(val message: String) : HomeEffect()
+    data object NavigateToSettings : HomeEffect()
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -54,12 +69,25 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _effect = MutableSharedFlow<HomeEffect>()
+    val effect: SharedFlow<HomeEffect> = _effect.asSharedFlow()
+
     private var heartRateJob: Job? = null
     private var connectionJob: Job? = null
 
     init {
-        loadInitialData()
+        processIntent(HomeIntent.OnLoadData)
         observeWearableData()
+    }
+
+    fun processIntent(intent: HomeIntent) {
+        when (intent) {
+            is HomeIntent.OnLoadData -> loadInitialData()
+            is HomeIntent.OnRefresh -> loadInitialData()
+            is HomeIntent.OnSelectProvider -> selectProvider(intent.brand)
+            is HomeIntent.OnConnect -> connect()
+            is HomeIntent.OnDisconnect -> disconnect()
+        }
     }
 
     private fun loadInitialData() {
@@ -87,7 +115,8 @@ class HomeViewModel @Inject constructor(
 
                 _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                _effect.emit(HomeEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
     }
@@ -116,11 +145,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
-        loadInitialData()
-    }
-
-    fun selectProvider(brand: String) {
+    private fun selectProvider(brand: String) {
         viewModelScope.launch {
             val provider = selectWearableProviderUseCase(brand)
             provider?.let {
@@ -133,7 +158,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun connect() {
+    private fun connect() {
         viewModelScope.launch {
             val provider = selectWearableProviderUseCase.getCurrentProvider()
             provider?.let { p ->
@@ -141,21 +166,22 @@ class HomeViewModel @Inject constructor(
                     if (hasAvailableDevicesUseCase(p.brand)) {
                         val result = connectWearableUseCase("device-1")
                         if (result.isFailure) {
-                            _uiState.value = _uiState.value.copy(error = result.exceptionOrNull()?.message)
+                            val errorMsg = result.exceptionOrNull()?.message ?: "Failed to connect"
+                            _effect.emit(HomeEffect.ShowError(errorMsg))
                         }
                     } else {
-                        _uiState.value = _uiState.value.copy(
-                            error = "No available devices found. Please pair a wearable device first."
-                        )
+                        val errorMsg =
+                            "No available devices found. Please pair a wearable device first."
+                        _effect.emit(HomeEffect.ShowError(errorMsg))
                     }
                 } catch (e: Exception) {
-                    _uiState.value = _uiState.value.copy(error = e.message)
+                    _effect.emit(HomeEffect.ShowError(e.message ?: "Unknown error"))
                 }
             }
         }
     }
 
-    fun disconnect() {
+    private fun disconnect() {
         viewModelScope.launch {
             disconnectWearableUseCase()
         }

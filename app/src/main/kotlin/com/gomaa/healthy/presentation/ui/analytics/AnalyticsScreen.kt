@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -33,7 +32,6 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {},
     onNavigateToSessionDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -57,19 +55,11 @@ fun AnalyticsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Analytics") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Text("←")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text("Analytics") },
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,8 +84,7 @@ fun AnalyticsScreen(
                     item {
                         SessionCard(
                             session = session,
-                            onClick = { viewModel.processIntent(AnalyticsIntent.OnLoadSessions) }
-                        )
+                            onClick = { viewModel.processIntent(AnalyticsIntent.OnLoadSessions) })
                     }
                 }
             }
@@ -105,29 +94,24 @@ fun AnalyticsScreen(
 
 @Composable
 private fun SessionCard(
-    session: ExerciseSession,
-    onClick: () -> Unit
+    session: ExerciseSession, onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth(), onClick = onClick
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = formatDate(session.startTime),
-                style = MaterialTheme.typography.titleMedium
+                text = formatDate(session.startTime), style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatColumn(
-                    label = "Duration",
-                    value = formatDuration(session.endTime - session.startTime)
+                    label = "Duration", value = formatDuration(session.endTime - session.startTime)
                 )
                 StatColumn(label = "Avg HR", value = "${session.avgHeartRate} BPM")
                 StatColumn(label = "Max HR", value = "${session.maxHeartRate} BPM")
@@ -141,8 +125,7 @@ private fun SessionCard(
 private fun StatColumn(label: String, value: String) {
     Column {
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall
+            text = value, style = MaterialTheme.typography.titleSmall
         )
         Text(
             text = label,

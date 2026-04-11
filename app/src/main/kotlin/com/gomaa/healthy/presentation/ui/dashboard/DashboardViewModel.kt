@@ -1,4 +1,4 @@
-package com.gomaa.healthy.presentation.viewmodel
+package com.gomaa.healthy.presentation.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,8 +11,12 @@ import com.gomaa.healthy.domain.usecase.SaveSessionUseCase
 import com.gomaa.healthy.domain.usecase.SelectWearableProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -32,9 +36,20 @@ data class DashboardUiState(
     val deviceBrand: String? = null,
     val avgHeartRate: Int = 0,
     val maxHeartRate: Int = 0,
-    val minHeartRate: Int = 0,
-    val error: String? = null
+    val minHeartRate: Int = 0
 )
+
+sealed class DashboardIntent {
+    data object OnStartTracking : DashboardIntent()
+    data object OnStopTracking : DashboardIntent()
+    data object OnTick : DashboardIntent()
+}
+
+sealed class DashboardEffect {
+    data object ShowSaveSuccess : DashboardEffect()
+    data object NavigateToAnalytics : DashboardEffect()
+    data class ShowError(val message: String) : DashboardEffect()
+}
 
 @HiltViewModel
 class DashboardViewModel  @Inject constructor(
@@ -47,14 +62,27 @@ class DashboardViewModel  @Inject constructor(
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    private val _effect = MutableSharedFlow<DashboardEffect>()
+    val effect: SharedFlow<DashboardEffect> = _effect.asSharedFlow()
+
     private val heartRateSamples = mutableListOf<Int>()
     private var sessionStartTime: Long = 0
 
     private var heartRateJob: Job? = null
     private var connectionJob: Job? = null
+    private var timerJob: Job? = null
 
     init {
         observeWearableData()
+    }
+
+    fun processIntent(intent: DashboardIntent) {
+        when (intent) {
+            is DashboardIntent.OnStartTracking -> startTracking()
+            is DashboardIntent.OnStopTracking -> stopTracking()
+            is DashboardIntent.OnTick -> { /* Timer now handled internally */
+            }
+        }
     }
 
     private fun observeWearableData() {
@@ -111,7 +139,7 @@ class DashboardViewModel  @Inject constructor(
         )
     }
 
-    fun startTracking() {
+    private fun startTracking() {
         sessionStartTime = System.currentTimeMillis()
         heartRateSamples.clear()
         _uiState.value = _uiState.value.copy(
@@ -122,12 +150,21 @@ class DashboardViewModel  @Inject constructor(
             minHeartRate = 0
         )
 
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (_uiState.value.isTracking) {
+                delay(1000)
+                _uiState.value = _uiState.value.copy(elapsedTime = _uiState.value.elapsedTime + 1)
+            }
+        }
+
         viewModelScope.launch {
             connectWearableUseCase("device-1")
         }
     }
 
-    fun stopTracking() {
+    private fun stopTracking() {
+        timerJob?.cancel()
         viewModelScope.launch {
             disconnectWearableUseCase()
             
@@ -149,16 +186,16 @@ class DashboardViewModel  @Inject constructor(
             )
 
             val result = saveSessionUseCase(session)
-            if (result.isFailure) {
-                _uiState.value = _uiState.value.copy(error = result.exceptionOrNull()?.message)
+            if (result.isSuccess) {
+                _effect.emit(DashboardEffect.ShowSaveSuccess)
+                _effect.emit(DashboardEffect.NavigateToAnalytics)
+            } else {
+                val errorMsg = result.exceptionOrNull()?.message ?: "Failed to save session"
+                _effect.emit(DashboardEffect.ShowError(errorMsg))
             }
 
             _uiState.value = _uiState.value.copy(isTracking = false)
             heartRateSamples.clear()
         }
-    }
-
-    fun updateElapsedTime(time: Long) {
-        _uiState.value = _uiState.value.copy(elapsedTime = time)
     }
 }

@@ -1,5 +1,6 @@
 package com.gomaa.healthy.presentation.navigation
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -29,10 +30,7 @@ sealed class Screen(val route: String, val title: String) {
 }
 
 val bottomNavItems = listOf(
-    Screen.Home,
-    Screen.Dashboard,
-    Screen.Goals,
-    Screen.Analytics
+    Screen.Home, Screen.Dashboard, Screen.Goals, Screen.Analytics
 )
 
 @Composable
@@ -42,30 +40,24 @@ fun AppNavHost(
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController = navController)
-        }
-    ) { paddingValues ->
+        }) { paddingValues ->
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .padding(bottom = paddingValues.calculateBottomPadding())
+                .navigationBarsPadding()
         ) {
             composable(Screen.Home.route) {
-                HomeScreen(
-                    onNavigateToDashboard = {
-                        navController.navigate(Screen.Dashboard.route)
-                    },
-                    onNavigateToGoals = {
-                        navController.navigate(Screen.Goals.route)
-                    }
-                )
+                HomeScreen(onNavigateToDashboard = {
+                    navController.navigate(Screen.Dashboard.route)
+                }, onNavigateToGoals = {
+                    navController.navigate(Screen.Goals.route)
+                })
             }
 
             composable(Screen.Dashboard.route) {
-                DashboardScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
+                DashboardScreen()
             }
 
             composable(Screen.Goals.route) {
@@ -73,20 +65,12 @@ fun AppNavHost(
             }
 
             composable(Screen.Analytics.route) {
-                AnalyticsScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
+                AnalyticsScreen()
             }
 
             composable(Screen.SessionDetail.route) { backStackEntry ->
                 val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
-                AnalyticsScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
-                )
+                AnalyticsScreen()
             }
         }
     }
@@ -105,8 +89,7 @@ private fun BottomNavigationBar(navController: NavHostController) {
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route)
-                }
-            )
+                })
         }
     }
 }

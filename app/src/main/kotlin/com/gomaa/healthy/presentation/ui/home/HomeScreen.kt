@@ -10,24 +10,27 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
-import com.gomaa.healthy.presentation.viewmodel.HomeUiState
-import com.gomaa.healthy.presentation.viewmodel.HomeViewModel
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(), 
@@ -35,21 +38,47 @@ fun HomeScreen(
     onNavigateToGoals: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    HomeContent(
-        uiState = uiState,
-        onProviderSelected = viewModel::selectProvider,
-        onConnect = viewModel::connect,
-        onDisconnect = viewModel::disconnect,
-        onNavigateToDashboard = onNavigateToDashboard,
-        onNavigateToGoals = onNavigateToGoals,
-        onRefresh = viewModel::refresh
-    )
+    LaunchedEffect(Unit) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is HomeEffect.ShowError -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+
+                is HomeEffect.NavigateToSettings -> {
+                    // Handle navigation
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("MyHealth") }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        HomeContent(
+            paddingValues = paddingValues,
+            uiState = uiState,
+            onProviderSelected = { viewModel.processIntent(HomeIntent.OnSelectProvider(it)) },
+            onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
+            onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
+            onNavigateToDashboard = onNavigateToDashboard,
+            onNavigateToGoals = onNavigateToGoals,
+            onRefresh = { viewModel.processIntent(HomeIntent.OnRefresh) }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeContent(
+    paddingValues: androidx.compose.foundation.layout.PaddingValues,
     uiState: HomeUiState,
     onProviderSelected: (String) -> Unit,
     onConnect: () -> Unit,
@@ -92,20 +121,6 @@ private fun HomeContent(
                     onDisconnect = onDisconnect,
                     onNavigateToDashboard = onNavigateToDashboard
                 )
-            }
-
-            uiState.error?.let { error ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
             }
 
             RecentSessionsCard(sessions = uiState.recentSessions)

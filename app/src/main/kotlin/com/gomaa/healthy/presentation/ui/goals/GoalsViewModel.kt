@@ -26,7 +26,6 @@ data class GoalsUiState(
     val isLoading: Boolean = false,
     val goals: List<FitnessGoal> = emptyList(),
     val goalProgress: Map<String, Float> = emptyMap(),
-    val error: String? = null,
     val showCreateDialog: Boolean = false
 )
 
@@ -79,7 +78,7 @@ class GoalsViewModel @Inject constructor(
 
     private fun loadGoals() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val goals = getAllGoalsUseCase()
                 val todaySteps = getDailyStepsUseCase(LocalDate.now())?.totalSteps ?: 0
@@ -102,7 +101,7 @@ class GoalsViewModel @Inject constructor(
                     goals = goals, goalProgress = progressMap, isLoading = false
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
+                _uiState.value = _uiState.value.copy(isLoading = false)
                 _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
@@ -116,7 +115,6 @@ class GoalsViewModel @Inject constructor(
                 _effect.emit(GoalsEffect.ShowCreateSuccess)
                 loadGoals()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
                 _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
@@ -129,7 +127,6 @@ class GoalsViewModel @Inject constructor(
                 _effect.emit(GoalsEffect.ShowDeleteConfirmation)
                 loadGoals()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
                 _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
@@ -141,7 +138,6 @@ class GoalsViewModel @Inject constructor(
                 updateGoalStatusUseCase(id, isActive)
                 loadGoals()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
                 _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }

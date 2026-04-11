@@ -16,8 +16,7 @@ import javax.inject.Inject
 
 data class AnalyticsUiState(
     val isLoading: Boolean = false,
-    val sessions: List<ExerciseSession> = emptyList(),
-    val error: String? = null
+    val sessions: List<ExerciseSession> = emptyList()
 )
 
 sealed class AnalyticsIntent {
@@ -50,15 +49,13 @@ class AnalyticsViewModel @Inject constructor(
 
     private fun loadSessions() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val sessions = getSessionsUseCase()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false, sessions = sessions.sortedByDescending { it.startTime })
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false, error = e.message
-                )
+                _uiState.value = _uiState.value.copy(isLoading = false)
                 _effect.emit(AnalyticsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
