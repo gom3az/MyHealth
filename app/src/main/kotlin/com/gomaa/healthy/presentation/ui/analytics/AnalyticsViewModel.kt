@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class AnalyticsUiState(
     val isLoading: Boolean = false,
@@ -15,7 +17,8 @@ data class AnalyticsUiState(
     val error: String? = null
 )
 
-class AnalyticsViewModel(
+@HiltViewModel
+class AnalyticsViewModel @Inject constructor(
     private val getSessionsUseCase: GetSessionsUseCase
 ) : ViewModel() {
 

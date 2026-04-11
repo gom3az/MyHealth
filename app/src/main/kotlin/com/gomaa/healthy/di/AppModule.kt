@@ -3,12 +3,18 @@ package com.gomaa.healthy.di
 import android.content.Context
 import androidx.room.Room
 import com.gomaa.healthy.data.local.HealthDatabase
+import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
+import com.gomaa.healthy.data.local.dao.GoalDao
 import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.repository.GoalRepositoryImpl
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
+import com.gomaa.healthy.data.repository.StepRepositoryImpl
+import com.gomaa.healthy.domain.repository.GoalRepository
 import com.gomaa.healthy.domain.repository.HealthConnectRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
+import com.gomaa.healthy.domain.repository.StepRepository
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
 import com.gomaa.healthy.domain.usecase.SaveSessionUseCase
 import dagger.Module
@@ -43,6 +49,18 @@ object DatabaseModule {
     fun provideHeartRateDao(database: HealthDatabase): HeartRateDao {
         return database.heartRateDao()
     }
+
+    @Provides
+    @Singleton
+    fun provideDailyStepsDao(database: HealthDatabase): DailyStepsDao {
+        return database.dailyStepsDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoalDao(database: HealthDatabase): GoalDao {
+        return database.goalDao()
+    }
 }
 
 @Module
@@ -56,6 +74,22 @@ object RepositoryModule {
         heartRateDao: HeartRateDao
     ): SessionRepository {
         return SessionRepositoryImpl(sessionDao, heartRateDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStepRepository(
+        dailyStepsDao: DailyStepsDao
+    ): StepRepository {
+        return StepRepositoryImpl(dailyStepsDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(
+        goalDao: GoalDao
+    ): GoalRepository {
+        return GoalRepositoryImpl(goalDao)
     }
 
     @Provides

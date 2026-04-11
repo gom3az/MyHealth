@@ -30,7 +30,9 @@ import com.gomaa.healthy.presentation.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel(), onNavigateToDashboard: () -> Unit = {}
+    viewModel: HomeViewModel = hiltViewModel(), 
+    onNavigateToDashboard: () -> Unit = {},
+    onNavigateToGoals: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -39,7 +41,9 @@ fun HomeScreen(
         onProviderSelected = viewModel::selectProvider,
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
-        onNavigateToDashboard = onNavigateToDashboard
+        onNavigateToDashboard = onNavigateToDashboard,
+        onNavigateToGoals = onNavigateToGoals,
+        onRefresh = viewModel::refresh
     )
 }
 
@@ -50,13 +54,17 @@ private fun HomeContent(
     onProviderSelected: (String) -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onNavigateToDashboard: () -> Unit
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToGoals: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vanguard Dynamics") })
-        }) { paddingValues ->
+                title = { Text("MyHealth") }
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -64,6 +72,12 @@ private fun HomeContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            StepsProgressCard(
+                steps = uiState.todaySteps?.totalSteps ?: 0,
+                goalProgress = uiState.stepGoalProgress,
+                onClick = onNavigateToGoals
+            )
+
             ConnectionStatusCard(uiState = uiState)
 
             if (uiState.connectedDeviceBrand == null) {
@@ -95,6 +109,46 @@ private fun HomeContent(
             }
 
             RecentSessionsCard(sessions = uiState.recentSessions)
+        }
+    }
+}
+
+@Composable
+private fun StepsProgressCard(
+    steps: Int,
+    goalProgress: Float,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Today's Steps",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "%,d".format(steps),
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { goalProgress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${(goalProgress * 100).toInt()}% of daily goal",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
