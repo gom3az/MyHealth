@@ -12,8 +12,11 @@ import com.gomaa.healthy.domain.usecase.GetAllGoalsUseCase
 import com.gomaa.healthy.domain.usecase.GetDailyStepsUseCase
 import com.gomaa.healthy.domain.usecase.UpdateGoalStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -29,11 +32,19 @@ data class GoalsUiState(
 
 sealed class GoalsIntent {
     data object LoadGoals : GoalsIntent()
-    data class CreateGoal(val name: String, val type: GoalType, val period: GoalPeriod) : GoalsIntent()
+    data class CreateGoal(val name: String, val type: GoalType, val period: GoalPeriod) :
+        GoalsIntent()
+
     data class DeleteGoal(val id: String) : GoalsIntent()
     data class ToggleGoal(val id: String, val isActive: Boolean) : GoalsIntent()
     data object ShowCreateDialog : GoalsIntent()
     data object HideCreateDialog : GoalsIntent()
+}
+
+sealed class GoalsEffect {
+    data object ShowCreateSuccess : GoalsEffect()
+    data object ShowDeleteConfirmation : GoalsEffect()
+    data class ShowError(val message: String) : GoalsEffect()
 }
 
 @HiltViewModel
@@ -49,9 +60,8 @@ class GoalsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GoalsUiState())
     val uiState: StateFlow<GoalsUiState> = _uiState.asStateFlow()
 
-    init {
-        processIntent(GoalsIntent.LoadGoals)
-    }
+    private val _effect = MutableSharedFlow<GoalsEffect>()
+    val effect: SharedFlow<GoalsEffect> = _effect.asSharedFlow()
 
     fun processIntent(intent: GoalsIntent) {
         when (intent) {
@@ -59,14 +69,17 @@ class GoalsViewModel @Inject constructor(
             is GoalsIntent.CreateGoal -> createGoal(intent.name, intent.type, intent.period)
             is GoalsIntent.DeleteGoal -> deleteGoal(intent.id)
             is GoalsIntent.ToggleGoal -> toggleGoal(intent.id, intent.isActive)
-            is GoalsIntent.ShowCreateDialog -> _uiState.value = _uiState.value.copy(showCreateDialog = true)
-            is GoalsIntent.HideCreateDialog -> _uiState.value = _uiState.value.copy(showCreateDialog = false)
+            is GoalsIntent.ShowCreateDialog -> _uiState.value =
+                _uiState.value.copy(showCreateDialog = true)
+
+            is GoalsIntent.HideCreateDialog -> _uiState.value =
+                _uiState.value.copy(showCreateDialog = false)
         }
     }
 
     private fun loadGoals() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val goals = getAllGoalsUseCase()
                 val todaySteps = getDailyStepsUseCase(LocalDate.now())?.totalSteps ?: 0
@@ -79,18 +92,18 @@ class GoalsViewModel @Inject constructor(
                             val minutes = getDailyStepsUseCase(LocalDate.now())?.activeMinutes ?: 0
                             calculateGoalProgressUseCase(minutes, type.targetMinutes)
                         }
+
                         else -> 0f
                     }
                     progressMap[goal.id] = progress
                 }
 
                 _uiState.value = _uiState.value.copy(
-                    goals = goals,
-                    goalProgress = progressMap,
-                    isLoading = false
+                    goals = goals, goalProgress = progressMap, isLoading = false
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
+                _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
     }
@@ -100,9 +113,11 @@ class GoalsViewModel @Inject constructor(
             try {
                 createGoalUseCase(name, type, period)
                 _uiState.value = _uiState.value.copy(showCreateDialog = false)
+                _effect.emit(GoalsEffect.ShowCreateSuccess)
                 loadGoals()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
+                _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
     }
@@ -111,9 +126,11 @@ class GoalsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 deleteGoalUseCase(id)
+                _effect.emit(GoalsEffect.ShowDeleteConfirmation)
                 loadGoals()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
+                _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
     }
@@ -125,6 +142,7 @@ class GoalsViewModel @Inject constructor(
                 loadGoals()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
+                _effect.emit(GoalsEffect.ShowError(e.message ?: "Unknown error"))
             }
         }
     }

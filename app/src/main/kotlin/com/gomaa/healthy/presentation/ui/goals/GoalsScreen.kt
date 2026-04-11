@@ -19,10 +19,13 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,36 +38,71 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(
     viewModel: GoalsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    GoalsContent(
-        goals = uiState.goals,
-        goalProgress = uiState.goalProgress,
-        isLoading = uiState.isLoading,
-        showCreateDialog = uiState.showCreateDialog,
-        onCreateGoal = { name, type, period ->
-            viewModel.processIntent(GoalsIntent.CreateGoal(name, type, period))
-        },
-        onDeleteGoal = { id ->
-            viewModel.processIntent(GoalsIntent.DeleteGoal(id))
-        },
-        onShowCreateDialog = {
-            viewModel.processIntent(GoalsIntent.ShowCreateDialog)
-        },
-        onHideCreateDialog = {
-            viewModel.processIntent(GoalsIntent.HideCreateDialog)
+
+    LaunchedEffect(Unit) {
+        viewModel.processIntent(GoalsIntent.LoadGoals)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is GoalsEffect.ShowCreateSuccess -> {
+                    snackbarHostState.showSnackbar("Goal created successfully!")
+                }
+
+                is GoalsEffect.ShowDeleteConfirmation -> {
+                    snackbarHostState.showSnackbar("Goal deleted")
+                }
+
+                is GoalsEffect.ShowError -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+            }
         }
-    )
+    }
+
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Goals") })
+    }, floatingActionButton = {
+        FloatingActionButton(onClick = { viewModel.processIntent(GoalsIntent.ShowCreateDialog) }) {
+            Text("+")
+        }
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+        GoalsContent(
+            innerPadding = innerPadding,
+            goals = uiState.goals,
+            goalProgress = uiState.goalProgress,
+            isLoading = uiState.isLoading,
+            showCreateDialog = uiState.showCreateDialog,
+            onCreateGoal = { name, type, period ->
+                viewModel.processIntent(GoalsIntent.CreateGoal(name, type, period))
+            },
+            onDeleteGoal = { id ->
+                viewModel.processIntent(GoalsIntent.DeleteGoal(id))
+            },
+            onShowCreateDialog = {
+                viewModel.processIntent(GoalsIntent.ShowCreateDialog)
+            },
+            onHideCreateDialog = {
+                viewModel.processIntent(GoalsIntent.HideCreateDialog)
+            })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalsContent(
+    innerPadding: androidx.compose.foundation.layout.PaddingValues,
     goals: List<FitnessGoal>,
     goalProgress: Map<String, Float>,
     isLoading: Boolean,
@@ -74,21 +112,18 @@ private fun GoalsContent(
     onShowCreateDialog: () -> Unit,
     onHideCreateDialog: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Goals") })
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onShowCreateDialog) {
-                Text("+")
-            }
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Goals") })
+    }, floatingActionButton = {
+        FloatingActionButton(onClick = onShowCreateDialog) {
+            Text("+")
         }
-    ) { paddingValues ->
+    }) { innerPadding ->
         if (isLoading) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(innerPadding),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -98,14 +133,13 @@ private fun GoalsContent(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(innerPadding)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "No goals yet",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "No goals yet", style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -118,7 +152,7 @@ private fun GoalsContent(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(innerPadding)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -126,8 +160,7 @@ private fun GoalsContent(
                     GoalCard(
                         goal = goal,
                         progress = goalProgress[goal.id] ?: 0f,
-                        onDelete = { onDeleteGoal(goal.id) }
-                    )
+                        onDelete = { onDeleteGoal(goal.id) })
                 }
             }
         }
@@ -135,17 +168,14 @@ private fun GoalsContent(
 
     if (showCreateDialog) {
         CreateGoalDialog(
-            onDismiss = onHideCreateDialog,
-            onCreate = onCreateGoal
+            onDismiss = onHideCreateDialog, onCreate = onCreateGoal
         )
     }
 }
 
 @Composable
 private fun GoalCard(
-    goal: FitnessGoal,
-    progress: Float,
-    onDelete: () -> Unit
+    goal: FitnessGoal, progress: Float, onDelete: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -159,8 +189,7 @@ private fun GoalCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = goal.name,
-                    style = MaterialTheme.typography.titleMedium
+                    text = goal.name, style = MaterialTheme.typography.titleMedium
                 )
                 TextButton(onClick = onDelete) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
@@ -202,70 +231,63 @@ private fun GoalCard(
 
 @Composable
 private fun CreateGoalDialog(
-    onDismiss: () -> Unit,
-    onCreate: (String, GoalType, GoalPeriod) -> Unit
+    onDismiss: () -> Unit, onCreate: (String, GoalType, GoalPeriod) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-                var selectedType by remember { mutableStateOf<GoalType>(GoalType.Steps(10000)) }
-                var selectedPeriod by remember { mutableStateOf(GoalPeriod.DAILY) }
+    var selectedType by remember { mutableStateOf<GoalType>(GoalType.Steps(10000)) }
+    var selectedPeriod by remember { mutableStateOf(GoalPeriod.DAILY) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create New Goal") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Goal Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Goal Type", style = MaterialTheme.typography.labelMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { selectedType = GoalType.Steps(10000) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Steps")
-                    }
-                    Button(
-                        onClick = { selectedType = GoalType.ActivityMinutes(30) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Mins")
-                    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Create New Goal") }, text = {
+        Column {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Goal Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Goal Type", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { selectedType = GoalType.Steps(10000) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Steps")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { selectedPeriod = GoalPeriod.DAILY },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Daily")
-                    }
-                    Button(
-                        onClick = { selectedPeriod = GoalPeriod.WEEKLY },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Weekly")
-                    }
+                Button(
+                    onClick = { selectedType = GoalType.ActivityMinutes(30) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Mins")
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onCreate(name, selectedType, selectedPeriod) },
-                enabled = name.isNotBlank()
-            ) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { selectedPeriod = GoalPeriod.DAILY },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Daily")
+                }
+                Button(
+                    onClick = { selectedPeriod = GoalPeriod.WEEKLY },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Weekly")
+                }
             }
         }
-    )
+    }, confirmButton = {
+        Button(
+            onClick = { onCreate(name, selectedType, selectedPeriod) },
+            enabled = name.isNotBlank()
+        ) {
+            Text("Create")
+        }
+    }, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Cancel")
+        }
+    })
 }
