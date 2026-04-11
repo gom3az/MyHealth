@@ -6,7 +6,6 @@ import com.gomaa.healthy.data.provider.HuaweiHeartRateMonitor
 import com.gomaa.healthy.data.provider.HuaweiWearProvider
 import com.gomaa.healthy.data.provider.MockWearableProvider
 import com.gomaa.healthy.domain.model.WearableProvider
-import com.gomaa.healthy.domain.provider.WearableManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,14 +38,13 @@ object WearableModule {
 
     @Provides
     @Singleton
-    fun provideWearableManager(
+    fun provideProvidersMap(
         @Named("mock") mockProvider: WearableProvider,
         @Named("huawei") huaweiProvider: WearableProvider
-    ): WearableManager {
-        val providers = mapOf(
+    ): Map<String, WearableProvider> {
+        return mapOf(
             "Mock" to mockProvider,
             "Huawei" to huaweiProvider
         )
-        return WearableManager(providers)
     }
 }

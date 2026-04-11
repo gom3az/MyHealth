@@ -35,6 +35,8 @@ class HuaweiDeviceDiscoverer @Inject constructor(
         return getConnectedDevicesList().any { it.uuid == deviceId && it.isConnected }
     }
 
+    override suspend fun hasAvailableDevices(): Boolean = checkAvailableDevices()
+
     private suspend fun getConnectedDevicesList(): List<Device> =
         suspendCancellableCoroutine { continuation ->
             deviceClient.bondedDevices.addOnSuccessListener { deviceList ->
@@ -44,5 +46,18 @@ class HuaweiDeviceDiscoverer @Inject constructor(
                 Log.e("HuaweiDeviceDiscoverer", "Failed to get devices", e)
                 continuation.resume(emptyList())
             }
+        }
+
+    private suspend fun checkAvailableDevices(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            deviceClient.hasAvailableDevices()
+                .addOnSuccessListener { result ->
+                    Log.i("HuaweiDeviceDiscoverer", "hasAvailableDevices: $result")
+                    continuation.resume(result)
+                }
+                .addOnFailureListener { e ->
+                    Log.e("HuaweiDeviceDiscoverer", "hasAvailableDevices failed", e)
+                    continuation.resume(false)
+                }
         }
 }

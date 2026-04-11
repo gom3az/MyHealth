@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateRecord
-import com.gomaa.healthy.domain.provider.WearableManager
+import com.gomaa.healthy.domain.usecase.ConnectWearableUseCase
+import com.gomaa.healthy.domain.usecase.DisconnectWearableUseCase
 import com.gomaa.healthy.domain.usecase.SaveSessionUseCase
+import com.gomaa.healthy.domain.usecase.SelectWearableProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -35,7 +38,9 @@ data class DashboardUiState(
 
 @HiltViewModel
 class DashboardViewModel  @Inject constructor(
-    private val wearableManager: WearableManager,
+    private val selectWearableProviderUseCase: SelectWearableProviderUseCase,
+    private val connectWearableUseCase: ConnectWearableUseCase,
+    private val disconnectWearableUseCase: DisconnectWearableUseCase,
     private val saveSessionUseCase: SaveSessionUseCase
 ) : ViewModel() {
 
@@ -45,31 +50,40 @@ class DashboardViewModel  @Inject constructor(
     private val heartRateSamples = mutableListOf<Int>()
     private var sessionStartTime: Long = 0
 
+    private var heartRateJob: Job? = null
+    private var connectionJob: Job? = null
+
     init {
         observeWearableData()
     }
 
     private fun observeWearableData() {
         viewModelScope.launch {
-            wearableManager.heartRate.collect { hr ->
-                if (_uiState.value.isTracking) {
-                    heartRateSamples.add(hr)
-                    updateHeartRateStats(hr)
-                }
-                _uiState.value = _uiState.value.copy(
-                    heartRate = hr,
-                    heartRateZone = calculateZone(hr)
-                )
-            }
-        }
-        viewModelScope.launch {
-            wearableManager.connectionState.collect { state ->
-                _uiState.value = _uiState.value.copy(connectionState = state)
-            }
-        }
-        viewModelScope.launch {
-            wearableManager.currentProvider.collect { provider ->
+            selectWearableProviderUseCase.selectedProvider.collectLatest { provider ->
                 _uiState.value = _uiState.value.copy(deviceBrand = provider?.brand)
+
+                heartRateJob?.cancel()
+                connectionJob?.cancel()
+
+                provider?.let { p ->
+                    heartRateJob = viewModelScope.launch {
+                        p.heartRateFlow().collectLatest { hr ->
+                            if (_uiState.value.isTracking) {
+                                heartRateSamples.add(hr)
+                                updateHeartRateStats(hr)
+                            }
+                            _uiState.value = _uiState.value.copy(
+                                heartRate = hr,
+                                heartRateZone = calculateZone(hr)
+                            )
+                        }
+                    }
+                    connectionJob = viewModelScope.launch {
+                        p.connectionStatus().collectLatest { state ->
+                            _uiState.value = _uiState.value.copy(connectionState = state)
+                        }
+                    }
+                }
             }
         }
     }
@@ -109,15 +123,13 @@ class DashboardViewModel  @Inject constructor(
         )
 
         viewModelScope.launch {
-            val provider = wearableManager.currentProvider.first()
-            provider?.startMonitoring("device-1")
+            connectWearableUseCase("device-1")
         }
     }
 
     fun stopTracking() {
         viewModelScope.launch {
-            val provider = wearableManager.currentProvider.first()
-            provider?.stopMonitoring()
+            disconnectWearableUseCase()
             
             val endTime = System.currentTimeMillis()
             val session = ExerciseSession(

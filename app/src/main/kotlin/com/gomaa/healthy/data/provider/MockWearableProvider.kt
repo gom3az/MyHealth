@@ -47,6 +47,8 @@ class MockWearableProvider @Inject constructor() : WearableProvider {
         return isMonitoring
     }
 
+    override suspend fun hasAvailableDevices(): Boolean = true
+
     override suspend fun getConnectedDevices(): List<DeviceInfo> {
         return if (isMonitoring) {
             listOf(DeviceInfo("mock-1", "Mock Watch", "Mock", true))

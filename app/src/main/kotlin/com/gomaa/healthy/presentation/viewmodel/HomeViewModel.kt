@@ -7,14 +7,20 @@ import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalType
-import com.gomaa.healthy.domain.provider.WearableManager
+import com.gomaa.healthy.domain.usecase.ConnectWearableUseCase
+import com.gomaa.healthy.domain.usecase.DisconnectWearableUseCase
 import com.gomaa.healthy.domain.usecase.GetActiveGoalsUseCase
+import com.gomaa.healthy.domain.usecase.GetAvailableProvidersUseCase
 import com.gomaa.healthy.domain.usecase.GetDailyStepsUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
+import com.gomaa.healthy.domain.usecase.HasAvailableDevicesUseCase
+import com.gomaa.healthy.domain.usecase.SelectWearableProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -25,6 +31,7 @@ data class HomeUiState(
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val connectedDeviceBrand: String? = null,
     val availableProviders: List<String> = emptyList(),
+    val hasAvailableDevices: Boolean = false,
     val recentSessions: List<ExerciseSession> = emptyList(),
     val todaySteps: DailySteps? = null,
     val activeGoals: List<FitnessGoal> = emptyList(),
@@ -34,7 +41,11 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val wearableManager: WearableManager,
+    private val getAvailableProvidersUseCase: GetAvailableProvidersUseCase,
+    private val selectWearableProviderUseCase: SelectWearableProviderUseCase,
+    private val hasAvailableDevicesUseCase: HasAvailableDevicesUseCase,
+    private val connectWearableUseCase: ConnectWearableUseCase,
+    private val disconnectWearableUseCase: DisconnectWearableUseCase,
     private val getSessionsUseCase: GetSessionsUseCase,
     private val getDailyStepsUseCase: GetDailyStepsUseCase,
     private val getActiveGoalsUseCase: GetActiveGoalsUseCase
@@ -42,6 +53,9 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private var heartRateJob: Job? = null
+    private var connectionJob: Job? = null
 
     init {
         loadInitialData()
@@ -52,7 +66,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val currentProviders = wearableManager.availableProviders
+                val currentProviders = getAvailableProvidersUseCase()
                 _uiState.value = _uiState.value.copy(availableProviders = currentProviders)
 
                 val sessions = getSessionsUseCase()
@@ -80,18 +94,24 @@ class HomeViewModel @Inject constructor(
 
     private fun observeWearableData() {
         viewModelScope.launch {
-            wearableManager.heartRate.collect { hr ->
-                _uiState.value = _uiState.value.copy(heartRate = hr)
-            }
-        }
-        viewModelScope.launch {
-            wearableManager.connectionState.collect { state ->
-                _uiState.value = _uiState.value.copy(connectionState = state)
-            }
-        }
-        viewModelScope.launch {
-            wearableManager.currentProvider.collect { provider ->
+            selectWearableProviderUseCase.selectedProvider.collectLatest { provider ->
                 _uiState.value = _uiState.value.copy(connectedDeviceBrand = provider?.brand)
+
+                heartRateJob?.cancel()
+                connectionJob?.cancel()
+
+                provider?.let { p ->
+                    heartRateJob = viewModelScope.launch {
+                        p.heartRateFlow().collectLatest { hr ->
+                            _uiState.value = _uiState.value.copy(heartRate = hr)
+                        }
+                    }
+                    connectionJob = viewModelScope.launch {
+                        p.connectionStatus().collectLatest { state ->
+                            _uiState.value = _uiState.value.copy(connectionState = state)
+                        }
+                    }
+                }
             }
         }
     }
@@ -101,22 +121,35 @@ class HomeViewModel @Inject constructor(
     }
 
     fun selectProvider(brand: String) {
-        val provider = wearableManager.getProvider(brand)
-        provider?.let {
-            wearableManager.setCurrentProvider(it)
-            _uiState.value = _uiState.value.copy(connectedDeviceBrand = brand)
+        viewModelScope.launch {
+            val provider = selectWearableProviderUseCase(brand)
+            provider?.let {
+                val hasDevices = hasAvailableDevicesUseCase(brand)
+                _uiState.value = _uiState.value.copy(
+                    connectedDeviceBrand = brand,
+                    hasAvailableDevices = hasDevices
+                )
+            }
         }
     }
 
     fun connect() {
         viewModelScope.launch {
-            wearableManager.currentProvider.collect { p ->
-                p?.let {
-                    try {
-                        it.startMonitoring("device-1")
-                    } catch (e: Exception) {
-                        _uiState.value = _uiState.value.copy(error = e.message)
+            val provider = selectWearableProviderUseCase.getCurrentProvider()
+            provider?.let { p ->
+                try {
+                    if (hasAvailableDevicesUseCase(p.brand)) {
+                        val result = connectWearableUseCase("device-1")
+                        if (result.isFailure) {
+                            _uiState.value = _uiState.value.copy(error = result.exceptionOrNull()?.message)
+                        }
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            error = "No available devices found. Please pair a wearable device first."
+                        )
                     }
+                } catch (e: Exception) {
+                    _uiState.value = _uiState.value.copy(error = e.message)
                 }
             }
         }
@@ -124,9 +157,7 @@ class HomeViewModel @Inject constructor(
 
     fun disconnect() {
         viewModelScope.launch {
-            wearableManager.currentProvider.collect { p ->
-                p?.stopMonitoring()
-            }
+            disconnectWearableUseCase()
         }
     }
 }

@@ -54,4 +54,8 @@ class HuaweiWearProvider @Inject constructor(
     override suspend fun getConnectedDevices(): List<DeviceInfo> {
         return deviceDiscoverer.getConnectedDevices()
     }
+
+    override suspend fun hasAvailableDevices(): Boolean {
+        return deviceDiscoverer.hasAvailableDevices()
+    }
 }
