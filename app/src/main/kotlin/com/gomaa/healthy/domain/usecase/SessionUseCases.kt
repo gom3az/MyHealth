@@ -1,22 +1,14 @@
 package com.gomaa.healthy.domain.usecase
 
 import com.gomaa.healthy.domain.model.ExerciseSession
-import com.gomaa.healthy.domain.model.HeartRateRecord
-import com.gomaa.healthy.domain.repository.HealthConnectRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
 import javax.inject.Inject
 
 class SaveSessionUseCase @Inject constructor(
-    private val sessionRepository: SessionRepository,
-    private val healthConnectRepository: HealthConnectRepository
+    private val sessionRepository: SessionRepository
 ) {
     suspend operator fun invoke(session: ExerciseSession): Result<Unit> {
-        sessionRepository.saveSession(session)
-        val hcResult = healthConnectRepository.writeExerciseSession(session)
-        session.heartRates.takeIf { it.isNotEmpty() }?.let {
-            healthConnectRepository.writeHeartRateData(session.id, it)
-        }
-        return hcResult
+        return Result.success(sessionRepository.saveSession(session))
     }
 }
 

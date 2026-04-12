@@ -8,12 +8,10 @@ import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.GoalDao
 import com.gomaa.healthy.data.local.dao.HeartRateDao
 import com.gomaa.healthy.data.repository.GoalRepositoryImpl
-import com.gomaa.healthy.data.repository.HealthConnectRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
 import com.gomaa.healthy.data.repository.StepRepositoryImpl
 import com.gomaa.healthy.data.source.MockDataSeeder
 import com.gomaa.healthy.domain.repository.GoalRepository
-import com.gomaa.healthy.domain.repository.HealthConnectRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
 import com.gomaa.healthy.domain.repository.StepRepository
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
@@ -103,14 +101,6 @@ object RepositoryModule {
     ): GoalRepository {
         return GoalRepositoryImpl(goalDao)
     }
-
-    @Provides
-    @Singleton
-    fun provideHealthConnectRepository(
-        @ApplicationContext context: Context
-    ): HealthConnectRepository {
-        return HealthConnectRepositoryImpl(context)
-    }
 }
 
 @Module
@@ -119,10 +109,9 @@ object UseCaseModule {
 
     @Provides
     fun provideSaveSessionUseCase(
-        sessionRepository: SessionRepository,
-        healthConnectRepository: HealthConnectRepository
+        sessionRepository: SessionRepository
     ): SaveSessionUseCase {
-        return SaveSessionUseCase(sessionRepository, healthConnectRepository)
+        return SaveSessionUseCase(sessionRepository)
     }
 
     @Provides

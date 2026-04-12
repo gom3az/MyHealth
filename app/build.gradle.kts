@@ -58,7 +58,6 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.navigation.compose)
-    implementation(libs.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
@@ -66,6 +65,8 @@ dependencies {
     implementation(libs.agconnect.core)
     // HMS WearEngine - using older version that's available in Maven
     implementation(libs.wearengine)
+    // DataStore Preferences
+    implementation(libs.datastore.preferences)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

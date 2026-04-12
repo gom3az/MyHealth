@@ -30,10 +30,3 @@ interface SessionRepository {
     suspend fun addHeartRates(sessionId: String, heartRates: List<HeartRateRecord>)
     suspend fun getHeartRatesForSession(sessionId: String): List<HeartRateRecord>
 }
-
-interface HealthConnectRepository {
-    suspend fun writeExerciseSession(session: ExerciseSession): Result<Unit>
-    suspend fun writeHeartRateData(sessionId: String, heartRates: List<HeartRateRecord>): Result<Unit>
-    suspend fun isAvailable(): Boolean
-    suspend fun hasPermissions(): Boolean
-}
