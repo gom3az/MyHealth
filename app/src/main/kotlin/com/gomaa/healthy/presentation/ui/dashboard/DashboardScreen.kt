@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
+import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneHigh
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneLow
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneMedium
@@ -321,5 +322,52 @@ private fun formatTime(seconds: Long): String {
         String.format("%d:%02d:%02d", hrs, mins, secs)
     } else {
         String.format("%02d:%02d", mins, secs)
+    }
+}
+
+// ========== Compose Previews ==========
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Dashboard - Idle", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun DashboardScreenIdlePreview() {
+    HealthTheme {
+        DashboardContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardIdleState,
+            onStartTracking = {},
+            onStopTracking = {},
+        )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Dashboard - Tracking", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun DashboardScreenTrackingPreview() {
+    HealthTheme {
+        DashboardContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardTrackingState,
+            onStartTracking = {},
+            onStopTracking = {},
+        )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Dashboard - Error", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun DashboardScreenErrorPreview() {
+    HealthTheme {
+        DashboardContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardErrorState,
+            onStartTracking = {},
+            onStopTracking = {},
+        )
     }
 }

@@ -16,7 +16,10 @@ sealed class GoalType {
     data class Steps(val target: Int) : GoalType()
     data class Distance(val targetMeters: Double, val unit: DistanceUnit) : GoalType()
     data class ActivityMinutes(val targetMinutes: Int) : GoalType()
-    data class HeartRateZone(val zone: HeartRateZone, val targetMinutes: Int) : GoalType()
+    data class HeartRateZone(
+        val zone: com.gomaa.healthy.domain.model.HeartRateZone,
+        val targetMinutes: Int
+    ) : GoalType()
 }
 
 enum class GoalPeriod { DAILY, WEEKLY }

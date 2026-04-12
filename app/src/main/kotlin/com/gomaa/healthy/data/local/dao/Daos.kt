@@ -4,15 +4,18 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
+import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
+import com.gomaa.healthy.data.local.entity.HeartRateEntity
 
 @Dao
 interface DailyStepsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(dailySteps: DailyStepsEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(dailyStepsList: List<DailyStepsEntity>)
 
     @Query("SELECT * FROM daily_steps WHERE date = :date")
     suspend fun getByDate(date: Long): DailyStepsEntity?
@@ -22,12 +25,18 @@ interface DailyStepsDao {
 
     @Query("SELECT * FROM daily_steps ORDER BY date DESC LIMIT :limit")
     suspend fun getRecent(limit: Int): List<DailyStepsEntity>
+
+    @Query("DELETE FROM daily_steps")
+    suspend fun deleteAll()
 }
 
 @Dao
 interface GoalDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(goal: FitnessGoalEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(goals: List<FitnessGoalEntity>)
 
     @Query("SELECT * FROM fitness_goals WHERE id = :id")
     suspend fun getById(id: String): FitnessGoalEntity?
@@ -43,6 +52,9 @@ interface GoalDao {
 
     @Query("DELETE FROM fitness_goals WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("DELETE FROM fitness_goals")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -58,6 +70,9 @@ interface ExerciseSessionDao {
 
     @Query("DELETE FROM exercise_sessions WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("DELETE FROM exercise_sessions")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -65,9 +80,15 @@ interface HeartRateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(heartRates: List<HeartRateEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(heartRate: HeartRateEntity)
+
     @Query("SELECT * FROM heart_rates WHERE sessionId = :sessionId ORDER BY timestamp ASC")
     suspend fun getForSession(sessionId: String): List<HeartRateEntity>
 
     @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
+
+    @Query("DELETE FROM heart_rates")
+    suspend fun deleteAll()
 }

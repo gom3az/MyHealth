@@ -30,12 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
+import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel(), 
+    viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToDashboard: () -> Unit = {},
     onNavigateToGoals: () -> Unit = {}
 ) {
@@ -60,14 +61,10 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("MyHealth") }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text("MyHealth") })
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         HomeContent(
             paddingValues = paddingValues,
             uiState = uiState,
@@ -77,8 +74,7 @@ fun HomeScreen(
             onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
             onNavigateToDashboard = onNavigateToDashboard,
             onNavigateToGoals = onNavigateToGoals,
-            onRefresh = { viewModel.processIntent(HomeIntent.OnRefresh) }
-        )
+            onRefresh = { viewModel.processIntent(HomeIntent.OnRefresh) })
     }
 }
 
@@ -108,8 +104,7 @@ private fun HomeContent(
                 showProviderSwitchDialog = true
                 selectedNewProvider = newProvider
             },
-            onDismiss = { showProviderSelectionDialog = false }
-        )
+            onDismiss = { showProviderSelectionDialog = false })
     }
 
     if (showProviderSwitchDialog && selectedNewProvider != null) {
@@ -124,17 +119,14 @@ private fun HomeContent(
             onDismiss = {
                 showProviderSwitchDialog = false
                 selectedNewProvider = null
-            }
-        )
+            })
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MyHealth") }
-            )
-        }
-    ) { parentPaddingValues ->
+                title = { Text("MyHealth") })
+        }) { parentPaddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -161,8 +153,7 @@ private fun HomeContent(
                     onConnect = onConnect,
                     onDisconnect = onDisconnect,
                     onNavigateToDashboard = onNavigateToDashboard,
-                    onChangeProvider = { showProviderSelectionDialog = true }
-                )
+                    onChangeProvider = { showProviderSelectionDialog = true })
             }
 
             RecentSessionsCard(sessions = uiState.recentSessions)
@@ -172,13 +163,10 @@ private fun HomeContent(
 
 @Composable
 private fun StepsProgressCard(
-    steps: Int,
-    goalProgress: Float,
-    onClick: () -> Unit
+    steps: Int, goalProgress: Float, onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth(), onClick = onClick
     ) {
         Column(
             modifier = Modifier
@@ -186,8 +174,7 @@ private fun StepsProgressCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Today's Steps",
-                style = MaterialTheme.typography.titleMedium
+                text = "Today's Steps", style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -320,8 +307,7 @@ private fun ActionButtonRow(
             }
         }
         Button(
-            onClick = onChangeProvider,
-            modifier = Modifier.fillMaxWidth()
+            onClick = onChangeProvider, modifier = Modifier.fillMaxWidth()
         ) {
             Text("Change Provider")
         }
@@ -405,16 +391,12 @@ private fun ProviderSelectionDialog(
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
-    )
+        })
 }
 
 @Composable
 private fun SwitchProviderConfirmationDialog(
-    currentProvider: String,
-    newProvider: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    currentProvider: String, newProvider: String, onConfirm: () -> Unit, onDismiss: () -> Unit
 ) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -431,6 +413,64 @@ private fun SwitchProviderConfirmationDialog(
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
-    )
+        })
+}
+
+// ========== Compose Previews ==========
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Home - Loaded", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun HomeScreenLoadedPreview() {
+    HealthTheme {
+        HomeContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeLoadedState,
+            onProviderSelected = {},
+            onSwitchProvider = {},
+            onConnect = {},
+            onDisconnect = {},
+            onNavigateToDashboard = {},
+            onNavigateToGoals = {},
+            onRefresh = {})
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Home - Disconnected", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun HomeScreenDisconnectedPreview() {
+    HealthTheme {
+        HomeContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeDisconnectedState,
+            onProviderSelected = {},
+            onSwitchProvider = {},
+            onConnect = {},
+            onDisconnect = {},
+            onNavigateToDashboard = {},
+            onNavigateToGoals = {},
+            onRefresh = {})
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Home - Empty", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun HomeScreenEmptyPreview() {
+    HealthTheme {
+        HomeContent(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeEmptyState,
+            onProviderSelected = {},
+            onSwitchProvider = {},
+            onConnect = {},
+            onDisconnect = {},
+            onNavigateToDashboard = {},
+            onNavigateToGoals = {},
+            onRefresh = {})
+    }
 }

@@ -12,7 +12,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.gomaa.healthy"
+        applicationId = "net.gomaa.healthy"
         minSdk = 33
         targetSdk = 36
         versionCode = 1
@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
     // HMS Core
     implementation(libs.agconnect.core)
     // HMS WearEngine - using older version that's available in Maven

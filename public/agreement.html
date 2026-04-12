@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="MyHealth User Agreement - Terms of Service for using the MyHealth health tracking application."
+          name="description">
+    <title>User Agreement - MyHealth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #1a73e8;
+            --text-color: #333333;
+            --text-light: #666666;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --warning-color: #f57c00;
+            --danger-color: #d32f2f;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            line-height: 1.7;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        
+        header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        
+        .app-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+        
+        h1 span {
+            color: var(--primary-color);
+        }
+        
+        h2 {
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            margin: 30px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-color);
+            margin: 20px 0 10px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 25px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .intro {
+            background: #e8f0fe;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            margin: 20px 0;
+        }
+        
+        .intro p {
+            margin-bottom: 0;
+        }
+        
+        .important-notice {
+            background: #fff3e0;
+            border: 1px solid #ffb74d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .important-notice h3 {
+            color: var(--warning-color);
+            margin-top: 0;
+        }
+        
+        .disclaimer-box {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .disclaimer-box h3 {
+            color: var(--danger-color);
+            margin-top: 0;
+        }
+        
+        .section-card {
+            background: #f5f5f5;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .terms-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .term-item {
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .term-number {
+            background: var(--primary-color);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        
+        .term-content {
+            flex: 1;
+        }
+        
+        .term-content strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .prohibited-list {
+            background: #fce4ec;
+            border: 1px solid #f48fb1;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .prohibited-list h3 {
+            color: #c2185b;
+            margin-top: 0;
+        }
+        
+        .prohibited-list li {
+            list-style: none;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8bbd0;
+            position: relative;
+            padding-left: 25px;
+        }
+        
+        .prohibited-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .prohibited-list li::before {
+            content: "✗";
+            color: #c2185b;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        footer {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid var(--border-color);
+            text-align: center;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .footer-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        
+        .footer-links a:hover {
+            background: #e8f0fe;
+        }
+        
+        .acceptance-box {
+            background: #e8f5e9;
+            border: 2px solid #81c784;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .acceptance-box p {
+            text-align: center;
+            margin-bottom: 0;
+        }
+        
+        .legal-footer {
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px 20px;
+                border-radius: 0;
+            }
+            
+            h1 {
+                font-size: 1.6rem;
+            }
+            
+            h2 {
+                font-size: 1.2rem;
+            }
+            
+            body {
+                padding: 0;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+            }
+            
+            .footer-links a {
+                display: block;
+            }
+            
+            .terms-grid {
+                gap: 10px;
+            }
+            
+            .term-item {
+                padding: 12px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="app-logo">M</div>
+        <h1>User Agreement</h1>
+        <p><span>MyHealth</span></p>
+        <p style="color: var(--text-light); margin-top: 5px;">Developed by Gomaa</p>
+    </header>
+
+    <section>
+        <div class="intro">
+            <p>
+                <strong>Welcome to MyHealth.</strong> By accessing, downloading, or using the
+                MyHealth mobile application, you agree to be bound by this User Agreement. Please
+                read these terms carefully before using the app.
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <h2>1. Acceptance of Terms</h2>
+        <p>
+            By installing, accessing, or using the <strong>MyHealth</strong> mobile application
+            ("App"), you acknowledge that you have read, understood, and agree to be bound by these
+            Terms of Service ("Agreement"). If you do not agree to these terms, do not use the App.
+        </p>
+        <p>
+            MyHealth reserves the right to update, modify, or replace any part of this Agreement at
+            any time. Your continued use of the App following any changes indicates your acceptance
+            of the new terms.
+        </p>
+    </section>
+
+    <section>
+        <h2>2. Description of Service</h2>
+        <p>
+            MyHealth is a health and fitness tracking application that allows users to:
+        </p>
+        <ul>
+            <li>Track daily step counts and physical activity</li>
+            <li>Monitor heart rate and vital health metrics</li>
+            <li>Record and analyze exercise sessions</li>
+            <li>Sync data with wearable devices and fitness trackers</li>
+            <li>View personalized health insights and progress reports</li>
+        </ul>
+        <p>
+            The App is provided "as is" and "as available" for personal, non-commercial use intended
+            to support healthy lifestyle choices.
+        </p>
+    </section>
+
+    <section>
+        <h2>3. User Eligibility</h2>
+        <p>
+            To use MyHealth, you must:
+        </p>
+        <ul>
+            <li>Be at least 13 years of age</li>
+            <li>Have the legal capacity to enter into binding agreements</li>
+            <li>Agree to these Terms of Service</li>
+            <li>Have a compatible mobile device meeting the minimum requirements</li>
+        </ul>
+        <p>
+            If you are between 13 and 18 years of age, you confirm that you have received parental
+            or guardian consent to use the App, and your parent or legal guardian has reviewed and
+            agreed to this Agreement.
+        </p>
+    </section>
+
+    <section>
+        <h2>4. User Account & Responsibilities</h2>
+        <p>
+            When creating an account with MyHealth, you agree to:
+        </p>
+
+        <div class="terms-grid">
+            <div class="term-item">
+                <div class="term-number">1</div>
+                <div class="term-content">
+                    <strong>Provide Accurate Information</strong>
+                    You agree to provide true, accurate, current, and complete information about
+                    yourself as prompted by the App's registration process.
+                </div>
+            </div>
+
+            <div class="term-item">
+                <div class="term-number">2</div>
+                <div class="term-content">
+                    <strong>Maintain Account Security</strong>
+                    You are responsible for maintaining the confidentiality of your account
+                    credentials and for all activities that occur under your account.
+                </div>
+            </div>
+
+            <div class="term-item">
+                <div class="term-number">3</div>
+                <div class="term-content">
+                    <strong>Notify Us of Unauthorized Use</strong>
+                    You agree to immediately notify us of any unauthorized use of your account or
+                    any other breach of security.
+                </div>
+            </div>
+
+            <div class="term-item">
+                <div class="term-number">4</div>
+                <div class="term-content">
+                    <strong>Use the App Responsibly</strong>
+                    You agree to use the App only for its intended purpose and in accordance with
+                    these terms and all applicable laws.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>5. Health Data & Fitness Information</h2>
+        <p>
+            MyHealth tracks and stores health-related data you provide or that is collected from
+            your connected wearable devices. You acknowledge that:
+        </p>
+        <ul>
+            <li>Health data displayed in the App is for informational purposes only</li>
+            <li>The App is not a medical device and does not provide medical diagnosis or
+                treatment
+            </li>
+            <li>You should consult qualified healthcare professionals for medical advice</li>
+            <li>You are responsible for the accuracy of data you manually input</li>
+            <li>Wearable device data depends on the accuracy and capabilities of your device</li>
+        </ul>
+    </section>
+
+    <section>
+        <div class="important-notice">
+            <h3>Important Health Notice</h3>
+            <p>
+                <strong>MyHealth is not a medical device.</strong> The data provided by this App is
+                intended for general fitness and wellness purposes only. It is not designed to
+                diagnose, treat, cure, or prevent any medical condition or disease.
+            </p>
+            <p style="margin-bottom: 0;">
+                Always consult with a qualified healthcare provider before starting any exercise
+                program or making significant changes to your health routine. Do not rely on the App
+                for medical decisions or emergency situations.
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <h2>6. Intellectual Property Rights</h2>
+        <p>
+            MyHealth and all related content, features, and functionality are owned by the developer
+            (<strong>Gomaa</strong>) and are protected by copyright, trademark, and other
+            intellectual property laws. You may not:
+        </p>
+        <ul>
+            <li>Copy, modify, or distribute the App or its content</li>
+            <li>Reverse engineer, decompile, or disassemble the App</li>
+            <li>Remove any copyright, trademark, or other proprietary notices</li>
+            <li>Use the App for any unauthorized commercial purpose</li>
+            <li>Sublicense, rent, or lease the App to third parties</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>7. Prohibited Conduct</h2>
+        <div class="prohibited-list">
+            <h3>You agree not to:</h3>
+            <ul>
+                <li>Use the App in any manner that violates any applicable law or regulation</li>
+                <li>Attempt to gain unauthorized access to the App or its servers</li>
+                <li>Interfere with or disrupt the operation of the App</li>
+                <li>Transmit viruses, malware, or other harmful code</li>
+                <li>Collect or store personal data about other users without their consent</li>
+                <li>Impersonate any person or entity or falsely represent your affiliation</li>
+                <li>Use the App to harm, harass, or threaten others</li>
+                <li>Upload or transmit content that is infringing, defamatory, or obscene</li>
+                <li>Attempt to circumvent any security measures or access controls</li>
+                <li>Use the App for any illegal or unauthorized purpose</li>
+            </ul>
+        </div>
+        <p>
+            Violation of these prohibitions may result in immediate termination of your access to
+            the App and may expose you to civil or criminal liability.
+        </p>
+    </section>
+
+    <section>
+        <h2>8. Third-Party Services & Links</h2>
+        <p>
+            MyHealth may integrate with third-party services, including wearable devices, fitness
+            trackers, and cloud storage providers. Your use of these third-party services is subject
+            to their respective terms of service and privacy policies. We are not responsible for:
+        </p>
+        <ul>
+            <li>The accuracy or reliability of data from third-party devices</li>
+            <li>Privacy practices of third-party service providers</li>
+            <li>Content or functionality of third-party websites or apps</li>
+            <li>Any damages arising from third-party services</li>
+        </ul>
+        <p>
+            Any data shared with third-party services is governed by their respective privacy
+            policies.
+        </p>
+    </section>
+
+    <section>
+        <div class="disclaimer-box">
+            <h3>9. Disclaimer of Warranties</h3>
+            <p>
+                <strong>THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY
+                    KIND, EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM
+                    ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
+            </p>
+            <ul style="margin-bottom: 0;">
+                <li>IMPLIED WARRANTIES OF MERCHANTABILITY</li>
+                <li>IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR PURPOSE</li>
+                <li>IMPLIED WARRANTIES OF NON-INFRINGEMENT</li>
+                <li>WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE</li>
+            </ul>
+            <p style="margin-bottom: 0; margin-top: 15px;">
+                We do not warrant that the App will be uninterrupted, error-free, or completely
+                secure. You use the App at your own risk.
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <div class="disclaimer-box">
+            <h3>10. Health & Medical Disclaimer</h3>
+            <p>
+                <strong>IMPORTANT: THIS APP IS NOT A MEDICAL DEVICE AND IS NOT INTENDED TO DIAGNOSE,
+                    TREAT, CURE, OR PREVENT ANY DISEASE OR MEDICAL CONDITION.</strong>
+            </p>
+            <p>
+                The information provided by MyHealth is for general fitness and wellness purposes
+                only. It should not be used as a substitute for professional medical advice,
+                diagnosis, or treatment.
+            </p>
+            <p style="margin-bottom: 0;">
+                Never disregard professional medical advice or delay seeking it because of something
+                you have read in the App. Always consult your physician or other qualified
+                healthcare provider with any questions about your health or any medical condition.
+            </p>
+        </div>
+    </section>
+
+    <section>
+        <h2>11. Account Termination</h2>
+        <div class="section-card">
+            <h3>Termination by You</h3>
+            <p>
+                You may terminate your account at any time by:
+            </p>
+            <ol>
+                <li>Opening the MyHealth app</li>
+                <li>Navigating to <strong>Settings → Account</strong></li>
+                <li>Selecting <strong>Delete Account</strong></li>
+            </ol>
+            <p style="margin-bottom: 0;">
+                Alternatively, contact us at <strong>mohamed.gomaa.ali.2@gmail.com</strong> to
+                request account deletion.
+            </p>
+        </div>
+
+        <div class="section-card">
+            <h3>Termination by Us</h3>
+            <p>
+                We reserve the right to suspend or terminate your account, with or without notice,
+                for:
+            </p>
+            <ul style="margin-bottom: 0;">
+                <li>Violation of this Agreement</li>
+                <li>Illegal or unauthorized use of the App</li>
+                <li>Inactivity for an extended period</li>
+                <li>Request by law enforcement or court order</li>
+                <li>Technical issues preventing operation</li>
+                <li>Discontinuation of the App service</li>
+            </ul>
+        </div>
+
+        <div class="section-card">
+            <h3>Effect of Termination</h3>
+            <p>
+                Upon termination of your account:
+            </p>
+            <ul style="margin-bottom: 0;">
+                <li>Your right to use the App immediately ceases</li>
+                <li>Your personal data will be deleted in accordance with our Privacy Policy</li>
+                <li>You must stop using the App</li>
+                <li>Any provisions that by their nature should survive termination will remain in
+                    effect
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <section>
+        <h2>12. Data Privacy</h2>
+        <p>
+            Your privacy is important to us. The collection and use of your personal information is
+            governed by our <strong>Privacy Policy</strong>, which is incorporated into this
+            Agreement by reference. By using the App, you consent to our collection and use of your
+            data as described in the Privacy Policy.
+        </p>
+        <p>
+            Please review our <a href="privacy.html" style="color: var(--primary-color);">Privacy
+            Policy</a> to understand how we handle your data.
+        </p>
+    </section>
+
+    <section>
+        <h2>13. Governing Law & Dispute Resolution</h2>
+        <p>
+            This Agreement shall be governed by and construed in accordance with the laws of the
+            jurisdiction in which the developer (<strong>Gomaa</strong>) resides, without regard to
+            its conflict of law provisions.
+        </p>
+        <p>
+            Any disputes arising from this Agreement shall first be addressed through good-faith
+            negotiation. If resolution cannot be reached, disputes shall be subject to exclusive
+            jurisdiction of the courts in the developer's jurisdiction.
+        </p>
+    </section>
+
+    <section>
+        <h2>14. Entire Agreement</h2>
+        <p>
+            This Agreement, together with the Privacy Policy and any other legal notices published
+            by us, constitutes the entire agreement between you and us regarding the App and
+            supersedes all prior agreements, representations, or understandings, whether written or
+            oral.
+        </p>
+    </section>
+
+    <section>
+        <h2>15. Severability</h2>
+        <p>
+            If any provision of this Agreement is found to be unenforceable or invalid, that
+            provision shall be limited or eliminated to the minimum extent necessary so that the
+            remaining provisions shall otherwise remain in full force and effect.
+        </p>
+    </section>
+
+    <section>
+        <h2>16. Contact Information</h2>
+        <p>
+            If you have any questions about this Agreement, please contact us:
+        </p>
+        <div class="section-card">
+            <p><strong>Developer:</strong> Gomaa</p>
+            <p><strong>Email:</strong> mohamed.gomaa.ali.2@gmail.com</p>
+            <p><strong>App:</strong> MyHealth</p>
+        </div>
+    </section>
+
+    <div class="acceptance-box">
+        <p>
+            <strong>By installing or using MyHealth, you acknowledge that you have read and agree to
+                be bound by this User Agreement.</strong>
+        </p>
+    </div>
+
+    <footer>
+        <div class="footer-links">
+            <a href="agreement.html">Terms of Service</a>
+            <a href="privacy.html">Privacy Policy</a>
+        </div>
+        <p class="legal-footer">
+            © 2026 MyHealth. All rights reserved.<br>
+            Developed by Gomaa
+        </p>
+    </footer>
+</div>
+</body>
+</html>

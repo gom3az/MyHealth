@@ -2,6 +2,7 @@ package com.gomaa.healthy.presentation.ui.goals
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,11 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
+import com.gomaa.healthy.presentation.ui.PreviewData
+import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -290,4 +294,58 @@ private fun CreateGoalDialog(
             Text("Cancel")
         }
     })
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GoalsContentPreview() {
+    HealthTheme {
+        GoalsContent(
+            innerPadding = PaddingValues(0.dp),
+            goals = PreviewData.goalsLoadedState.goals,
+            goalProgress = PreviewData.goalsLoadedState.goalProgress,
+            isLoading = false,
+            showCreateDialog = false,
+            onCreateGoal = { _, _, _ -> },
+            onDeleteGoal = {},
+            onShowCreateDialog = {},
+            onHideCreateDialog = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GoalsContentLoadingPreview() {
+    HealthTheme {
+        GoalsContent(
+            innerPadding = PaddingValues(0.dp),
+            goals = emptyList(),
+            goalProgress = emptyMap(),
+            isLoading = true,
+            showCreateDialog = false,
+            onCreateGoal = { _, _, _ -> },
+            onDeleteGoal = {},
+            onShowCreateDialog = {},
+            onHideCreateDialog = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GoalsContentEmptyPreview() {
+    HealthTheme {
+        GoalsContent(
+            innerPadding = PaddingValues(0.dp),
+            goals = emptyList(),
+            goalProgress = emptyMap(),
+            isLoading = false,
+            showCreateDialog = false,
+            onCreateGoal = { _, _, _ -> },
+            onDeleteGoal = {},
+            onShowCreateDialog = {},
+            onHideCreateDialog = {}
+        )
+    }
 }

@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ExerciseSession
+import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,32 +61,45 @@ fun AnalyticsScreen(
             title = { Text("Analytics") },
         )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (uiState.sessions.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "No sessions recorded yet",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+        AnalyticsContent(
+            uiState = uiState,
+            onSessionClick = viewModel::processIntent,
+            modifier = Modifier.padding(paddingValues)
+        )
+    }
+}
+
+@Composable
+private fun AnalyticsContent(
+    uiState: AnalyticsUiState,
+    onSessionClick: (AnalyticsIntent) -> Unit,
+    modifier: Modifier = Modifier,
+
+    ) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (uiState.sessions.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "No sessions recorded yet",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
-            } else {
-                uiState.sessions.forEach { session ->
-                    item {
-                        SessionCard(
-                            session = session,
-                            onClick = { viewModel.processIntent(AnalyticsIntent.OnLoadSessions) })
-                    }
+            }
+        } else {
+            uiState.sessions.forEach { session ->
+                item {
+                    SessionCard(
+                        session = session,
+                        onClick = { onSessionClick(AnalyticsIntent.OnLoadSessions) })
                 }
             }
         }
@@ -145,4 +159,45 @@ private fun formatDuration(durationMs: Long): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return "${mins}m ${secs}s"
+}
+
+// ========== Compose Previews ==========
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Analytics - Loaded", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun AnalyticsScreenLoadedPreview() {
+    HealthTheme {
+        AnalyticsContent(
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.analyticsLoadedState,
+            onSessionClick = {},
+        )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Analytics - Empty", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun AnalyticsScreenEmptyPreview() {
+    HealthTheme {
+        AnalyticsContent(
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.analyticsEmptyState,
+            onSessionClick = {},
+        )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Analytics - Loading", showBackground = true, widthDp = 360, heightDp = 640
+)
+@Composable
+private fun AnalyticsScreenLoadingPreview() {
+    HealthTheme {
+        AnalyticsContent(
+            uiState = com.gomaa.healthy.presentation.ui.PreviewData.analyticsLoadingState,
+            onSessionClick = {},
+        )
+    }
 }
