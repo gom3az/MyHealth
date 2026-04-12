@@ -9,7 +9,8 @@ data class DailySteps(
     val activeMinutes: Int,
     val lightActivityMinutes: Int,
     val moderateActivityMinutes: Int,
-    val vigorousActivityMinutes: Int
+    val vigorousActivityMinutes: Int,
+    val source: StepSource = StepSource.MY_HEALTH
 )
 
 sealed class GoalType {
@@ -60,3 +61,19 @@ data class DeviceInfo(
 enum class HeartRateZone {
     REST, LOW, MODERATE, HIGH, VERY_HIGH
 }
+
+enum class StepSource {
+    MY_HEALTH,
+    HEALTH_CONNECT
+}
+
+data class StepsWithSource(
+    val source: StepSource,
+    val steps: Int
+)
+
+data class CombinedSteps(
+    val totalSteps: Int,
+    val myHealthSteps: Int,
+    val healthConnectSteps: Int
+)

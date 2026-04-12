@@ -2,6 +2,7 @@ package com.gomaa.healthy.presentation.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gomaa.healthy.domain.model.CombinedSteps
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
@@ -11,6 +12,7 @@ import com.gomaa.healthy.domain.usecase.ConnectWearableUseCase
 import com.gomaa.healthy.domain.usecase.DisconnectWearableUseCase
 import com.gomaa.healthy.domain.usecase.GetActiveGoalsUseCase
 import com.gomaa.healthy.domain.usecase.GetAvailableProvidersUseCase
+import com.gomaa.healthy.domain.usecase.GetCombinedStepsUseCase
 import com.gomaa.healthy.domain.usecase.GetDailyStepsUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
 import com.gomaa.healthy.domain.usecase.HasAvailableDevicesUseCase
@@ -28,6 +30,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
+enum class StepSourceFilter {
+    ALL, MY_HEALTH, HEALTH_CONNECT
+}
+
 data class HomeUiState(
     val isLoading: Boolean = false,
     val heartRate: Int = 0,
@@ -38,7 +44,10 @@ data class HomeUiState(
     val recentSessions: List<ExerciseSession> = emptyList(),
     val todaySteps: DailySteps? = null,
     val activeGoals: List<FitnessGoal> = emptyList(),
-    val stepGoalProgress: Float = 0f
+    val stepGoalProgress: Float = 0f,
+    val stepSourceFilter: StepSourceFilter = StepSourceFilter.ALL,
+    val combinedSteps: CombinedSteps = CombinedSteps(0, 0, 0),
+    val healthConnectAvailable: Boolean = false
 )
 
 sealed class HomeIntent {
@@ -48,6 +57,7 @@ sealed class HomeIntent {
     data class OnSwitchProvider(val brand: String) : HomeIntent()
     data object OnConnect : HomeIntent()
     data object OnDisconnect : HomeIntent()
+    data class OnFilterChanged(val filter: StepSourceFilter) : HomeIntent()
 }
 
 sealed class HomeEffect {
@@ -65,7 +75,8 @@ class HomeViewModel @Inject constructor(
     private val disconnectWearableUseCase: DisconnectWearableUseCase,
     private val getSessionsUseCase: GetSessionsUseCase,
     private val getDailyStepsUseCase: GetDailyStepsUseCase,
-    private val getActiveGoalsUseCase: GetActiveGoalsUseCase
+    private val getActiveGoalsUseCase: GetActiveGoalsUseCase,
+    private val getCombinedStepsUseCase: GetCombinedStepsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -90,7 +101,12 @@ class HomeViewModel @Inject constructor(
             is HomeIntent.OnSwitchProvider -> switchProvider(intent.brand)
             is HomeIntent.OnConnect -> connect()
             is HomeIntent.OnDisconnect -> disconnect()
+            is HomeIntent.OnFilterChanged -> updateFilter(intent.filter)
         }
+    }
+
+    private fun updateFilter(filter: StepSourceFilter) {
+        _uiState.value = _uiState.value.copy(stepSourceFilter = filter)
     }
 
     private fun loadInitialData() {
@@ -106,15 +122,26 @@ class HomeViewModel @Inject constructor(
                 val todaySteps = getDailyStepsUseCase(LocalDate.now())
                 _uiState.value = _uiState.value.copy(todaySteps = todaySteps)
 
+                // Get combined steps from both sources
+                val combinedSteps = getCombinedStepsUseCase(LocalDate.now())
+                _uiState.value = _uiState.value.copy(combinedSteps = combinedSteps)
+
                 val goals = getActiveGoalsUseCase()
                 _uiState.value = _uiState.value.copy(activeGoals = goals)
 
+                // Calculate progress based on combined steps
                 val stepGoal = goals.find { it.type is GoalType.Steps }
+                val totalSteps = combinedSteps.totalSteps
                 if (todaySteps != null && stepGoal != null) {
                     val target = (stepGoal.type as GoalType.Steps).target
-                    val progress = if (target > 0) todaySteps.totalSteps.toFloat() / target else 0f
+                    val progress = if (target > 0) totalSteps.toFloat() / target else 0f
                     _uiState.value = _uiState.value.copy(stepGoalProgress = progress.coerceIn(0f, 1f))
                 }
+
+                // Check if Health Connect has data
+                val healthConnectAvailable = combinedSteps.healthConnectSteps > 0
+                _uiState.value =
+                    _uiState.value.copy(healthConnectAvailable = healthConnectAvailable)
 
                 _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {

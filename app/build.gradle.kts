@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.room.runtime)
@@ -67,6 +68,11 @@ dependencies {
     implementation(libs.wearengine)
     // DataStore Preferences
     implementation(libs.datastore.preferences)
+    // Health Connect
+    implementation(libs.health.connect.client)
+    // WorkManager for background sync
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

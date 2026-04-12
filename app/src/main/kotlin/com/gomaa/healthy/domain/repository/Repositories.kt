@@ -11,6 +11,7 @@ interface StepRepository {
     suspend fun getDailySteps(date: LocalDate): DailySteps?
     suspend fun getDailyStepsRange(startDate: LocalDate, endDate: LocalDate): List<DailySteps>
     suspend fun getRecentDays(days: Int): List<DailySteps>
+    suspend fun getHealthConnectTotalSteps(date: LocalDate): Int
 }
 
 interface GoalRepository {

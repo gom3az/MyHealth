@@ -2,6 +2,7 @@ package com.gomaa.healthy.data.repository
 
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.GoalDao
+import com.gomaa.healthy.data.local.dao.HealthConnectStepsDao
 import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toEntity
 import com.gomaa.healthy.domain.model.DailySteps
@@ -12,7 +13,8 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 class StepRepositoryImpl @Inject constructor(
-    private val dailyStepsDao: DailyStepsDao
+    private val dailyStepsDao: DailyStepsDao,
+    private val healthConnectStepsDao: HealthConnectStepsDao
 ) : StepRepository {
 
     override suspend fun saveDailySteps(dailySteps: DailySteps) {
@@ -30,6 +32,13 @@ class StepRepositoryImpl @Inject constructor(
 
     override suspend fun getRecentDays(days: Int): List<DailySteps> {
         return dailyStepsDao.getRecent(days).map { it.toDomain() }
+    }
+
+    override suspend fun getHealthConnectTotalSteps(date: LocalDate): Int {
+        val startOfDay = date.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC) * 1000
+        val endOfDay =
+            date.plusDays(1).atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC) * 1000
+        return healthConnectStepsDao.getTotalStepsByDateRange(startOfDay, endOfDay) ?: 0
     }
 }
 

@@ -38,7 +38,9 @@ data class ExerciseSessionEntity(
     val avgHeartRate: Int,
     val maxHeartRate: Int,
     val minHeartRate: Int,
-    val deviceBrand: String
+    val deviceBrand: String,
+    val source: String = "myhealth", // "myhealth" or "health_connect"
+    val healthConnectRecordId: String? = null // Original HC record ID for deduplication
 )
 
 @Entity(tableName = "heart_rates")
@@ -48,6 +50,30 @@ data class HeartRateEntity(
     val sessionId: String,
     val timestamp: Long,
     val bpm: Int
+)
+
+@Entity(tableName = "health_connect_steps")
+data class HealthConnectStepEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val count: Int,
+    val startTime: Long,
+    val endTime: Long,
+    val healthConnectRecordId: String, // Original HC record ID
+    val importedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "health_connect_exercise_sessions")
+data class HealthConnectExerciseSessionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val startTime: Long,
+    val endTime: Long,
+    val exerciseType: String,
+    val durationMinutes: Int,
+    val caloriesBurned: Int?,
+    val healthConnectRecordId: String,
+    val importedAt: Long = System.currentTimeMillis()
 )
 
 class Converters {

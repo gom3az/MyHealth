@@ -7,7 +7,10 @@ import androidx.room.Query
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
+import com.gomaa.healthy.data.local.entity.HealthConnectExerciseSessionEntity
+import com.gomaa.healthy.data.local.entity.HealthConnectStepEntity
 import com.gomaa.healthy.data.local.entity.HeartRateEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DailyStepsDao {
@@ -91,4 +94,55 @@ interface HeartRateDao {
 
     @Query("DELETE FROM heart_rates")
     suspend fun deleteAll()
+}
+
+@Dao
+interface HealthConnectStepsDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(steps: List<HealthConnectStepEntity>)
+
+    @Query("SELECT * FROM health_connect_steps ORDER BY startTime DESC")
+    fun getAllSteps(): Flow<List<HealthConnectStepEntity>>
+
+    @Query("SELECT * FROM health_connect_steps WHERE startTime >= :startTime AND endTime <= :endTime ORDER BY startTime DESC")
+    fun getStepsByDateRange(startTime: Long, endTime: Long): Flow<List<HealthConnectStepEntity>>
+
+    @Query("SELECT * FROM health_connect_steps WHERE healthConnectRecordId = :recordId LIMIT 1")
+    suspend fun getByRecordId(recordId: String): HealthConnectStepEntity?
+
+    @Query("SELECT SUM(count) FROM health_connect_steps")
+    suspend fun getTotalSteps(): Int?
+
+    @Query("SELECT SUM(count) FROM health_connect_steps WHERE startTime >= :startTime AND endTime <= :endTime")
+    suspend fun getTotalStepsByDateRange(startTime: Long, endTime: Long): Int?
+
+    @Query("DELETE FROM health_connect_steps")
+    suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM health_connect_steps")
+    suspend fun getStepCount(): Int
+}
+
+@Dao
+interface HealthConnectExerciseSessionDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(sessions: List<HealthConnectExerciseSessionEntity>)
+
+    @Query("SELECT * FROM health_connect_exercise_sessions ORDER BY startTime DESC")
+    fun getAllSessions(): Flow<List<HealthConnectExerciseSessionEntity>>
+
+    @Query("SELECT * FROM health_connect_exercise_sessions WHERE startTime >= :startTime AND endTime <= :endTime ORDER BY startTime DESC")
+    fun getSessionsByDateRange(
+        startTime: Long,
+        endTime: Long
+    ): Flow<List<HealthConnectExerciseSessionEntity>>
+
+    @Query("SELECT * FROM health_connect_exercise_sessions WHERE healthConnectRecordId = :recordId LIMIT 1")
+    suspend fun getByRecordId(recordId: String): HealthConnectExerciseSessionEntity?
+
+    @Query("DELETE FROM health_connect_exercise_sessions")
+    suspend fun deleteAll()
+
+    @Query("SELECT COUNT(*) FROM health_connect_exercise_sessions")
+    suspend fun getSessionCount(): Int
 }

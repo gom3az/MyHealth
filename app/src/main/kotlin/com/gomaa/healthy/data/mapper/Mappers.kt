@@ -11,6 +11,7 @@ import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.model.HeartRateRecord
+import com.gomaa.healthy.domain.model.StepSource
 import java.time.LocalDate
 
 // DailySteps Mappers
@@ -22,7 +23,8 @@ fun DailyStepsEntity.toDomain(): DailySteps {
         activeMinutes = activeMinutes,
         lightActivityMinutes = lightActivityMinutes,
         moderateActivityMinutes = moderateActivityMinutes,
-        vigorousActivityMinutes = vigorousActivityMinutes
+        vigorousActivityMinutes = vigorousActivityMinutes,
+        source = StepSource.MY_HEALTH
     )
 }
 

@@ -2,43 +2,124 @@
 
 package com.gomaa.healthy.presentation.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+
+private const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
 
 @Composable
 fun SettingsScreen(
-    onNavigateToGoals: () -> Unit
+    onNavigateToGoals: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Settings") })
-    }) { innerPadding ->
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { grantedPermissions ->
+        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
+    }
+
+    fun requestHealthConnectPermissions() {
+        Log.d("SettingsScreen", "BUTTON CLICKED!")
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage(HEALTH_CONNECT_PACKAGE)
+            if (intent != null) {
+                Log.d("SettingsScreen", "Direct launch intent found, starting")
+                context.startActivity(intent)
+            } else {
+                Log.d("SettingsScreen", "No direct intent, trying market")
+                val marketIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
+                }
+                context.startActivity(marketIntent)
+            }
+        } catch (e: Exception) {
+            Log.e("SettingsScreen", "Error: ${e.message}", e)
+            try {
+                val marketIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
+                }
+                context.startActivity(marketIntent)
+            } catch (e2: Exception) {
+                Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
+    }
+
+    LaunchedEffect(state.isConnected) {
+        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
+    }
+
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.processIntent(SettingsIntent.ClearError)
+        }
+    }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Settings") }) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-
             item {
                 SettingsItem(
                     title = "Goals",
@@ -46,6 +127,256 @@ fun SettingsScreen(
                     icon = "🎯",
                     onClick = onNavigateToGoals
                 )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                HealthConnectSection(
+                    isLoading = state.isLoading,
+                    isAvailable = state.isAvailable,
+                    isConnected = state.isConnected,
+                    stepCount = state.stepCount,
+                    exerciseSessionCount = state.exerciseSessionCount,
+                    lastSyncTime = state.lastSyncTime,
+                    isSyncing = state.isSyncing,
+                    onConnect = {
+                        // Open Health Connect permission screen directly
+                        requestHealthConnectPermissions()
+                    },
+                    onSyncNow = { viewModel.processIntent(SettingsIntent.SyncNow) }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                ExportSection(
+                    hasHealthConnectData = state.stepCount > 0 || state.exerciseSessionCount > 0,
+                    onExport = { includeHealthConnect ->
+                        // Export functionality would be triggered here
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                "Export started - including Health Connect: $includeHealthConnect"
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ExportSection(
+    hasHealthConnectData: Boolean,
+    onExport: (Boolean) -> Unit
+) {
+    var showExportDialog by remember { mutableStateOf(false) }
+    var includeHealthConnect by remember { mutableStateOf(true) }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("Export Data") },
+            text = {
+                Column {
+                    Text("Select data to include in export:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { includeHealthConnect = true }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = includeHealthConnect,
+                            onClick = { includeHealthConnect = true })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("All data (MyHealth + Health Connect)")
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { includeHealthConnect = false }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = !includeHealthConnect,
+                            onClick = { includeHealthConnect = false })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("MyHealth data only")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onExport(includeHealthConnect)
+                    showExportDialog = false
+                }) {
+                    Text("Export CSV")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showExportDialog = true },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "📤",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.semantics { }
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Export Data",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Export your health data to CSV",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HealthConnectSection(
+    isLoading: Boolean = false,
+    isAvailable: Boolean,
+    isConnected: Boolean,
+    stepCount: Int,
+    exerciseSessionCount: Int,
+    lastSyncTime: Long?,
+    isSyncing: Boolean,
+    onConnect: () -> Unit,
+    onSyncNow: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🏥",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.semantics { }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Health Connect",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = if (isConnected) "Connected" else "Not connected",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isConnected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isAvailable) {
+                Text(
+                    text = "Health Connect app is not installed. Install it to sync your health data.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(onClick = onConnect) {
+                    Text("Install Health Connect")
+                }
+            } else if (isConnected) {
+                // Connection details
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "$stepCount steps imported",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$exerciseSessionCount exercises imported",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    if (lastSyncTime != null) {
+                        val timeSince = (System.currentTimeMillis() - lastSyncTime) / 60000
+                        Text(
+                            text = if (timeSince < 1) "Just now" else "${timeSince}m ago",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = onSyncNow,
+                    enabled = !isSyncing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isSyncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Syncing...")
+                    } else {
+                        Text("Sync Now")
+                    }
+                }
+            } else {
+                Text(
+                    text = "Grant permissions to sync your health data from other apps.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) {
+                    Text("Connect to Health Connect")
+                }
             }
         }
     }

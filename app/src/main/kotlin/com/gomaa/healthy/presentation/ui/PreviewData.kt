@@ -1,5 +1,6 @@
 package com.gomaa.healthy.presentation.ui
 
+import com.gomaa.healthy.domain.model.CombinedSteps
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.DeviceInfo
@@ -14,6 +15,7 @@ import com.gomaa.healthy.presentation.ui.analytics.AnalyticsUiState
 import com.gomaa.healthy.presentation.ui.dashboard.DashboardUiState
 import com.gomaa.healthy.presentation.ui.goals.GoalsUiState
 import com.gomaa.healthy.presentation.ui.home.HomeUiState
+import com.gomaa.healthy.presentation.ui.home.StepSourceFilter
 import java.time.LocalDate
 
 /**
@@ -113,7 +115,10 @@ object PreviewData {
         recentSessions = recentSessions,
         todaySteps = todaySteps,
         activeGoals = activeGoals,
-        stepGoalProgress = 0.85f
+        stepGoalProgress = 0.85f,
+        stepSourceFilter = StepSourceFilter.ALL,
+        combinedSteps = CombinedSteps(12542, 8542, 4000),
+        healthConnectAvailable = true
     )
 
     val homeLoadingState = HomeUiState(
@@ -126,7 +131,10 @@ object PreviewData {
         recentSessions = emptyList(),
         todaySteps = null,
         activeGoals = emptyList(),
-        stepGoalProgress = 0f
+        stepGoalProgress = 0f,
+        stepSourceFilter = StepSourceFilter.ALL,
+        combinedSteps = CombinedSteps(0, 0, 0),
+        healthConnectAvailable = false
     )
 
     val homeDisconnectedState = homeLoadedState.copy(
@@ -145,7 +153,10 @@ object PreviewData {
         recentSessions = emptyList(),
         todaySteps = null,
         activeGoals = emptyList(),
-        stepGoalProgress = 0f
+        stepGoalProgress = 0f,
+        stepSourceFilter = StepSourceFilter.ALL,
+        combinedSteps = CombinedSteps(0, 0, 0),
+        healthConnectAvailable = false
     )
 
     // ========== Dashboard Screen Preview States ==========
