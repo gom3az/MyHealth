@@ -6,6 +6,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -134,7 +135,7 @@ fun HomeScreen(
 
 @Composable
 private fun HomeContent(
-    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    paddingValues: PaddingValues,
     uiState: HomeUiState,
     onProviderSelected: (String) -> Unit,
     onConnect: () -> Unit,
@@ -146,10 +147,10 @@ private fun HomeContent(
     onChangeProvider: () -> Unit = {}
 ) {
     LazyColumn(
+        contentPadding = paddingValues,
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -468,14 +469,10 @@ private fun getFilteredSteps(uiState: HomeUiState): Int {
 
 @Composable
 private fun HeartRateCard(
-    latestHeartRate: Int?,
-    lastUpdate: Long?,
-    isLoading: Boolean,
-    onClick: () -> Unit
+    latestHeartRate: Int?, lastUpdate: Long?, isLoading: Boolean, onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth(), onClick = onClick
     ) {
         Column(
             modifier = Modifier
@@ -488,8 +485,7 @@ private fun HeartRateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Heart Rate",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "Heart Rate", style = MaterialTheme.typography.titleMedium
                 )
                 Icon(
                     imageVector = Icons.Default.Favorite,

@@ -61,6 +61,7 @@ fun AppNavHost(
             navController = navController,
             startDestination = Screen.Home.route,
             modifier = Modifier
+                // .consumeWindowInsets(paddingValues)
                 .padding(bottom = paddingValues.calculateBottomPadding())
                 .fillMaxSize()
         ) {
