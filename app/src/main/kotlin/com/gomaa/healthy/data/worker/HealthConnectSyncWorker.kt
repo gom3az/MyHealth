@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.gomaa.healthy.data.repository.HealthConnectRepository
+import com.gomaa.healthy.data.repository.HealthConnectResult
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -18,21 +19,28 @@ class HealthConnectSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             // Check if Health Connect is available and has permissions
-            if (!healthConnectRepository.isAvailable()) {
+            val isAvailableResult = healthConnectRepository.isAvailable()
+            val isAvailable =
+                isAvailableResult is HealthConnectResult.Success && isAvailableResult.data
+
+            if (!isAvailable) {
                 return Result.failure()
             }
 
-            if (!healthConnectRepository.hasPermissions()) {
+            val hasPermsResult = healthConnectRepository.hasPermissions()
+            val hasPerms = hasPermsResult is HealthConnectResult.Success && hasPermsResult.data
+
+            if (!hasPerms) {
                 return Result.failure()
             }
 
             // Sync steps
             val stepsResult = healthConnectRepository.syncSteps()
-            val stepsSuccess = stepsResult.isSuccess
+            val stepsSuccess = stepsResult is HealthConnectResult.Success
 
             // Sync exercise sessions
             val exerciseResult = healthConnectRepository.syncExerciseSessions()
-            val exerciseSuccess = exerciseResult.isSuccess
+            val exerciseSuccess = exerciseResult is HealthConnectResult.Success
 
             // Return success if at least one sync succeeded
             if (stepsSuccess || exerciseSuccess) {

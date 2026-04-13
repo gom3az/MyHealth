@@ -48,9 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gomaa.healthy.data.repository.HealthConnectRepository
+import com.gomaa.healthy.data.repository.HealthConnectRepository.Companion.HEALTH_CONNECT_PACKAGE
 import kotlinx.coroutines.launch
-
-private const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
 
 @Composable
 fun SettingsScreen(
@@ -64,31 +64,26 @@ fun SettingsScreen(
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
-    ) { grantedPermissions ->
+    ) { _ ->
         viewModel.processIntent(SettingsIntent.CheckHealthConnect)
     }
 
     fun requestHealthConnectPermissions() {
-        Log.d("SettingsScreen", "BUTTON CLICKED!")
         try {
-            val intent = context.packageManager.getLaunchIntentForPackage(HEALTH_CONNECT_PACKAGE)
-            if (intent != null) {
-                Log.d("SettingsScreen", "Direct launch intent found, starting")
-                context.startActivity(intent)
-            } else {
-                Log.d("SettingsScreen", "No direct intent, trying market")
-                val marketIntent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
-                }
-                context.startActivity(marketIntent)
-            }
+            permissionLauncher.launch(HealthConnectRepository.PERMISSIONS)
         } catch (e: Exception) {
             Log.e("SettingsScreen", "Error: ${e.message}", e)
             try {
-                val marketIntent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
-                }
-                context.startActivity(marketIntent)
+                val uriString =
+                    "market://details?id=$HEALTH_CONNECT_PACKAGE&url=healthconnect%3A%2F%2Fonboarding"
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setPackage("com.android.vending")
+                        data = Uri.parse(uriString)
+                        putExtra("overlay", true)
+                        putExtra("callerId", context.packageName)
+                    }
+                )
             } catch (e2: Exception) {
                 Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
             }

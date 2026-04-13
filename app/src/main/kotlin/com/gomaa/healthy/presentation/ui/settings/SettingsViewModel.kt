@@ -3,6 +3,7 @@ package com.gomaa.healthy.presentation.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gomaa.healthy.data.repository.HealthConnectRepository
+import com.gomaa.healthy.data.repository.HealthConnectResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,8 +48,20 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            val isAvailable = healthConnectRepository.isAvailable()
-            val hasPerms = healthConnectRepository.hasPermissions()
+            val isAvailableResult = healthConnectRepository.isAvailable()
+            val hasPermsResult = healthConnectRepository.hasPermissions()
+
+            // Extract boolean values from HealthConnectResult
+            val isAvailable = when (val result = isAvailableResult) {
+                is HealthConnectResult.Success -> result.data
+                is HealthConnectResult.Error -> false
+            }
+
+            val hasPerms = when (val result = hasPermsResult) {
+                is HealthConnectResult.Success -> result.data
+                is HealthConnectResult.Error -> false
+            }
+
             val isConnected = isAvailable && hasPerms
             val stepCount = if (isConnected) healthConnectRepository.getStepCount() else 0
             val exerciseCount =
@@ -71,7 +84,11 @@ class SettingsViewModel @Inject constructor(
             val stepsResult = healthConnectRepository.syncSteps()
             val exerciseResult = healthConnectRepository.syncExerciseSessions()
 
-            if (stepsResult.isSuccess && exerciseResult.isSuccess) {
+            // Check if both results are successful using HealthConnectResult pattern matching
+            val stepsSuccess = stepsResult is HealthConnectResult.Success
+            val exerciseSuccess = exerciseResult is HealthConnectResult.Success
+
+            if (stepsSuccess && exerciseSuccess) {
                 _state.value = _state.value.copy(
                     isSyncing = false,
                     stepCount = healthConnectRepository.getStepCount(),
@@ -79,9 +96,12 @@ class SettingsViewModel @Inject constructor(
                     lastSyncTime = System.currentTimeMillis()
                 )
             } else {
-                val error = stepsResult.exceptionOrNull()?.message
-                    ?: exerciseResult.exceptionOrNull()?.message
-                    ?: "Unknown error"
+                // Extract error message from failed result
+                val error = when {
+                    stepsResult is HealthConnectResult.Error -> stepsResult.exception.message
+                    exerciseResult is HealthConnectResult.Error -> exerciseResult.exception.message
+                    else -> "Unknown error"
+                }
                 _state.value = _state.value.copy(
                     isSyncing = false,
                     errorMessage = error
