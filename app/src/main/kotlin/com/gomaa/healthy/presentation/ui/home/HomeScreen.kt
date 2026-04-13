@@ -1,8 +1,5 @@
 package com.gomaa.healthy.presentation.ui.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,25 +10,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -170,14 +162,6 @@ private fun HomeContent(
                 combinedSteps = uiState.combinedSteps,
                 selectedFilter = uiState.stepSourceFilter
             )
-        }
-
-        if (uiState.healthConnectAvailable && uiState.stepSourceFilter != StepSourceFilter.MY_HEALTH) {
-            item {
-                ExpandableStepsSection(
-                    combinedSteps = uiState.combinedSteps, selectedFilter = uiState.stepSourceFilter
-                )
-            }
         }
 
         item {
@@ -335,128 +319,6 @@ private fun StepsProgressCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableStepsSection(
-    combinedSteps: com.gomaa.healthy.domain.model.CombinedSteps, selectedFilter: StepSourceFilter
-) {
-    var myHealthExpanded by remember { mutableStateOf(false) }
-    var healthConnectExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
-    ) {
-        // MyHealth Section
-        Card(
-            modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
-        ) {
-            Column(modifier = Modifier.padding(Dimensions.spacingLarge)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsWalk,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.size(4.dp))
-                        Text(
-                            text = "MyHealth", style = MaterialTheme.typography.titleSmall
-                        )
-                    }
-                    Text(
-                        text = "%,d steps".format(combinedSteps.myHealthSteps),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                AnimatedVisibility(
-                    visible = myHealthExpanded,
-                    enter = expandVertically(),
-                    exit = shrinkVertically()
-                ) {
-                    Column(modifier = Modifier.padding(top = Dimensions.spacing)) {
-                        Text(
-                            text = "Steps tracked manually in MyHealth app",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                IconButton(
-                    onClick = { myHealthExpanded = !myHealthExpanded },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Icon(
-                        imageVector = if (myHealthExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (myHealthExpanded) "Collapse" else "Expand"
-                    )
-                }
-            }
-        }
-
-        // Health Connect Section
-        if (combinedSteps.healthConnectSteps > 0) {
-            Card(
-                modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
-                )
-            ) {
-                Column(modifier = Modifier.padding(Dimensions.spacingLarge)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.FitnessCenter,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary
-                            )
-                            Spacer(modifier = Modifier.size(4.dp))
-                            Text(
-                                text = "Health Connect", style = MaterialTheme.typography.titleSmall
-                            )
-                        }
-                        Text(
-                            text = "%,d steps".format(combinedSteps.healthConnectSteps),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = healthConnectExpanded,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column(modifier = Modifier.padding(top = Dimensions.spacing)) {
-                            Text(
-                                text = "Steps imported from Health Connect",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = { healthConnectExpanded = !healthConnectExpanded },
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Icon(
-                            imageVector = if (healthConnectExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (healthConnectExpanded) "Collapse" else "Expand"
-                        )
-                    }
                 }
             }
         }
