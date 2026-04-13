@@ -3,6 +3,7 @@ package com.gomaa.healthy.presentation.ui.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,11 +12,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +63,10 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var showProviderSwitchDialog by remember { mutableStateOf(false) }
+    var selectedNewProvider by remember { mutableStateOf<String?>(null) }
+    var showProviderSelectionDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
@@ -74,42 +85,6 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("MyHealth") })
-    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
-        HomeContent(
-            paddingValues = paddingValues,
-            uiState = uiState,
-            onProviderSelected = { viewModel.processIntent(HomeIntent.OnSelectProvider(it)) },
-            onSwitchProvider = { viewModel.processIntent(HomeIntent.OnSwitchProvider(it)) },
-            onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
-            onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
-            onNavigateToDashboard = onNavigateToDashboard,
-            onNavigateToGoals = onNavigateToGoals,
-            onRefresh = { viewModel.processIntent(HomeIntent.OnRefresh) },
-            onFilterChanged = { viewModel.processIntent(HomeIntent.OnFilterChanged(it)) })
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HomeContent(
-    paddingValues: androidx.compose.foundation.layout.PaddingValues,
-    uiState: HomeUiState,
-    onProviderSelected: (String) -> Unit,
-    onSwitchProvider: (String) -> Unit,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onNavigateToDashboard: () -> Unit,
-    onNavigateToGoals: () -> Unit,
-    onRefresh: () -> Unit,
-    onFilterChanged: (StepSourceFilter) -> Unit
-) {
-    var showProviderSwitchDialog by remember { mutableStateOf(false) }
-    var selectedNewProvider by remember { mutableStateOf<String?>(null) }
-    var showProviderSelectionDialog by remember { mutableStateOf(false) }
-
     if (showProviderSelectionDialog) {
         ProviderSelectionDialog(
             currentProvider = uiState.connectedDeviceBrand,
@@ -127,7 +102,7 @@ private fun HomeContent(
             currentProvider = uiState.connectedDeviceBrand ?: "",
             newProvider = selectedNewProvider ?: "",
             onConfirm = {
-                onSwitchProvider(selectedNewProvider!!)
+                viewModel.processIntent(HomeIntent.OnSwitchProvider(selectedNewProvider!!))
                 showProviderSwitchDialog = false
                 selectedNewProvider = null
             },
@@ -137,24 +112,51 @@ private fun HomeContent(
             })
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("MyHealth") })
-        }) { parentPaddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(parentPaddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text("MyHealth") })
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
+        HomeContent(
+            paddingValues = paddingValues,
+            uiState = uiState,
+            onProviderSelected = { viewModel.processIntent(HomeIntent.OnSelectProvider(it)) },
+            onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
+            onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
+            onNavigateToDashboard = onNavigateToDashboard,
+            onNavigateToGoals = onNavigateToGoals,
+            onFilterChanged = { viewModel.processIntent(HomeIntent.OnFilterChanged(it)) },
+            onChangeProvider = { showProviderSelectionDialog = true })
+    }
+}
+
+@Composable
+private fun HomeContent(
+    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    uiState: HomeUiState,
+    onProviderSelected: (String) -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToGoals: () -> Unit,
+    onFilterChanged: (StepSourceFilter) -> Unit,
+    onChangeProvider: () -> Unit = {}
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
             StepsFilterChips(
                 selectedFilter = uiState.stepSourceFilter,
                 onFilterChanged = onFilterChanged,
                 healthConnectAvailable = uiState.healthConnectAvailable
             )
+        }
 
+        item {
             StepsProgressCard(
                 steps = getFilteredSteps(uiState),
                 goalProgress = uiState.stepGoalProgress,
@@ -162,30 +164,40 @@ private fun HomeContent(
                 combinedSteps = uiState.combinedSteps,
                 selectedFilter = uiState.stepSourceFilter
             )
+        }
 
-            if (uiState.healthConnectAvailable && uiState.stepSourceFilter != StepSourceFilter.MY_HEALTH) {
+        if (uiState.healthConnectAvailable && uiState.stepSourceFilter != StepSourceFilter.MY_HEALTH) {
+            item {
                 ExpandableStepsSection(
-                    combinedSteps = uiState.combinedSteps,
-                    selectedFilter = uiState.stepSourceFilter
+                    combinedSteps = uiState.combinedSteps, selectedFilter = uiState.stepSourceFilter
                 )
             }
+        }
 
+        item {
             ConnectionStatusCard(uiState = uiState)
+        }
 
-            if (uiState.connectedDeviceBrand == null) {
+        if (uiState.connectedDeviceBrand == null) {
+            item {
                 ProviderSelectionCard(
                     availableProviders = uiState.availableProviders,
                     onProviderSelected = onProviderSelected
                 )
-            } else {
+            }
+        } else {
+            item {
                 ActionButtonRow(
                     isConnected = uiState.connectionState == ConnectionState.Connected,
                     onConnect = onConnect,
                     onDisconnect = onDisconnect,
                     onNavigateToDashboard = onNavigateToDashboard,
-                    onChangeProvider = { showProviderSelectionDialog = true })
+                    onChangeProvider = onChangeProvider
+                )
             }
+        }
 
+        item {
             RecentSessionsCard(sessions = uiState.recentSessions)
         }
     }
@@ -197,15 +209,17 @@ private fun StepsFilterChips(
     onFilterChanged: (StepSourceFilter) -> Unit,
     healthConnectAvailable: Boolean
 ) {
+    val scrollState = rememberScrollState()
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilterChip(
             selected = selectedFilter == StepSourceFilter.ALL,
             onClick = { onFilterChanged(StepSourceFilter.ALL) },
-            label = { Text("All") }
-        )
+            label = { Text("All") })
         FilterChip(
             selected = selectedFilter == StepSourceFilter.MY_HEALTH,
             onClick = { onFilterChanged(StepSourceFilter.MY_HEALTH) },
@@ -216,8 +230,7 @@ private fun StepsFilterChips(
                     contentDescription = null,
                     modifier = Modifier.height(18.dp)
                 )
-            }
-        )
+            })
         if (healthConnectAvailable) {
             FilterChip(
                 selected = selectedFilter == StepSourceFilter.HEALTH_CONNECT,
@@ -229,8 +242,7 @@ private fun StepsFilterChips(
                         contentDescription = null,
                         modifier = Modifier.height(18.dp)
                     )
-                }
-            )
+                })
         }
     }
 }
@@ -313,8 +325,7 @@ private fun StepsProgressCard(
 
 @Composable
 private fun ExpandableStepsSection(
-    combinedSteps: com.gomaa.healthy.domain.model.CombinedSteps,
-    selectedFilter: StepSourceFilter
+    combinedSteps: com.gomaa.healthy.domain.model.CombinedSteps, selectedFilter: StepSourceFilter
 ) {
     var myHealthExpanded by remember { mutableStateOf(false) }
     var healthConnectExpanded by remember { mutableStateOf(false) }
@@ -324,8 +335,7 @@ private fun ExpandableStepsSection(
     ) {
         // MyHealth Section
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
+            modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
         ) {
@@ -341,10 +351,9 @@ private fun ExpandableStepsSection(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.padding(4.dp))
+                        Spacer(modifier = Modifier.size(4.dp))
                         Text(
-                            text = "MyHealth",
-                            style = MaterialTheme.typography.titleSmall
+                            text = "MyHealth", style = MaterialTheme.typography.titleSmall
                         )
                     }
                     Text(
@@ -381,8 +390,7 @@ private fun ExpandableStepsSection(
         // Health Connect Section
         if (combinedSteps.healthConnectSteps > 0) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
+                modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
                 )
             ) {
@@ -398,10 +406,9 @@ private fun ExpandableStepsSection(
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
-                            Spacer(modifier = Modifier.padding(4.dp))
+                            Spacer(modifier = Modifier.size(4.dp))
                             Text(
-                                text = "Health Connect",
-                                style = MaterialTheme.typography.titleSmall
+                                text = "Health Connect", style = MaterialTheme.typography.titleSmall
                             )
                         }
                         Text(
@@ -447,42 +454,6 @@ private fun getFilteredSteps(uiState: HomeUiState): Int {
 }
 
 @Composable
-private fun StepsProgressCard(
-    steps: Int, goalProgress: Float, onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), onClick = onClick
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Today's Steps", style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "%,d".format(steps),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            androidx.compose.material3.LinearProgressIndicator(
-                progress = { goalProgress },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${(goalProgress * 100).toInt()}% of daily goal",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 private fun ConnectionStatusCard(uiState: HomeUiState) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -508,24 +479,26 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             ) {
                 val (icon, text, color) = when (uiState.connectionState) {
                     ConnectionState.Connected -> Triple(
-                        "●", "Connected", MaterialTheme.colorScheme.primary
+                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.primary
                     )
 
                     ConnectionState.Connecting -> Triple(
-                        "○", "Connecting...", MaterialTheme.colorScheme.tertiary
+                        Icons.Default.Refresh, "Connecting...", MaterialTheme.colorScheme.tertiary
                     )
 
                     ConnectionState.Disconnected -> Triple(
-                        "○", "Disconnected", MaterialTheme.colorScheme.outline
+                        Icons.Default.Refresh, "Disconnected", MaterialTheme.colorScheme.outline
                     )
 
                     is ConnectionState.Error -> Triple(
-                        "!",
+                        Icons.Default.Error,
                         "Error: ${uiState.connectionState.message}",
                         MaterialTheme.colorScheme.error
                     )
                 }
-                Text(text = icon, color = color)
+                Icon(
+                    imageVector = icon, contentDescription = null, tint = color
+                )
                 Text(text = text, color = color)
             }
             uiState.connectedDeviceBrand?.let { brand ->
@@ -704,10 +677,7 @@ private fun SwitchProviderConfirmationDialog(
 // ========== Compose Previews ==========
 
 @androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Loaded",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 640
+    name = "Home - Loaded", showBackground = true, widthDp = 360, heightDp = 640
 )
 @Composable
 private fun HomeScreenLoadedPreview() {
@@ -716,22 +686,16 @@ private fun HomeScreenLoadedPreview() {
             paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeLoadedState,
             onProviderSelected = {},
-            onSwitchProvider = {},
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
-            onRefresh = {},
-            onFilterChanged = {}
-        )
+            onFilterChanged = {})
     }
 }
 
 @androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Disconnected",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 640
+    name = "Home - Disconnected", showBackground = true, widthDp = 360, heightDp = 640
 )
 @Composable
 private fun HomeScreenDisconnectedPreview() {
@@ -740,22 +704,16 @@ private fun HomeScreenDisconnectedPreview() {
             paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeDisconnectedState,
             onProviderSelected = {},
-            onSwitchProvider = {},
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
-            onRefresh = {},
-            onFilterChanged = {}
-        )
+            onFilterChanged = {})
     }
 }
 
 @androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Empty",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 640
+    name = "Home - Empty", showBackground = true, widthDp = 360, heightDp = 640
 )
 @Composable
 private fun HomeScreenEmptyPreview() {
@@ -764,13 +722,10 @@ private fun HomeScreenEmptyPreview() {
             paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeEmptyState,
             onProviderSelected = {},
-            onSwitchProvider = {},
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
-            onRefresh = {},
-            onFilterChanged = {}
-        )
+            onFilterChanged = {})
     }
 }
