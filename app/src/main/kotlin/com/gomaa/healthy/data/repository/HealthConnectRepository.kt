@@ -6,13 +6,17 @@ import androidx.core.content.edit
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import com.gomaa.healthy.data.local.dao.HealthConnectExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HealthConnectStepsDao
-import com.gomaa.healthy.data.local.entity.HealthConnectExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HealthConnectStepEntity
+import com.gomaa.healthy.data.local.dao.DailyStepsDao
+import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
+import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.local.entity.DailyStepsEntity
+import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
+import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
+import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -21,6 +25,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -56,86 +63,20 @@ interface HealthConnectRepositoryInterface {
     suspend fun hasPermissions(): HealthConnectResult<Boolean>
     suspend fun syncSteps(): HealthConnectResult<Int>
     suspend fun syncExerciseSessions(): HealthConnectResult<Int>
+    suspend fun syncHeartRates(): HealthConnectResult<Int>
     suspend fun getStepCount(): Int
     suspend fun getExerciseSessionCount(): Int
+    suspend fun getHeartRateCount(): Int
 }
 
-/**
- * Enum representing different exercise types from Health Connect.
- */
-enum class ExerciseType(val displayName: String) {
-    EXERCISE("Exercise"),
-    RUNNING("Running"),
-    CYCLING("Cycling"),
-    SWIMMING("Swimming"),
-    WALKING("Walking"),
-    HIKING("Hiking"),
-    YOGA("Yoga"),
-    SPORTS("Sports"),
-    OTHER("Other")
-}
-
-/** Milliseconds per minute for duration calculations */
-private const val MILLIS_PER_MINUTE = 60_000L
-
-/**
- * Data class for sync operation result containing count and latest record timestamp.
- */
 data class SyncResult(val newRecordsCount: Int, val latestRecordTime: Long?)
-
-/**
- * Pure function to map StepsRecord to HealthConnectStepEntity.
- * Extracted from repository for single responsibility.
- */
-fun mapStepsRecordToEntity(record: StepsRecord): HealthConnectStepEntity {
-    return HealthConnectStepEntity(
-        count = record.count.toInt(),
-        startTime = record.startTime.toEpochMilli(),
-        endTime = record.endTime.toEpochMilli(),
-        healthConnectRecordId = record.metadata.id
-    )
-}
-
-/**
- * Pure function to map ExerciseSessionRecord to HealthConnectExerciseSessionEntity.
- * Extracted from repository for single responsibility.
- */
-fun mapExerciseSessionToEntity(record: ExerciseSessionRecord): HealthConnectExerciseSessionEntity {
-    val start = record.startTime.toEpochMilli()
-    val end = record.endTime.toEpochMilli()
-    val exerciseTypeName = mapExerciseSessionType(record.exerciseType)
-
-    return HealthConnectExerciseSessionEntity(
-        startTime = start,
-        endTime = end,
-        exerciseType = exerciseTypeName,
-        durationMinutes = ((end - start) / MILLIS_PER_MINUTE).toInt(),
-        caloriesBurned = null,
-        healthConnectRecordId = record.metadata.id
-    )
-}
-
-/**
- * Maps Health Connect exercise type to our ExerciseType enum.
- */
-private fun mapExerciseSessionType(hcType: Int): String {
-    return when (hcType) {
-        1 -> ExerciseType.RUNNING.displayName
-        2 -> ExerciseType.CYCLING.displayName
-        3 -> ExerciseType.SWIMMING.displayName
-        4 -> ExerciseType.WALKING.displayName
-        5 -> ExerciseType.HIKING.displayName
-        6 -> ExerciseType.YOGA.displayName
-        7 -> ExerciseType.SPORTS.displayName
-        else -> ExerciseType.OTHER.displayName
-    }
-}
 
 @Singleton
 class HealthConnectRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val healthConnectStepsDao: HealthConnectStepsDao,
-    private val healthConnectExerciseSessionDao: HealthConnectExerciseSessionDao
+    private val dailyStepsDao: DailyStepsDao,
+    private val heartRateDao: HeartRateDao,
+    private val exerciseSessionDao: ExerciseSessionDao
 ) : HealthConnectRepositoryInterface {
 
     companion object {
@@ -144,7 +85,9 @@ class HealthConnectRepository @Inject constructor(
         private val READ_EXERCISE = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
         private val WRITE_EXERCISE =
             HealthPermission.getWritePermission(ExerciseSessionRecord::class)
-        val PERMISSIONS = setOf(READ_STEPS, WRITE_STEPS, READ_EXERCISE, WRITE_EXERCISE)
+        private val READ_HEART_RATE = HealthPermission.getReadPermission(HeartRateRecord::class)
+        val PERMISSIONS =
+            setOf(READ_STEPS, WRITE_STEPS, READ_EXERCISE, WRITE_EXERCISE, READ_HEART_RATE)
 
         const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
 
@@ -152,6 +95,7 @@ class HealthConnectRepository @Inject constructor(
         private const val PREFS_NAME = "health_connect_sync"
         private const val KEY_LAST_STEPS_SYNC = "last_steps_sync"
         private const val KEY_LAST_EXERCISE_SYNC = "last_exercise_sync"
+        private const val KEY_LAST_HEART_RATE_SYNC = "last_heart_rate_sync"
 
         /** Retry configuration */
         private const val MAX_RETRY_ATTEMPTS = 3
@@ -248,9 +192,18 @@ class HealthConnectRepository @Inject constructor(
      * @return HealthConnectResult with number of new sessions synced
      */
     override suspend fun syncExerciseSessions(): HealthConnectResult<Int> {
+        // First check permissions
+        val permResult = hasPermissions()
+        if (permResult !is HealthConnectResult.Success || !permResult.data) {
+            return when (permResult) {
+                is HealthConnectResult.Success -> HealthConnectResult.Error.PermissionDenied
+                else -> permResult as HealthConnectResult.Error
+            }
+        }
+
         try {
             val lastSyncTime = getLastExerciseSyncTime()
-            val result = syncExerciseWithPagination(lastSyncTime)
+            val result = syncExerciseSessionsWithPagination(lastSyncTime)
 
             // Save last sync time
             if (result.newRecordsCount > 0) {
@@ -270,11 +223,104 @@ class HealthConnectRepository @Inject constructor(
     }
 
     /**
+     * Syncs exercise sessions with pagination support.
+     */
+    private suspend fun syncExerciseSessionsWithPagination(lastSyncTime: Long?): SyncResult {
+        val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
+
+        var totalNewRecords = 0
+        var latestRecordTime: Long? = null
+        var pageToken: String? = null
+
+        do {
+            if (!currentCoroutineContext().isActive) {
+                throw CancellationException("Sync operation cancelled")
+            }
+
+            val request = ReadRecordsRequest(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.after(startTime),
+                pageToken = pageToken
+            )
+
+            val response = executeWithRetry {
+                healthConnectClient.readRecords(request)
+            }
+            val records = response.records
+
+            // Convert to entities with deduplication using mapper
+            val entities = records.mapNotNull { record ->
+                val recordId = record.metadata.id
+                // Check if already exists
+                val existing = exerciseSessionDao.getByHealthConnectRecordId(
+                    SOURCE_HEALTH_CONNECT,
+                    recordId
+                )
+                if (existing != null) {
+                    null
+                } else {
+                    mapExerciseSessionRecordToEntity(record, recordId)
+                }
+            }
+
+            if (entities.isNotEmpty()) {
+                entities.forEach { exerciseSessionDao.insert(it) }
+                totalNewRecords += entities.size
+
+                val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
+                if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
+                    latestRecordTime = maxEndTime
+                }
+            }
+
+            pageToken = response.pageToken
+        } while (pageToken != null)
+
+        return SyncResult(totalNewRecords, latestRecordTime)
+    }
+
+    /**
+     * Syncs heart rate data from Health Connect to local database with pagination support.
+     * Only fetches records newer than last sync time.
+     * HC-065: Check hasPermissions() before sync
+     * @return HealthConnectResult with number of new heart rate records synced
+     */
+    override suspend fun syncHeartRates(): HealthConnectResult<Int> {
+        // First check permissions
+        val permResult = hasPermissions()
+        if (permResult !is HealthConnectResult.Success || !permResult.data) {
+            return when (permResult) {
+                is HealthConnectResult.Success -> HealthConnectResult.Error.PermissionDenied
+                else -> permResult as HealthConnectResult.Error
+            }
+        }
+
+        try {
+            val lastSyncTime = getLastHeartRateSyncTime()
+            val result = syncHeartRatesWithPagination(lastSyncTime)
+
+            // Save last sync time
+            if (result.newRecordsCount > 0) {
+                saveLastHeartRateSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
+            }
+
+            return HealthConnectResult.Success(result.newRecordsCount)
+        } catch (_: PackageManager.NameNotFoundException) {
+            return HealthConnectResult.Error.NotAvailable
+        } catch (_: SecurityException) {
+            return HealthConnectResult.Error.PermissionDenied
+        } catch (_: IOException) {
+            return HealthConnectResult.Error.NetworkError
+        } catch (_: Exception) {
+            return HealthConnectResult.Error.Unknown
+        }
+    }
+
+    /**
      * Supports cancellation via coroutine's isActive check.
      */
     private suspend fun <T> executeWithRetry(
-        maxAttempts: Int = MAX_RETRY_ATTEMPTS,
-        operation: suspend () -> T
+        maxAttempts: Int = MAX_RETRY_ATTEMPTS, operation: suspend () -> T
     ): T {
         var lastException: Exception? = null
         var currentDelay = INITIAL_RETRY_DELAY_MS
@@ -290,8 +336,7 @@ class HealthConnectRepository @Inject constructor(
                 lastException = e
                 // Don't retry on certain exceptions
                 when (e) {
-                    is SecurityException,
-                    is PackageManager.NameNotFoundException -> throw e
+                    is SecurityException, is PackageManager.NameNotFoundException -> throw e
                 }
 
                 // Exponential backoff, capped at max delay
@@ -306,8 +351,8 @@ class HealthConnectRepository @Inject constructor(
     }
 
     /**
-     * Syncs steps with pagination support using generic approach.
-     * Shares common pagination logic with exercise sessions.
+     * Syncs steps with pagination support using unified DailyStepsEntity.
+     * Groups steps by date and aggregates.
      */
     private suspend fun syncStepsWithPagination(lastSyncTime: Long?): SyncResult {
         val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
@@ -333,21 +378,33 @@ class HealthConnectRepository @Inject constructor(
             }
             val records = response.records
 
-            // Filter duplicates using null-safe check
-            val newRecords = records.filter { record ->
-                // getByRecordId returns nullable type, use explicit == null check as required by Room
-                healthConnectStepsDao.getByRecordId(record.metadata.id) == null
+            // Group by date to aggregate steps
+            val stepsByDate = records.groupBy { record ->
+                Instant.ofEpochMilli(record.startTime.toEpochMilli()).atZone(ZoneId.systemDefault())
+                    .toLocalDate().toEpochDay()
             }
 
-            // Map to entities
-            val entities = newRecords.map { mapStepsRecordToEntity(it) }
+            // Convert to DailyStepsEntity with source
+            val entities = stepsByDate.map { (date, recordsForDate) ->
+                val totalSteps = recordsForDate.sumOf { it.count }.toInt()
+                DailyStepsEntity(
+                    date = date,
+                    totalSteps = totalSteps,
+                    totalDistanceMeters = 0.0,
+                    activeMinutes = 0,
+                    lightActivityMinutes = 0,
+                    moderateActivityMinutes = 0,
+                    vigorousActivityMinutes = 0,
+                    source = SOURCE_HEALTH_CONNECT
+                )
+            }
 
-            // Insert and track
+            // Insert aggregated steps (composite key handles duplicates for same date/source)
             if (entities.isNotEmpty()) {
-                healthConnectStepsDao.insertAll(entities)
+                dailyStepsDao.insertAll(entities)
                 totalNewRecords += entities.size
 
-                val maxEndTime = newRecords.maxOfOrNull { it.endTime.toEpochMilli() }
+                val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
                 if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
                     latestRecordTime = maxEndTime
                 }
@@ -360,24 +417,30 @@ class HealthConnectRepository @Inject constructor(
     }
 
     /**
-     * Syncs exercise sessions with pagination support using generic approach.
-     * Shares common pagination logic with steps.
+     * Syncs heart rates with pagination support using unified HeartRateEntity.
+     * HC-059: Query ALL existing record IDs for proper deduplication
+     * HC-066: Use UUID.randomUUID() for recordId to prevent collisions
      */
-    private suspend fun syncExerciseWithPagination(lastSyncTime: Long?): SyncResult {
-        val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
+    private suspend fun syncHeartRatesWithPagination(lastSyncTime: Long?): SyncResult {
+        // Default to last 30 days on first sync to avoid importing massive historical data
+        val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.now()
+            .minus(30, java.time.temporal.ChronoUnit.DAYS)
 
         var totalNewRecords = 0
         var latestRecordTime: Long? = null
         var pageToken: String? = null
+
+        // Query all existing record IDs for deduplication
+        val existingRecordIds =
+            heartRateDao.getAllRecordIdsBySource(SOURCE_HEALTH_CONNECT).toSet()
 
         do {
             if (!currentCoroutineContext().isActive) {
                 throw CancellationException("Sync operation cancelled")
             }
 
-            // Read page of exercise session records with retry
             val request = ReadRecordsRequest(
-                recordType = ExerciseSessionRecord::class,
+                recordType = HeartRateRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
                 pageToken = pageToken
             )
@@ -387,22 +450,25 @@ class HealthConnectRepository @Inject constructor(
             }
             val records = response.records
 
-            // Filter duplicates
-            val newRecords = records.filter { record ->
-                healthConnectExerciseSessionDao.getByRecordId(record.metadata.id) == null
+            // Convert to entities with UUID record ID for deduplication
+            // HC-066: Use UUID instead of timestamp to prevent collisions
+            val entities = records.flatMap { record ->
+                val recordId = UUID.randomUUID().toString()
+                mapHeartRateRecordToEntity(record, recordId, SOURCE_HEALTH_CONNECT)
             }
 
-            // Map to entities
-            val entities = newRecords.map { mapExerciseSessionToEntity(it) }
+            // Filter out duplicates using healthConnectRecordId
+            val newEntities = entities.filter { it.healthConnectRecordId !in existingRecordIds }
 
-            // Insert and track
-            if (entities.isNotEmpty()) {
-                healthConnectExerciseSessionDao.insertAll(entities)
-                totalNewRecords += entities.size
+            // Insert new records (with IGNORE strategy - no overwrite)
+            if (newEntities.isNotEmpty()) {
+                heartRateDao.insertAll(newEntities)
+                totalNewRecords += newEntities.size
 
-                val maxEndTime = newRecords.maxOfOrNull { it.endTime.toEpochMilli() }
-                if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
-                    latestRecordTime = maxEndTime
+                val maxMeasurementTime =
+                    records.flatMap { it.samples }.maxOfOrNull { it.time.toEpochMilli() }
+                if (maxMeasurementTime != null && (latestRecordTime == null || maxMeasurementTime > latestRecordTime)) {
+                    latestRecordTime = maxMeasurementTime
                 }
             }
 
@@ -421,6 +487,15 @@ class HealthConnectRepository @Inject constructor(
         sharedPreferences.edit { putLong(KEY_LAST_STEPS_SYNC, time) }
     }
 
+    private fun getLastHeartRateSyncTime(): Long? {
+        val time = sharedPreferences.getLong(KEY_LAST_HEART_RATE_SYNC, -1L)
+        return if (time == -1L) null else time
+    }
+
+    private fun saveLastHeartRateSyncTime(time: Long) {
+        sharedPreferences.edit { putLong(KEY_LAST_HEART_RATE_SYNC, time) }
+    }
+
     private fun getLastExerciseSyncTime(): Long? {
         val time = sharedPreferences.getLong(KEY_LAST_EXERCISE_SYNC, -1L)
         return if (time == -1L) null else time
@@ -431,11 +506,19 @@ class HealthConnectRepository @Inject constructor(
     }
 
     override suspend fun getStepCount(): Int {
-        return healthConnectStepsDao.getStepCount()
+        val steps = dailyStepsDao.getByDateAndSource(
+            LocalDate.now().toEpochDay(), SOURCE_HEALTH_CONNECT
+        )
+        return steps?.totalSteps ?: 0
     }
 
     override suspend fun getExerciseSessionCount(): Int {
-        return healthConnectExerciseSessionDao.getSessionCount()
+        return exerciseSessionDao.getBySource(SOURCE_HEALTH_CONNECT).size
     }
 
+    override suspend fun getHeartRateCount(): Int {
+        // Get all readings, not just latest
+        val allReadings = heartRateDao.getAllBySource(SOURCE_HEALTH_CONNECT)
+        return allReadings.size
+    }
 }

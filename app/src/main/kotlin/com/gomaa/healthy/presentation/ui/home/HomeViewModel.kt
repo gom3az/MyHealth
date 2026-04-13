@@ -14,6 +14,7 @@ import com.gomaa.healthy.domain.usecase.GetActiveGoalsUseCase
 import com.gomaa.healthy.domain.usecase.GetAvailableProvidersUseCase
 import com.gomaa.healthy.domain.usecase.GetCombinedStepsUseCase
 import com.gomaa.healthy.domain.usecase.GetDailyStepsUseCase
+import com.gomaa.healthy.domain.usecase.GetLatestHeartRateUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
 import com.gomaa.healthy.domain.usecase.HasAvailableDevicesUseCase
 import com.gomaa.healthy.domain.usecase.SelectWearableProviderUseCase
@@ -37,6 +38,9 @@ enum class StepSourceFilter {
 data class HomeUiState(
     val isLoading: Boolean = false,
     val heartRate: Int = 0,
+    val latestHeartRate: Int? = null,
+    val lastHeartRateUpdate: Long? = null,
+    val isLoadingHeartRate: Boolean = false,
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val connectedDeviceBrand: String? = null,
     val availableProviders: List<String> = emptyList(),
@@ -76,7 +80,8 @@ class HomeViewModel @Inject constructor(
     private val getSessionsUseCase: GetSessionsUseCase,
     private val getDailyStepsUseCase: GetDailyStepsUseCase,
     private val getActiveGoalsUseCase: GetActiveGoalsUseCase,
-    private val getCombinedStepsUseCase: GetCombinedStepsUseCase
+    private val getCombinedStepsUseCase: GetCombinedStepsUseCase,
+    private val getLatestHeartRateUseCase: GetLatestHeartRateUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -135,7 +140,8 @@ class HomeViewModel @Inject constructor(
                 if (todaySteps != null && stepGoal != null) {
                     val target = (stepGoal.type as GoalType.Steps).target
                     val progress = if (target > 0) totalSteps.toFloat() / target else 0f
-                    _uiState.value = _uiState.value.copy(stepGoalProgress = progress.coerceIn(0f, 1f))
+                    _uiState.value =
+                        _uiState.value.copy(stepGoalProgress = progress.coerceIn(0f, 1f))
                 }
 
                 // Check if Health Connect has data
@@ -143,10 +149,29 @@ class HomeViewModel @Inject constructor(
                 _uiState.value =
                     _uiState.value.copy(healthConnectAvailable = healthConnectAvailable)
 
+                // Load latest heart rate from database (including Health Connect)
+                loadLatestHeartRate()
+
                 _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 _effect.emit(HomeEffect.ShowError(e.message ?: "Unknown error"))
+            }
+        }
+    }
+
+    private fun loadLatestHeartRate() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHeartRate = true)
+            try {
+                val heartRate = getLatestHeartRateUseCase()
+                _uiState.value = _uiState.value.copy(
+                    latestHeartRate = heartRate?.bpm,
+                    lastHeartRateUpdate = heartRate?.timestamp,
+                    isLoadingHeartRate = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoadingHeartRate = false)
             }
         }
     }

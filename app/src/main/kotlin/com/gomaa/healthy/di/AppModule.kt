@@ -1,18 +1,19 @@
 package com.gomaa.healthy.di
 
 import android.content.Context
-import androidx.room.Room
 import com.gomaa.healthy.data.local.HealthDatabase
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.GoalDao
-import com.gomaa.healthy.data.local.dao.HealthConnectExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HealthConnectStepsDao
 import com.gomaa.healthy.data.local.dao.HeartRateDao
 import com.gomaa.healthy.data.repository.GoalRepositoryImpl
+import com.gomaa.healthy.data.repository.HealthConnectRepository
+import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
+import com.gomaa.healthy.data.repository.HeartRateRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
 import com.gomaa.healthy.data.repository.StepRepositoryImpl
 import com.gomaa.healthy.domain.repository.GoalRepository
+import com.gomaa.healthy.domain.repository.HeartRateRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
 import com.gomaa.healthy.domain.repository.StepRepository
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
@@ -31,11 +32,7 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HealthDatabase {
-        return Room.databaseBuilder(
-            context,
-            HealthDatabase::class.java,
-            "health_database"
-        ).build()
+        return HealthDatabase.getDatabase(context)
     }
 
     @Provides
@@ -61,18 +58,6 @@ object DatabaseModule {
     fun provideGoalDao(database: HealthDatabase): GoalDao {
         return database.goalDao()
     }
-
-    @Provides
-    @Singleton
-    fun provideHealthConnectStepsDao(database: HealthDatabase): HealthConnectStepsDao {
-        return database.healthConnectStepsDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideHealthConnectExerciseSessionDao(database: HealthDatabase): HealthConnectExerciseSessionDao {
-        return database.healthConnectExerciseSessionDao()
-    }
 }
 
 @Module
@@ -91,10 +76,9 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideStepRepository(
-        dailyStepsDao: DailyStepsDao,
-        healthConnectStepsDao: HealthConnectStepsDao
+        dailyStepsDao: DailyStepsDao
     ): StepRepository {
-        return StepRepositoryImpl(dailyStepsDao, healthConnectStepsDao)
+        return StepRepositoryImpl(dailyStepsDao)
     }
 
     @Provides
@@ -103,6 +87,22 @@ object RepositoryModule {
         goalDao: GoalDao
     ): GoalRepository {
         return GoalRepositoryImpl(goalDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHeartRateRepository(
+        heartRateDao: HeartRateDao
+    ): HeartRateRepository {
+        return HeartRateRepositoryImpl(heartRateDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHealthConnectRepository(
+        healthConnectRepository: HealthConnectRepository
+    ): HealthConnectRepositoryInterface {
+        return healthConnectRepository
     }
 }
 

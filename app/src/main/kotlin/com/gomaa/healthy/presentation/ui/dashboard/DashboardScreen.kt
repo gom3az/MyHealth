@@ -143,7 +143,7 @@ private fun DashboardContent(
 
         TrackingButton(
             isTracking = uiState.isTracking,
-            isConnected = uiState.connectionState == com.gomaa.healthy.domain.model.ConnectionState.Connected,
+            isConnected = uiState.connectionState == ConnectionState.Connected,
             onStart = onStartTracking,
             onStop = onStopTracking
         )
@@ -233,7 +233,7 @@ private fun StatItem(label: String, value: String) {
 
 @Composable
 private fun ConnectionStatusRow(
-    connectionState: com.gomaa.healthy.domain.model.ConnectionState, deviceBrand: String?
+    connectionState: ConnectionState, deviceBrand: String?
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

@@ -5,9 +5,9 @@ import android.util.Log
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.DeviceInfo
 import com.gomaa.healthy.domain.model.WearableProvider
+import com.huawei.wearengine.HiWear
 import com.huawei.wearengine.client.ServiceConnectionListener
 import com.huawei.wearengine.client.WearEngineClient
-import com.huawei.wearengine.HiWear
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -31,7 +31,8 @@ class HuaweiWearProvider @Inject constructor(
         }
     }
 
-    private val wearEngineClient: WearEngineClient = HiWear.getWearEngineClient(context, serviceConnectionListener)
+    private val wearEngineClient: WearEngineClient =
+        HiWear.getWearEngineClient(context, serviceConnectionListener)
 
     override fun heartRateFlow(): Flow<Int> = heartRateMonitor.heartRateFlow()
 

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -58,7 +59,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToDashboard: () -> Unit = {},
-    onNavigateToGoals: () -> Unit = {}
+    onNavigateToGoals: () -> Unit = {},
+    onNavigateToHeartRate: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -124,6 +126,7 @@ fun HomeScreen(
             onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
             onNavigateToDashboard = onNavigateToDashboard,
             onNavigateToGoals = onNavigateToGoals,
+            onNavigateToHeartRate = onNavigateToHeartRate,
             onFilterChanged = { viewModel.processIntent(HomeIntent.OnFilterChanged(it)) },
             onChangeProvider = { showProviderSelectionDialog = true })
     }
@@ -138,6 +141,7 @@ private fun HomeContent(
     onDisconnect: () -> Unit,
     onNavigateToDashboard: () -> Unit,
     onNavigateToGoals: () -> Unit,
+    onNavigateToHeartRate: () -> Unit,
     onFilterChanged: (StepSourceFilter) -> Unit,
     onChangeProvider: () -> Unit = {}
 ) {
@@ -172,6 +176,15 @@ private fun HomeContent(
                     combinedSteps = uiState.combinedSteps, selectedFilter = uiState.stepSourceFilter
                 )
             }
+        }
+
+        item {
+            HeartRateCard(
+                latestHeartRate = uiState.latestHeartRate,
+                lastUpdate = uiState.lastHeartRateUpdate,
+                isLoading = uiState.isLoadingHeartRate,
+                onClick = onNavigateToHeartRate
+            )
         }
 
         item {
@@ -454,6 +467,78 @@ private fun getFilteredSteps(uiState: HomeUiState): Int {
 }
 
 @Composable
+private fun HeartRateCard(
+    latestHeartRate: Int?,
+    lastUpdate: Long?,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Heart Rate",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else if (latestHeartRate != null) {
+                Text(
+                    text = "$latestHeartRate BPM",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                lastUpdate?.let { timestamp ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val timeFormat =
+                        java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                    Text(
+                        text = "Last updated: ${timeFormat.format(java.util.Date(timestamp))}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    text = "No heart rate data yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Sync from Health Connect to see readings",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ConnectionStatusCard(uiState: HomeUiState) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -663,7 +748,7 @@ private fun SwitchProviderConfirmationDialog(
             Text("You are switching from $currentProvider to $newProvider")
         },
         confirmButton = {
-            androidx.compose.material3.Button(onClick = onConfirm) {
+            Button(onClick = onConfirm) {
                 Text("Confirm")
             }
         },
@@ -690,6 +775,7 @@ private fun HomeScreenLoadedPreview() {
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
+            onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
 }
@@ -708,6 +794,7 @@ private fun HomeScreenDisconnectedPreview() {
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
+            onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
 }
@@ -726,6 +813,7 @@ private fun HomeScreenEmptyPreview() {
             onDisconnect = {},
             onNavigateToDashboard = {},
             onNavigateToGoals = {},
+            onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
 }

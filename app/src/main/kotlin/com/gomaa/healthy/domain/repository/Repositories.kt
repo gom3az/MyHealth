@@ -3,7 +3,9 @@ package com.gomaa.healthy.domain.repository
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
+import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateRecord
+import com.gomaa.healthy.domain.model.HeartRateSource
 import java.time.LocalDate
 
 interface StepRepository {
@@ -30,4 +32,14 @@ interface SessionRepository {
     suspend fun deleteSession(id: String)
     suspend fun addHeartRates(sessionId: String, heartRates: List<HeartRateRecord>)
     suspend fun getHeartRatesForSession(sessionId: String): List<HeartRateRecord>
+}
+
+interface HeartRateRepository {
+    suspend fun getLatestHeartRate(): HeartRateReading?
+    suspend fun getLatestHeartRateBySource(source: HeartRateSource): HeartRateReading?
+    suspend fun getHeartRatesForDateRange(startTime: Long, endTime: Long): List<HeartRateReading>
+    suspend fun getAllHeartRates(): List<HeartRateReading>
+    suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int?
+    suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
+    suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
 }

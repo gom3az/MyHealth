@@ -106,7 +106,7 @@ fun GoalsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalsContent(
-    innerPadding: androidx.compose.foundation.layout.PaddingValues,
+    innerPadding: PaddingValues,
     goals: List<FitnessGoal>,
     goalProgress: Map<String, Float>,
     isLoading: Boolean,

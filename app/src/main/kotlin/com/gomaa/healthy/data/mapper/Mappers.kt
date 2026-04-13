@@ -1,5 +1,6 @@
 package com.gomaa.healthy.data.mapper
 
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
@@ -10,9 +11,13 @@ import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
-import com.gomaa.healthy.domain.model.HeartRateRecord
+import com.gomaa.healthy.domain.model.HeartRateReading
+import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.StepSource
 import java.time.LocalDate
+import java.util.UUID
+import androidx.health.connect.client.records.HeartRateRecord as HealthConnectHeartRateRecord
+import com.gomaa.healthy.domain.model.HeartRateRecord as DomainHeartRateRecord
 
 // DailySteps Mappers
 fun DailyStepsEntity.toDomain(): DailySteps {
@@ -86,7 +91,7 @@ fun FitnessGoal.toEntity(): FitnessGoalEntity {
     )
 }
 
-fun ExerciseSessionEntity.toDomain(heartRates: List<HeartRateRecord> = emptyList()): ExerciseSession {
+fun ExerciseSessionEntity.toDomain(heartRates: List<DomainHeartRateRecord> = emptyList()): ExerciseSession {
     return ExerciseSession(
         id = id,
         startTime = startTime,
@@ -111,17 +116,65 @@ fun ExerciseSession.toEntity(): ExerciseSessionEntity {
     )
 }
 
-fun HeartRateEntity.toDomain(): HeartRateRecord {
-    return HeartRateRecord(
+fun HeartRateEntity.toDomain(): DomainHeartRateRecord {
+    return DomainHeartRateRecord(
         timestamp = timestamp,
         bpm = bpm
     )
 }
 
-fun HeartRateRecord.toEntity(sessionId: String): HeartRateEntity {
-    return HeartRateEntity(
-        sessionId = sessionId,
+// HC-058: Use timestamp as the ID since composite key is (timestamp, source)
+fun HeartRateEntity.toDomainReading(): HeartRateReading {
+    return HeartRateReading(
+        id = timestamp, // Use timestamp as Long ID
+        bpm = bpm,
         timestamp = timestamp,
+        source = if (source == "health_connect") HeartRateSource.HEALTH_CONNECT else HeartRateSource.MY_HEALTH
+    )
+}
+
+// HC-062: Added source parameter
+fun DomainHeartRateRecord.toEntity(
+    sessionId: String,
+    source: String = "myhealth"
+): HeartRateEntity {
+    return HeartRateEntity(
+        timestamp = timestamp,
+        source = source,
+        sessionId = sessionId,
         bpm = bpm
+    )
+}
+
+const val SOURCE_HEALTH_CONNECT = "health_connect"
+
+fun mapHeartRateRecordToEntity(
+    record: HealthConnectHeartRateRecord, recordId: String, source: String
+): List<HeartRateEntity> {
+    return record.samples.map { sample ->
+        HeartRateEntity(
+            sessionId = null,
+            timestamp = sample.time.toEpochMilli(),
+            bpm = sample.beatsPerMinute.toInt(),
+            source = source,
+            healthConnectRecordId = recordId
+        )
+    }
+}
+
+fun mapExerciseSessionRecordToEntity(
+    record: ExerciseSessionRecord,
+    healthConnectRecordId: String
+): ExerciseSessionEntity {
+    return ExerciseSessionEntity(
+        id = UUID.randomUUID().toString(),
+        startTime = record.startTime.toEpochMilli(),
+        endTime = record.endTime.toEpochMilli(),
+        avgHeartRate = 0,
+        maxHeartRate = 0,
+        minHeartRate = 0,
+        deviceBrand = "Health Connect",
+        source = SOURCE_HEALTH_CONNECT,
+        healthConnectRecordId = healthConnectRecordId
     )
 }

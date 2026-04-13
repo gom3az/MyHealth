@@ -2,9 +2,6 @@ package com.gomaa.healthy.domain.usecase
 
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HealthConnectExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HealthConnectStepsDao
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject
@@ -33,8 +30,6 @@ data class ExerciseSessionExportData(
 
 class ExportDataUseCase @Inject constructor(
     private val dailyStepsDao: DailyStepsDao,
-    private val healthConnectStepsDao: HealthConnectStepsDao,
-    private val healthConnectExerciseSessionDao: HealthConnectExerciseSessionDao,
     private val exerciseSessionDao: ExerciseSessionDao
 ) {
     suspend fun getExportData(
@@ -44,35 +39,18 @@ class ExportDataUseCase @Inject constructor(
     ): ExportData {
         val stepsList = mutableListOf<StepExportData>()
 
-        // Get MyHealth steps
-        val myHealthSteps =
-            dailyStepsDao.getByDateRange(startDate.toEpochDay(), endDate.toEpochDay())
-        stepsList.addAll(myHealthSteps.map { entity ->
+        // Get steps from unified daily_steps table
+        val allSteps = dailyStepsDao.getByDateRange(startDate.toEpochDay(), endDate.toEpochDay())
+
+        stepsList.addAll(allSteps.map { entity ->
             StepExportData(
                 date = LocalDate.ofEpochDay(entity.date).toString(),
                 count = entity.totalSteps,
-                source = "MyHealth",
+                source = if (entity.source == "health_connect") "Health Connect" else "MyHealth",
                 distance = entity.totalDistanceMeters,
                 activeMinutes = entity.activeMinutes
             )
         })
-
-        // Get Health Connect steps if enabled
-        if (includeHealthConnect) {
-            val hcStartTime = startDate.atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000
-            val hcEndTime = endDate.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC) * 1000
-            val hcSteps = healthConnectStepsDao.getStepsByDateRange(hcStartTime, hcEndTime).first()
-            stepsList.addAll(hcSteps.map { entity ->
-                StepExportData(
-                    date = java.time.Instant.ofEpochMilli(entity.startTime)
-                        .atZone(ZoneOffset.UTC).toLocalDate().toString(),
-                    count = entity.count,
-                    source = "Health Connect",
-                    distance = entity.count * 0.762, // Approximate distance
-                    activeMinutes = entity.count / 100 // Approximate active minutes
-                )
-            })
-        }
 
         // Get exercise sessions
         val sessions = exerciseSessionDao.getAll()

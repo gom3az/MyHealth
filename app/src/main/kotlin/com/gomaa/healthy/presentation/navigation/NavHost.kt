@@ -24,6 +24,7 @@ import androidx.navigation.navArgument
 import com.gomaa.healthy.presentation.ui.analytics.AnalyticsScreen
 import com.gomaa.healthy.presentation.ui.dashboard.DashboardScreen
 import com.gomaa.healthy.presentation.ui.goals.GoalsScreen
+import com.gomaa.healthy.presentation.ui.heartrate.HeartRateScreen
 import com.gomaa.healthy.presentation.ui.home.HomeScreen
 import com.gomaa.healthy.presentation.ui.session.SessionDetailScreen
 import com.gomaa.healthy.presentation.ui.settings.SettingsScreen
@@ -37,7 +38,11 @@ sealed class Screen(val route: String, val title: String, val icon: String) {
     object SessionDetail : Screen("session/{sessionId}", "Session", "🏃") {
         fun createRoute(sessionId: String) = "session/$sessionId"
     }
+
+    object HeartRate : Screen("heart_rate", "Heart Rate", "❤️")
 }
+
+const val HEART_RATE_ROUTE = "heart_rate"
 
 val bottomNavItems = listOf(
     Screen.Home, Screen.Dashboard, Screen.Analytics, Screen.Settings,
@@ -64,6 +69,14 @@ fun AppNavHost(
                     navController.navigate(Screen.Dashboard.route)
                 }, onNavigateToGoals = {
                     navController.navigate(Screen.Goals.route)
+                }, onNavigateToHeartRate = {
+                    navController.navigate(HEART_RATE_ROUTE)
+                })
+            }
+
+            composable(HEART_RATE_ROUTE) {
+                HeartRateScreen(onNavigateBack = {
+                    navController.popBackStack()
                 })
             }
 

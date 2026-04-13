@@ -4,15 +4,15 @@ import android.content.Context
 import android.util.Log
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.WearableHeartRateMonitor
+import com.huawei.wearengine.HiWear
+import com.huawei.wearengine.auth.AuthCallback
+import com.huawei.wearengine.auth.AuthClient
+import com.huawei.wearengine.auth.Permission
 import com.huawei.wearengine.device.Device
 import com.huawei.wearengine.device.DeviceClient
 import com.huawei.wearengine.monitor.MonitorClient
 import com.huawei.wearengine.monitor.MonitorItem
 import com.huawei.wearengine.monitor.MonitorListener
-import com.huawei.wearengine.auth.AuthCallback
-import com.huawei.wearengine.auth.AuthClient
-import com.huawei.wearengine.auth.Permission
-import com.huawei.wearengine.HiWear
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,7 +65,8 @@ class HuaweiHeartRateMonitor @Inject constructor(
             registerHeartRateListener(huaweiDevice)
             _connectionState.value = ConnectionState.Connected
         } catch (e: Exception) {
-            _connectionState.value = ConnectionState.Error(e.message ?: "Failed to start monitoring")
+            _connectionState.value =
+                ConnectionState.Error(e.message ?: "Failed to start monitoring")
         }
     }
 
@@ -85,31 +86,34 @@ class HuaweiHeartRateMonitor @Inject constructor(
         _connectionState.value = ConnectionState.Disconnected
     }
 
-    private suspend fun requestPermissions(): Boolean = suspendCancellableCoroutine { continuation ->
-        val permissions = arrayOf(Permission.DEVICE_MANAGER, Permission.SENSOR)
-        authClient.requestPermission(object : AuthCallback {
-            override fun onOk(permissions: Array<out Permission>?) {
-                Log.i("HuaweiHeartRateMonitor", "Permissions granted")
-                if (continuation.isActive) continuation.resume(true)
-            }
+    private suspend fun requestPermissions(): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            val permissions = arrayOf(Permission.DEVICE_MANAGER, Permission.SENSOR)
+            authClient.requestPermission(object : AuthCallback {
+                override fun onOk(permissions: Array<out Permission>?) {
+                    Log.i("HuaweiHeartRateMonitor", "Permissions granted")
+                    if (continuation.isActive) continuation.resume(true)
+                }
 
-            override fun onCancel() {
-                Log.i("HuaweiHeartRateMonitor", "Permissions denied")
-                if (continuation.isActive) continuation.resume(false)
-            }
-        }, *permissions)
-    }
-
-    private suspend fun getConnectedDevices(): List<Device> = suspendCancellableCoroutine { continuation ->
-        deviceClient.bondedDevices.addOnSuccessListener { deviceList ->
-            continuation.resume(deviceList?.filter { it.isConnected } ?: emptyList())
-        }.addOnFailureListener { e ->
-            Log.e("HuaweiHeartRateMonitor", "Failed to get devices", e)
-            continuation.resume(emptyList())
+                override fun onCancel() {
+                    Log.i("HuaweiHeartRateMonitor", "Permissions denied")
+                    if (continuation.isActive) continuation.resume(false)
+                }
+            }, *permissions)
         }
-    }
 
-    private suspend fun findDeviceByUuid(uuid: String): Device? = getConnectedDevices().firstOrNull { it.uuid == uuid }
+    private suspend fun getConnectedDevices(): List<Device> =
+        suspendCancellableCoroutine { continuation ->
+            deviceClient.bondedDevices.addOnSuccessListener { deviceList ->
+                continuation.resume(deviceList?.filter { it.isConnected } ?: emptyList())
+            }.addOnFailureListener { e ->
+                Log.e("HuaweiHeartRateMonitor", "Failed to get devices", e)
+                continuation.resume(emptyList())
+            }
+        }
+
+    private suspend fun findDeviceByUuid(uuid: String): Device? =
+        getConnectedDevices().firstOrNull { it.uuid == uuid }
 
     private fun registerHeartRateListener(device: Device) {
         val heartRateItem = MonitorItem.MONITOR_ITEM_HEART_RATE_ALARM

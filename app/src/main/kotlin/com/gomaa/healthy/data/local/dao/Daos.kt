@@ -7,8 +7,6 @@ import androidx.room.Query
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
-import com.gomaa.healthy.data.local.entity.HealthConnectExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HealthConnectStepEntity
 import com.gomaa.healthy.data.local.entity.HeartRateEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -26,11 +24,26 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
     suspend fun getByDateRange(startDate: Long, endDate: Long): List<DailyStepsEntity>
 
+    @Query("SELECT * FROM daily_steps WHERE date = :date AND source = :source")
+    suspend fun getByDateAndSource(date: Long, source: String): DailyStepsEntity?
+
+    @Query("SELECT * FROM daily_steps ORDER BY date DESC")
+    suspend fun getAll(): List<DailyStepsEntity>
+
+    @Query("SELECT * FROM daily_steps WHERE date = :date ORDER BY source")
+    suspend fun getByDateAllSources(date: Long): List<DailyStepsEntity>
+
+    @Query("SELECT * FROM daily_steps WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
+    fun getByDateRangeFlow(startDate: Long, endDate: Long): Flow<List<DailyStepsEntity>>
+
     @Query("SELECT * FROM daily_steps ORDER BY date DESC LIMIT :limit")
     suspend fun getRecent(limit: Int): List<DailyStepsEntity>
 
     @Query("DELETE FROM daily_steps")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM daily_steps WHERE source = :source")
+    suspend fun deleteBySource(source: String)
 }
 
 @Dao
@@ -76,73 +89,66 @@ interface ExerciseSessionDao {
 
     @Query("DELETE FROM exercise_sessions")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM exercise_sessions WHERE source = :source")
+    suspend fun getBySource(source: String): List<ExerciseSessionEntity>
+
+    @Query("SELECT * FROM exercise_sessions WHERE source = :source AND healthConnectRecordId = :recordId")
+    suspend fun getByHealthConnectRecordId(source: String, recordId: String): ExerciseSessionEntity?
 }
 
 @Dao
 interface HeartRateDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // HC-061: Change to IGNORE to prevent overwriting existing records
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(heartRates: List<HeartRateEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(heartRate: HeartRateEntity)
 
     @Query("SELECT * FROM heart_rates WHERE sessionId = :sessionId ORDER BY timestamp ASC")
     suspend fun getForSession(sessionId: String): List<HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
+    fun getBySource(source: String): Flow<List<HeartRateEntity>>
+
+    // HC-064: Get all readings by source (not just latest)
+    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
+    suspend fun getAllBySource(source: String): List<HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
+    fun getAllHeartRates(): Flow<List<HeartRateEntity>>
+
+    // HC-060: Get all readings for date range - returns all readings, not empty
+    @Query("SELECT * FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
+    suspend fun getHeartRatesByDateRange(startTime: Long, endTime: Long): List<HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatest(): HeartRateEntity?
+
+    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestBySource(source: String): HeartRateEntity?
+
+    // HC-059: Query ALL existing record IDs for deduplication
+    // Fixed: Return List<String> instead of List<String?>
+    @Query("SELECT healthConnectRecordId FROM heart_rates WHERE source = :source AND healthConnectRecordId IS NOT NULL")
+    suspend fun getAllRecordIdsBySource(source: String): List<String>
+
+    @Query("SELECT AVG(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Double?
+
+    @Query("SELECT MAX(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
+
+    @Query("SELECT MIN(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
 
     @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
 
     @Query("DELETE FROM heart_rates")
     suspend fun deleteAll()
-}
 
-@Dao
-interface HealthConnectStepsDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(steps: List<HealthConnectStepEntity>)
-
-    @Query("SELECT * FROM health_connect_steps ORDER BY startTime DESC")
-    fun getAllSteps(): Flow<List<HealthConnectStepEntity>>
-
-    @Query("SELECT * FROM health_connect_steps WHERE startTime >= :startTime AND endTime <= :endTime ORDER BY startTime DESC")
-    fun getStepsByDateRange(startTime: Long, endTime: Long): Flow<List<HealthConnectStepEntity>>
-
-    @Query("SELECT * FROM health_connect_steps WHERE healthConnectRecordId = :recordId LIMIT 1")
-    suspend fun getByRecordId(recordId: String): HealthConnectStepEntity?
-
-    @Query("SELECT SUM(count) FROM health_connect_steps")
-    suspend fun getTotalSteps(): Int?
-
-    @Query("SELECT SUM(count) FROM health_connect_steps WHERE startTime >= :startTime AND endTime <= :endTime")
-    suspend fun getTotalStepsByDateRange(startTime: Long, endTime: Long): Int?
-
-    @Query("DELETE FROM health_connect_steps")
-    suspend fun deleteAll()
-
-    @Query("SELECT COUNT(*) FROM health_connect_steps")
-    suspend fun getStepCount(): Int
-}
-
-@Dao
-interface HealthConnectExerciseSessionDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(sessions: List<HealthConnectExerciseSessionEntity>)
-
-    @Query("SELECT * FROM health_connect_exercise_sessions ORDER BY startTime DESC")
-    fun getAllSessions(): Flow<List<HealthConnectExerciseSessionEntity>>
-
-    @Query("SELECT * FROM health_connect_exercise_sessions WHERE startTime >= :startTime AND endTime <= :endTime ORDER BY startTime DESC")
-    fun getSessionsByDateRange(
-        startTime: Long,
-        endTime: Long
-    ): Flow<List<HealthConnectExerciseSessionEntity>>
-
-    @Query("SELECT * FROM health_connect_exercise_sessions WHERE healthConnectRecordId = :recordId LIMIT 1")
-    suspend fun getByRecordId(recordId: String): HealthConnectExerciseSessionEntity?
-
-    @Query("DELETE FROM health_connect_exercise_sessions")
-    suspend fun deleteAll()
-
-    @Query("SELECT COUNT(*) FROM health_connect_exercise_sessions")
-    suspend fun getSessionCount(): Int
+    @Query("DELETE FROM heart_rates WHERE source = :source")
+    suspend fun deleteBySource(source: String)
 }

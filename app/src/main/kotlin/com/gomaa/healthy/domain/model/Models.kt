@@ -40,6 +40,26 @@ data class HeartRateRecord(
     val bpm: Int
 )
 
+enum class HeartRateSource {
+    MY_HEALTH,
+    HEALTH_CONNECT
+}
+
+data class HeartRateReading(
+    val id: Long,
+    val bpm: Int,
+    val timestamp: Long,
+    val source: HeartRateSource
+)
+
+data class HeartRateSummary(
+    val averageBpm: Int,
+    val maxBpm: Int,
+    val minBpm: Int,
+    val readingCount: Int,
+    val source: HeartRateSource? = null
+)
+
 data class ExerciseSession(
     val id: String,
     val startTime: Long,

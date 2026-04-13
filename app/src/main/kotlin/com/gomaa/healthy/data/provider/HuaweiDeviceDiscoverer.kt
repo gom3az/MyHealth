@@ -4,9 +4,9 @@ import android.content.Context
 import android.util.Log
 import com.gomaa.healthy.domain.model.DeviceInfo
 import com.gomaa.healthy.domain.model.WearableDeviceDiscoverer
+import com.huawei.wearengine.HiWear
 import com.huawei.wearengine.device.Device
 import com.huawei.wearengine.device.DeviceClient
-import com.huawei.wearengine.HiWear
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject

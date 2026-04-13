@@ -52,7 +52,7 @@ sealed class DashboardEffect {
 }
 
 @HiltViewModel
-class DashboardViewModel  @Inject constructor(
+class DashboardViewModel @Inject constructor(
     private val selectWearableProviderUseCase: SelectWearableProviderUseCase,
     private val connectWearableUseCase: ConnectWearableUseCase,
     private val disconnectWearableUseCase: DisconnectWearableUseCase,
@@ -167,7 +167,7 @@ class DashboardViewModel  @Inject constructor(
         timerJob?.cancel()
         viewModelScope.launch {
             disconnectWearableUseCase()
-            
+
             val endTime = System.currentTimeMillis()
             val session = ExerciseSession(
                 id = UUID.randomUUID().toString(),

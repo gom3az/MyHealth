@@ -5,16 +5,16 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import java.util.UUID
 
-@Entity(tableName = "daily_steps")
+@Entity(tableName = "daily_steps", primaryKeys = ["date", "source"])
 data class DailyStepsEntity(
-    @PrimaryKey
     val date: Long, // epoch day
     val totalSteps: Int,
     val totalDistanceMeters: Double,
     val activeMinutes: Int,
     val lightActivityMinutes: Int,
     val moderateActivityMinutes: Int,
-    val vigorousActivityMinutes: Int
+    val vigorousActivityMinutes: Int,
+    val source: String = "myhealth" // "myhealth" or "health_connect"
 )
 
 @Entity(tableName = "fitness_goals")
@@ -43,37 +43,16 @@ data class ExerciseSessionEntity(
     val healthConnectRecordId: String? = null // Original HC record ID for deduplication
 )
 
-@Entity(tableName = "heart_rates")
+// HC-058: Add composite primary key on (timestamp, source) for deduplication
+// Removed @PrimaryKey(autoGenerate - composite keys handle uniqueness
+@Entity(tableName = "heart_rates", primaryKeys = ["timestamp", "source"])
 data class HeartRateEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val sessionId: String,
+    // Using composite key instead of auto-generated ID
     val timestamp: Long,
-    val bpm: Int
-)
-
-@Entity(tableName = "health_connect_steps")
-data class HealthConnectStepEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val count: Int,
-    val startTime: Long,
-    val endTime: Long,
-    val healthConnectRecordId: String, // Original HC record ID
-    val importedAt: Long = System.currentTimeMillis()
-)
-
-@Entity(tableName = "health_connect_exercise_sessions")
-data class HealthConnectExerciseSessionEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val startTime: Long,
-    val endTime: Long,
-    val exerciseType: String,
-    val durationMinutes: Int,
-    val caloriesBurned: Int?,
-    val healthConnectRecordId: String,
-    val importedAt: Long = System.currentTimeMillis()
+    val source: String,
+    val sessionId: String? = null, // Nullable - can be null for Health Connect readings
+    val bpm: Int,
+    val healthConnectRecordId: String? = null // For deduplication with HC records
 )
 
 class Converters {

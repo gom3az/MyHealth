@@ -42,8 +42,12 @@ class HealthConnectSyncWorker @AssistedInject constructor(
             val exerciseResult = healthConnectRepository.syncExerciseSessions()
             val exerciseSuccess = exerciseResult is HealthConnectResult.Success
 
+            // Sync heart rates
+            val heartRateResult = healthConnectRepository.syncHeartRates()
+            val heartRateSuccess = heartRateResult is HealthConnectResult.Success
+
             // Return success if at least one sync succeeded
-            if (stepsSuccess || exerciseSuccess) {
+            if (stepsSuccess || exerciseSuccess || heartRateSuccess) {
                 Result.success()
             } else {
                 Result.retry()
