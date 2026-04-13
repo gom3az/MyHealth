@@ -60,32 +60,42 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { _ ->
-        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
+        viewModel.processIntent(SettingsIntent.PermissionsRequested)
     }
 
-    fun requestHealthConnectPermissions() {
-        try {
-            permissionLauncher.launch(HealthConnectRepository.PERMISSIONS)
-        } catch (e: Exception) {
-            Log.e("SettingsScreen", "Error: ${e.message}", e)
-            try {
-                val uriString =
-                    "market://details?id=$HEALTH_CONNECT_PACKAGE&url=healthconnect%3A%2F%2Fonboarding"
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW).apply {
-                        setPackage("com.android.vending")
-                        data = Uri.parse(uriString)
-                        putExtra("overlay", true)
-                        putExtra("callerId", context.packageName)
+    LaunchedEffect(Unit) {
+        viewModel.sideEffect.collect { sideEffect ->
+            when (sideEffect) {
+                is SettingsSideEffect.RequestPermissions -> {
+                    try {
+                        permissionLauncher.launch(HealthConnectRepository.PERMISSIONS)
+                    } catch (e: Exception) {
+                        Log.e("SettingsScreen", "Error: ${e.message}", e)
+                        try {
+                            val uriString =
+                                "market://details?id=$HEALTH_CONNECT_PACKAGE&url=healthconnect%3A%2F%2Fonboarding"
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW).apply {
+                                    setPackage("com.android.vending")
+                                    data = Uri.parse(uriString)
+                                    putExtra("overlay", true)
+                                    putExtra("callerId", context.packageName)
+                                }
+                            )
+                        } catch (e2: Exception) {
+                            Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
+                        }
                     }
-                )
-            } catch (e2: Exception) {
-                Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
+                }
+
+                is SettingsSideEffect.ShowError -> {
+                    snackbarHostState.showSnackbar(sideEffect.message)
+                }
             }
         }
     }
@@ -94,16 +104,7 @@ fun SettingsScreen(
         viewModel.processIntent(SettingsIntent.CheckHealthConnect)
     }
 
-    LaunchedEffect(state.isConnected) {
-        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
-    }
-
-    LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let { error ->
-            snackbarHostState.showSnackbar(error)
-            viewModel.processIntent(SettingsIntent.ClearError)
-        }
-    }
+    val idleState = state as? SettingsUiState.Idle
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Settings") }) },
@@ -128,16 +129,14 @@ fun SettingsScreen(
 
             item {
                 HealthConnectSection(
-                    isLoading = state.isLoading,
-                    isAvailable = state.isAvailable,
-                    isConnected = state.isConnected,
-                    stepCount = state.stepCount,
-                    exerciseSessionCount = state.exerciseSessionCount,
-                    lastSyncTime = state.lastSyncTime,
-                    isSyncing = state.isSyncing,
+                    isAvailable = idleState?.isAvailable ?: false,
+                    isConnected = idleState?.isConnected ?: false,
+                    stepCount = idleState?.stepCount ?: 0,
+                    exerciseSessionCount = idleState?.exerciseSessionCount ?: 0,
+                    lastSyncTime = idleState?.lastSyncTime,
+                    isSyncing = idleState?.isSyncing ?: false,
                     onConnect = {
-                        // Open Health Connect permission screen directly
-                        requestHealthConnectPermissions()
+                        viewModel.processIntent(SettingsIntent.RequestHealthConnectPermissions)
                     },
                     onSyncNow = { viewModel.processIntent(SettingsIntent.SyncNow) }
                 )
@@ -147,10 +146,8 @@ fun SettingsScreen(
 
             item {
                 ExportSection(
-                    hasHealthConnectData = state.stepCount > 0 || state.exerciseSessionCount > 0,
                     onExport = { includeHealthConnect ->
-                        // Export functionality would be triggered here
-                        scope.launch {
+                        coroutineScope.launch {
                             snackbarHostState.showSnackbar(
                                 "Export started - including Health Connect: $includeHealthConnect"
                             )
@@ -164,7 +161,6 @@ fun SettingsScreen(
 
 @Composable
 fun ExportSection(
-    hasHealthConnectData: Boolean,
     onExport: (Boolean) -> Unit
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
@@ -225,7 +221,8 @@ fun ExportSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showExportDialog = true },
+            .clickable { showExportDialog = true }
+            .semantics { contentDescription = "Export data to CSV" },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -259,7 +256,6 @@ fun ExportSection(
 
 @Composable
 fun HealthConnectSection(
-    isLoading: Boolean = false,
     isAvailable: Boolean,
     isConnected: Boolean,
     stepCount: Int,
@@ -301,12 +297,6 @@ fun HealthConnectSection(
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -337,9 +327,9 @@ fun HealthConnectSection(
                         )
                     }
                     if (lastSyncTime != null) {
-                        val timeSince = (System.currentTimeMillis() - lastSyncTime) / 60000
+                        val timeSinceMinutes = (System.currentTimeMillis() - lastSyncTime) / 60_000
                         Text(
-                            text = if (timeSince < 1) "Just now" else "${timeSince}m ago",
+                            text = if (timeSinceMinutes < 1) "Just now" else "${timeSinceMinutes}m ago",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
