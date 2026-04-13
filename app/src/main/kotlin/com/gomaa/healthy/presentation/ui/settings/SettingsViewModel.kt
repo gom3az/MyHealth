@@ -32,6 +32,7 @@ sealed interface SettingsUiState {
         val isConnected: Boolean = false,
         val stepCount: Int = 0,
         val exerciseSessionCount: Int = 0,
+        val heartRateCount: Int = 0,
         val lastSyncTime: Long? = null,
         val isSyncing: Boolean = false
     ) : SettingsUiState
@@ -82,12 +83,17 @@ class SettingsViewModel @Inject constructor(
             val stepCount = if (isConnected) healthConnectRepository.getStepCount() else 0
             val exerciseCount =
                 if (isConnected) healthConnectRepository.getExerciseSessionCount() else 0
+            val heartRateCount =
+                if (isConnected) healthConnectRepository.getHeartRateCount() else 0
+            val lastSyncTime = healthConnectRepository.getLastSyncTime()
 
             _state.value = SettingsUiState.Idle(
                 isAvailable = isAvailable,
                 isConnected = isConnected,
                 stepCount = stepCount,
-                exerciseSessionCount = exerciseCount
+                exerciseSessionCount = exerciseCount,
+                heartRateCount = heartRateCount,
+                lastSyncTime = lastSyncTime
             )
         }
     }
@@ -101,24 +107,28 @@ class SettingsViewModel @Inject constructor(
 
             val stepsResult = healthConnectRepository.syncSteps()
             val exerciseResult = healthConnectRepository.syncExerciseSessions()
+            val heartRateResult = healthConnectRepository.syncHeartRates()
 
             val stepsSuccess = stepsResult is HealthConnectResult.Success
             val exerciseSuccess = exerciseResult is HealthConnectResult.Success
+            val heartRateSuccess = heartRateResult is HealthConnectResult.Success
 
             val updatedState = _state.value
             if (updatedState is SettingsUiState.Idle) {
-                if (stepsSuccess && exerciseSuccess) {
+                if (stepsSuccess && exerciseSuccess && heartRateSuccess) {
                     _state.value = updatedState.copy(
                         isSyncing = false,
                         stepCount = healthConnectRepository.getStepCount(),
                         exerciseSessionCount = healthConnectRepository.getExerciseSessionCount(),
-                        lastSyncTime = System.currentTimeMillis()
+                        heartRateCount = healthConnectRepository.getHeartRateCount(),
+                        lastSyncTime = healthConnectRepository.getLastSyncTime()
                     )
                 } else {
                     _state.value = updatedState.copy(isSyncing = false)
                     val error = when {
                         stepsResult is HealthConnectResult.Error -> stepsResult.exception.message
                         exerciseResult is HealthConnectResult.Error -> exerciseResult.exception.message
+                        heartRateResult is HealthConnectResult.Error -> heartRateResult.exception.message
                         else -> "Unknown error"
                     }
                     _sideEffect.emit(SettingsSideEffect.ShowError(error ?: "Sync failed"))

@@ -30,7 +30,7 @@ fun DailyStepsEntity.toDomain(): DailySteps {
         lightActivityMinutes = lightActivityMinutes,
         moderateActivityMinutes = moderateActivityMinutes,
         vigorousActivityMinutes = vigorousActivityMinutes,
-        source = StepSource.MY_HEALTH
+        source = if (source == "health_connect") StepSource.HEALTH_CONNECT else StepSource.MY_HEALTH
     )
 }
 

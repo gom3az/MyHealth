@@ -169,10 +169,8 @@ class HealthConnectRepository @Inject constructor(
             val lastSyncTime = getLastStepsSyncTime()
             val result = syncStepsWithPagination(lastSyncTime)
 
-            // Save last sync time
-            if (result.newRecordsCount > 0) {
-                saveLastStepsSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
-            }
+            // Save last sync time regardless of whether new records were found
+            saveLastStepsSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
 
             return HealthConnectResult.Success(result.newRecordsCount)
         } catch (_: PackageManager.NameNotFoundException) {
@@ -205,10 +203,8 @@ class HealthConnectRepository @Inject constructor(
             val lastSyncTime = getLastExerciseSyncTime()
             val result = syncExerciseSessionsWithPagination(lastSyncTime)
 
-            // Save last sync time
-            if (result.newRecordsCount > 0) {
-                saveLastExerciseSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
-            }
+            // Save last sync time regardless of whether new records were found
+            saveLastExerciseSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
 
             return HealthConnectResult.Success(result.newRecordsCount)
         } catch (_: PackageManager.NameNotFoundException) {
@@ -299,10 +295,8 @@ class HealthConnectRepository @Inject constructor(
             val lastSyncTime = getLastHeartRateSyncTime()
             val result = syncHeartRatesWithPagination(lastSyncTime)
 
-            // Save last sync time
-            if (result.newRecordsCount > 0) {
-                saveLastHeartRateSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
-            }
+            // Save last sync time regardless of whether new records were found
+            saveLastHeartRateSyncTime(result.latestRecordTime ?: System.currentTimeMillis())
 
             return HealthConnectResult.Success(result.newRecordsCount)
         } catch (_: PackageManager.NameNotFoundException) {
@@ -498,6 +492,13 @@ class HealthConnectRepository @Inject constructor(
 
     private fun saveLastExerciseSyncTime(time: Long) {
         sharedPreferences.edit { putLong(KEY_LAST_EXERCISE_SYNC, time) }
+    }
+
+    fun getLastSyncTime(): Long? {
+        val stepsTime = getLastStepsSyncTime()
+        val exerciseTime = getLastExerciseSyncTime()
+        val heartRateTime = getLastHeartRateSyncTime()
+        return listOfNotNull(stepsTime, exerciseTime, heartRateTime).maxOrNull()
     }
 
     override suspend fun getStepCount(): Int {

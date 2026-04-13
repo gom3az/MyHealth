@@ -52,4 +52,8 @@ class HeartRateRepositoryImpl @Inject constructor(
     override suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int? {
         return heartRateDao.getMinHeartRate(startTime, endTime)
     }
+
+    override suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int {
+        return heartRateDao.getHeartRateCount(startTime, endTime)
+    }
 }

@@ -29,6 +29,7 @@ class GetHeartRateSummaryUseCase @Inject constructor(
         val avg = heartRateRepository.getAverageHeartRate(startTime, endTime)
         val max = heartRateRepository.getMaxHeartRate(startTime, endTime)
         val min = heartRateRepository.getMinHeartRate(startTime, endTime)
+        val count = heartRateRepository.getHeartRateCount(startTime, endTime)
 
         if (avg == null || max == null || min == null) return null
 
@@ -36,7 +37,7 @@ class GetHeartRateSummaryUseCase @Inject constructor(
             averageBpm = avg,
             maxBpm = max,
             minBpm = min,
-            readingCount = 0 // Would need count query
+            readingCount = count
         )
     }
 }

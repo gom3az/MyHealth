@@ -143,6 +143,9 @@ interface HeartRateDao {
     @Query("SELECT MIN(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
     suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
 
+    @Query("SELECT COUNT(*) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int
+
     @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
 

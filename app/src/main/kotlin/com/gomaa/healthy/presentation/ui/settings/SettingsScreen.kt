@@ -133,6 +133,7 @@ fun SettingsScreen(
                     isConnected = idleState?.isConnected ?: false,
                     stepCount = idleState?.stepCount ?: 0,
                     exerciseSessionCount = idleState?.exerciseSessionCount ?: 0,
+                    heartRateCount = idleState?.heartRateCount ?: 0,
                     lastSyncTime = idleState?.lastSyncTime,
                     isSyncing = idleState?.isSyncing ?: false,
                     onConnect = {
@@ -260,6 +261,7 @@ fun HealthConnectSection(
     isConnected: Boolean,
     stepCount: Int,
     exerciseSessionCount: Int,
+    heartRateCount: Int,
     lastSyncTime: Long?,
     isSyncing: Boolean,
     onConnect: () -> Unit,
@@ -323,6 +325,10 @@ fun HealthConnectSection(
                         )
                         Text(
                             text = "$exerciseSessionCount exercises imported",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "$heartRateCount heart rate readings imported",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

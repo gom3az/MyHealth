@@ -42,4 +42,5 @@ interface HeartRateRepository {
     suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int?
     suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
     suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
+    suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int
 }
