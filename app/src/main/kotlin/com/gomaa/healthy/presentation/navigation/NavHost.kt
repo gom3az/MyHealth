@@ -78,7 +78,7 @@ fun AppNavHost(
             composable(Screen.Settings.route) {
                 SettingsScreen(onNavigateToGoals = {
                     navController.navigate(Screen.Goals.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
+                        //popUpTo(Screen.Home.route) { saveState = true }
                     }
                 })
             }
@@ -102,6 +102,10 @@ fun AppNavHost(
 private fun BottomNavigationBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    if (currentRoute !in bottomNavItems.map { it.route }) {
+        return
+    }
 
     NavigationBar {
         bottomNavItems.forEach { screen ->
