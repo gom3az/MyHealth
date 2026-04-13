@@ -24,7 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
@@ -75,7 +74,7 @@ fun AnalyticsScreen(
 private fun AnalyticsContent(
     uiState: AnalyticsUiState,
     onSessionClick: (AnalyticsIntent) -> Unit,
-    paddingValues: PaddingValues = PaddingValues(16.dp),
+    paddingValues: PaddingValues = PaddingValues(Dimensions.spacingLarge),
 
     ) {
     LazyColumn(
@@ -83,7 +82,7 @@ private fun AnalyticsContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = Dimensions.contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
     ) {
         if (uiState.sessions.isEmpty()) {
             item {
@@ -92,7 +91,7 @@ private fun AnalyticsContent(
                 ) {
                     Text(
                         text = "No sessions recorded yet",
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(Dimensions.spacingLarge),
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -117,12 +116,12 @@ private fun SessionCard(
         modifier = Modifier.fillMaxWidth(), onClick = onClick
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(Dimensions.spacingLarge)
         ) {
             Text(
                 text = formatDate(session.startTime), style = MaterialTheme.typography.titleMedium
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
 
             Row(
                 modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween

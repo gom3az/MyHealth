@@ -112,23 +112,23 @@ private fun HeartRateContent(
                 Icon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    modifier = Modifier.padding(bottom = 16.dp),
+                    modifier = Modifier.padding(bottom = Dimensions.spacingLarge),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "No heart rate data yet",
                     style = MaterialTheme.typography.titleMedium
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
                     text = "Sync from Health Connect to see your heart rate readings",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                 Button(onClick = { onIntent(HeartRateIntent.OnSync) }) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.padding(4.dp))
+                    Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
                     Text("Sync from Health Connect")
                 }
             }
@@ -140,7 +140,7 @@ private fun HeartRateContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = Dimensions.contentPadding),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
             ) {
                 // Source Filter
                 item {
@@ -186,7 +186,7 @@ private fun HeartRateContent(
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                         }
-                        Spacer(modifier = Modifier.padding(4.dp))
+                        Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
                         Text("Sync from Health Connect")
                     }
                 }
@@ -207,7 +207,7 @@ private fun HeartRateContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                 Button(onClick = { onIntent(HeartRateIntent.OnRefresh) }) {
                     Text("Retry")
                 }
@@ -223,7 +223,7 @@ private fun SourceFilterChips(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         FilterChip(
             selected = selectedFilter == HeartRateSourceFilter.ALL,
@@ -247,7 +247,7 @@ private fun SourceFilterChips(
 private fun HeartRateSummaryCards(summary: HeartRateSummary) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         SummaryCard(
             title = "Average",
@@ -286,7 +286,7 @@ private fun SummaryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(Dimensions.spacingMedium),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -320,7 +320,7 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Dimensions.spacingLarge),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

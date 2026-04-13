@@ -126,7 +126,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
 
             item {
                 HealthConnectSection(
@@ -144,7 +144,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
 
             item {
                 ExportSection(
@@ -175,18 +175,18 @@ fun ExportSection(
             text = {
                 Column {
                     Text("Select data to include in export:")
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { includeHealthConnect = true }
-                            .padding(vertical = 8.dp)
+                            .padding(vertical = Dimensions.spacing)
                     ) {
                         RadioButton(
                             selected = includeHealthConnect,
                             onClick = { includeHealthConnect = true })
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimensions.spacing))
                         Text("All data (MyHealth + Health Connect)")
                     }
                     Row(
@@ -194,12 +194,12 @@ fun ExportSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { includeHealthConnect = false }
-                            .padding(vertical = 8.dp)
+                            .padding(vertical = Dimensions.spacing)
                     ) {
                         RadioButton(
                             selected = !includeHealthConnect,
                             onClick = { includeHealthConnect = false })
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimensions.spacing))
                         Text("MyHealth data only")
                     }
                 }
@@ -232,7 +232,7 @@ fun ExportSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Dimensions.spacingLarge),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -240,7 +240,7 @@ fun ExportSection(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { }
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimensions.spacingLarge))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Export Data",
@@ -277,7 +277,7 @@ fun HealthConnectSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Dimensions.spacingLarge)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -287,7 +287,7 @@ fun HealthConnectSection(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.semantics { }
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Dimensions.spacingLarge))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Health Connect",
@@ -302,14 +302,14 @@ fun HealthConnectSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
             if (!isAvailable) {
                 Text(
                     text = "Health Connect app is not installed. Install it to sync your health data.",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
                 Button(onClick = onConnect) {
                     Text("Install Health Connect")
                 }
@@ -342,7 +342,7 @@ fun HealthConnectSection(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
                 Button(
                     onClick = onSyncNow,
@@ -354,7 +354,7 @@ fun HealthConnectSection(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimensions.spacing))
                         Text("Syncing...")
                     } else {
                         Text("Sync Now")
@@ -365,7 +365,7 @@ fun HealthConnectSection(
                     text = "Grant permissions to sync your health data from other apps.",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
                 Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) {
                     Text("Connect to Health Connect")
                 }
@@ -393,7 +393,7 @@ fun SettingsItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Dimensions.spacingLarge),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -401,7 +401,7 @@ fun SettingsItem(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { }
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimensions.spacingLarge))
             Column {
                 Text(
                     text = title,

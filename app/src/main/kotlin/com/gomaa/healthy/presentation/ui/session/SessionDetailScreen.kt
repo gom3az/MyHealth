@@ -22,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import java.text.SimpleDateFormat
@@ -89,7 +88,7 @@ fun SessionDetailScreen(
                             text = "Exercise Session",
                             style = MaterialTheme.typography.headlineMedium
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                     }
 
                     item {
@@ -135,12 +134,12 @@ fun SessionDetailScreen(
 
                     if (session.heartRates.isNotEmpty()) {
                         item {
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge))
                             Text(
                                 text = "Heart Rate Data",
                                 style = MaterialTheme.typography.titleLarge
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(Dimensions.spacing))
                         }
 
                         session.heartRates.take(10).forEach { hr ->
@@ -178,7 +177,7 @@ private fun DetailItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = Dimensions.spacingSmall),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -186,14 +185,14 @@ private fun DetailItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Dimensions.spacingLarge)
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge

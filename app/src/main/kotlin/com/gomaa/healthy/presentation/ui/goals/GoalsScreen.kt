@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
@@ -146,7 +145,7 @@ private fun GoalsContent(
                 Text(
                     text = "No goals yet", style = MaterialTheme.typography.titleMedium
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
                     text = "Tap + to create your first goal",
                     style = MaterialTheme.typography.bodyMedium,
@@ -159,7 +158,7 @@ private fun GoalsContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = Dimensions.contentPadding),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
             ) {
                 items(goals) { goal ->
                     GoalCard(
@@ -186,7 +185,7 @@ private fun GoalCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Dimensions.spacingLarge)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -201,7 +200,7 @@ private fun GoalCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
 
             val targetText = when (goal.type) {
                 is GoalType.Steps -> "%,d steps".format(goal.type.target)
@@ -216,14 +215,14 @@ private fun GoalCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
 
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
 
             Text(
                 text = "${(progress * 100).toInt()}% complete",
@@ -250,10 +249,10 @@ private fun CreateGoalDialog(
                 label = { Text("Goal Name") },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
             Text("Goal Type", style = MaterialTheme.typography.labelMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
                 Button(
                     onClick = { selectedType = GoalType.Steps(10000) },
                     modifier = Modifier.weight(1f)
@@ -267,8 +266,8 @@ private fun CreateGoalDialog(
                     Text("Mins")
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
                 Button(
                     onClick = { selectedPeriod = GoalPeriod.DAILY },
                     modifier = Modifier.weight(1f)
@@ -302,7 +301,7 @@ private fun CreateGoalDialog(
 private fun GoalsContentPreview() {
     HealthTheme {
         GoalsContent(
-            innerPadding = PaddingValues(0.dp),
+            innerPadding = PaddingValues(Dimensions.spacing),
             goals = PreviewData.goalsLoadedState.goals,
             goalProgress = PreviewData.goalsLoadedState.goalProgress,
             isLoading = false,
@@ -320,7 +319,7 @@ private fun GoalsContentPreview() {
 private fun GoalsContentLoadingPreview() {
     HealthTheme {
         GoalsContent(
-            innerPadding = PaddingValues(0.dp),
+            innerPadding = PaddingValues(Dimensions.spacing),
             goals = emptyList(),
             goalProgress = emptyMap(),
             isLoading = true,
@@ -338,7 +337,7 @@ private fun GoalsContentLoadingPreview() {
 private fun GoalsContentEmptyPreview() {
     HealthTheme {
         GoalsContent(
-            innerPadding = PaddingValues(0.dp),
+            innerPadding = PaddingValues(Dimensions.spacing),
             goals = emptyList(),
             goalProgress = emptyMap(),
             isLoading = false,

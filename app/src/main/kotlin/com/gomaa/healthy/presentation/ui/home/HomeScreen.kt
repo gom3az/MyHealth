@@ -276,7 +276,7 @@ private fun StepsProgressCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Dimensions.spacingLarge)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -294,18 +294,21 @@ private fun StepsProgressCard(
                         Text(
                             text = "Combined",
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(
+                                horizontal = Dimensions.spacing,
+                                vertical = 4.dp
+                            )
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
             Text(
                 text = "%,d".format(steps),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
             LinearProgressIndicator(
                 progress = { goalProgress },
                 modifier = Modifier.fillMaxWidth(),
@@ -317,7 +320,7 @@ private fun StepsProgressCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (selectedFilter == StepSourceFilter.ALL && combinedSteps.healthConnectSteps > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -354,7 +357,7 @@ private fun ExpandableStepsSection(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Dimensions.spacingLarge)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -382,7 +385,7 @@ private fun ExpandableStepsSection(
                     enter = expandVertically(),
                     exit = shrinkVertically()
                 ) {
-                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Column(modifier = Modifier.padding(top = Dimensions.spacing)) {
                         Text(
                             text = "Steps tracked manually in MyHealth app",
                             style = MaterialTheme.typography.bodySmall,
@@ -409,7 +412,7 @@ private fun ExpandableStepsSection(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
                 )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Dimensions.spacingLarge)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -437,7 +440,7 @@ private fun ExpandableStepsSection(
                         enter = expandVertically(),
                         exit = shrinkVertically()
                     ) {
-                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                        Column(modifier = Modifier.padding(top = Dimensions.spacing)) {
                             Text(
                                 text = "Steps imported from Health Connect",
                                 style = MaterialTheme.typography.bodySmall,
@@ -478,7 +481,7 @@ private fun HeartRateCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(Dimensions.spacingLarge)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -495,7 +498,7 @@ private fun HeartRateCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
 
             if (isLoading) {
                 androidx.compose.material3.CircularProgressIndicator(
@@ -543,7 +546,7 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Dimensions.spacingLarge),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -554,7 +557,7 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
@@ -602,12 +605,12 @@ private fun ProviderSelectionCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(Dimensions.spacingLarge)
         ) {
             Text(
                 text = "Select Wearable Provider", style = MaterialTheme.typography.titleMedium
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
             ) {
@@ -630,9 +633,10 @@ private fun ActionButtonRow(
     onNavigateToDashboard: () -> Unit,
     onChangeProvider: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
         Row(
-            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
         ) {
             Button(
                 onClick = if (isConnected) onDisconnect else onConnect,
@@ -660,7 +664,7 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(Dimensions.spacingLarge)
         ) {
             Text(
                 text = "Recent Sessions", style = MaterialTheme.typography.titleMedium
@@ -676,7 +680,7 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = Dimensions.spacing),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
@@ -714,7 +718,7 @@ private fun ProviderSelectionDialog(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                     otherProviders.forEach { provider ->
                         androidx.compose.material3.TextButton(
                             onClick = { onProviderSelected(provider) },
@@ -765,7 +769,7 @@ private fun SwitchProviderConfirmationDialog(
 private fun HomeScreenLoadedPreview() {
     HealthTheme {
         HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeLoadedState,
             onProviderSelected = {},
             onConnect = {},
@@ -784,7 +788,7 @@ private fun HomeScreenLoadedPreview() {
 private fun HomeScreenDisconnectedPreview() {
     HealthTheme {
         HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeDisconnectedState,
             onProviderSelected = {},
             onConnect = {},
@@ -803,7 +807,7 @@ private fun HomeScreenDisconnectedPreview() {
 private fun HomeScreenEmptyPreview() {
     HealthTheme {
         HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeEmptyState,
             onProviderSelected = {},
             onConnect = {},

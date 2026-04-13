@@ -198,12 +198,12 @@ private fun TrackingStats(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(Dimensions.spacingLarge)
         ) {
             Text(
                 text = "Session Stats", style = MaterialTheme.typography.titleMedium
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
                 modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -238,7 +238,7 @@ private fun ConnectionStatusRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         when (connectionState) {
             is ConnectionState.Connected -> {
@@ -300,7 +300,7 @@ private fun ConnectionBadge(brand: String) {
         Text(
             text = brand,
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = Dimensions.spacing, vertical = 4.dp)
         )
     }
 }
@@ -335,7 +335,7 @@ private fun formatTime(seconds: Long): String {
 private fun DashboardScreenIdlePreview() {
     HealthTheme {
         DashboardContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardIdleState,
             onStartTracking = {},
             onStopTracking = {},
@@ -350,7 +350,7 @@ private fun DashboardScreenIdlePreview() {
 private fun DashboardScreenTrackingPreview() {
     HealthTheme {
         DashboardContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardTrackingState,
             onStartTracking = {},
             onStopTracking = {},
@@ -365,7 +365,7 @@ private fun DashboardScreenTrackingPreview() {
 private fun DashboardScreenErrorPreview() {
     HealthTheme {
         DashboardContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
             uiState = com.gomaa.healthy.presentation.ui.PreviewData.dashboardErrorState,
             onStartTracking = {},
             onStopTracking = {},
