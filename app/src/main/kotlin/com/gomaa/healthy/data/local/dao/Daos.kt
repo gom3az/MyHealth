@@ -33,9 +33,6 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps WHERE date = :date ORDER BY source")
     suspend fun getByDateAllSources(date: Long): List<DailyStepsEntity>
 
-    @Query("SELECT * FROM daily_steps WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
-    fun getByDateRangeFlow(startDate: Long, endDate: Long): Flow<List<DailyStepsEntity>>
-
     @Query("SELECT * FROM daily_steps ORDER BY date DESC LIMIT :limit")
     suspend fun getRecent(limit: Int): List<DailyStepsEntity>
 
@@ -44,6 +41,19 @@ interface DailyStepsDao {
 
     @Query("DELETE FROM daily_steps WHERE source = :source")
     suspend fun deleteBySource(source: String)
+
+    // Source-of-truth refactor: Track sync status
+    @Query("SELECT * FROM daily_steps WHERE date = :date AND source = :source AND synced_to_hc = 0")
+    suspend fun getByDateAndSourceNotSynced(date: Long, source: String): DailyStepsEntity?
+
+    @Query("SELECT * FROM daily_steps WHERE source = :source AND synced_to_hc = 0")
+    suspend fun getBySourceNotSynced(source: String): List<DailyStepsEntity>
+
+    @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date = :date AND source = :source")
+    suspend fun markAsSynced(date: Long, source: String)
+
+    @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date IN (:dates) AND source = :source")
+    suspend fun markAsSynced(dates: List<Long>, source: String)
 }
 
 @Dao
@@ -95,6 +105,16 @@ interface ExerciseSessionDao {
 
     @Query("SELECT * FROM exercise_sessions WHERE source = :source AND healthConnectRecordId = :recordId")
     suspend fun getByHealthConnectRecordId(source: String, recordId: String): ExerciseSessionEntity?
+
+    // Source-of-truth refactor: Track sync status
+    @Query("SELECT * FROM exercise_sessions WHERE source = :source AND synced_to_hc = 0")
+    suspend fun getBySourceNotSynced(source: String): List<ExerciseSessionEntity>
+
+    @Query("UPDATE exercise_sessions SET synced_to_hc = 1 WHERE id = :id")
+    suspend fun markAsSynced(id: String)
+
+    @Query("UPDATE exercise_sessions SET synced_to_hc = 1 WHERE id IN (:ids)")
+    suspend fun markAsSynced(ids: List<String>)
 }
 
 @Dao
@@ -154,4 +174,14 @@ interface HeartRateDao {
 
     @Query("DELETE FROM heart_rates WHERE source = :source")
     suspend fun deleteBySource(source: String)
+
+    // Source-of-truth refactor: Track sync status
+    @Query("SELECT * FROM heart_rates WHERE source = :source AND synced_to_hc = 0")
+    suspend fun getBySourceNotSynced(source: String): List<HeartRateEntity>
+
+    @Query("UPDATE heart_rates SET synced_to_hc = 1 WHERE timestamp = :timestamp AND source = :source")
+    suspend fun markAsSynced(timestamp: Long, source: String)
+
+    @Query("UPDATE heart_rates SET synced_to_hc = 1 WHERE timestamp IN (:timestamps) AND source = :source")
+    suspend fun markAsSynced(timestamps: List<Long>, source: String)
 }

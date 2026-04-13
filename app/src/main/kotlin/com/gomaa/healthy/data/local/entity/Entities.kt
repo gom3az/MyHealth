@@ -14,13 +14,13 @@ data class DailyStepsEntity(
     val lightActivityMinutes: Int,
     val moderateActivityMinutes: Int,
     val vigorousActivityMinutes: Int,
-    val source: String = "myhealth" // "myhealth" or "health_connect"
+    val source: String = "myhealth", // "myhealth" or "health_connect"
+    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
 )
 
 @Entity(tableName = "fitness_goals")
 data class FitnessGoalEntity(
-    @PrimaryKey
-    val id: String,
+    @PrimaryKey val id: String,
     val name: String,
     val type: String, // "steps", "distance", "activity_minutes", "heart_rate_zone"
     val targetValue: Int,
@@ -31,8 +31,7 @@ data class FitnessGoalEntity(
 
 @Entity(tableName = "exercise_sessions")
 data class ExerciseSessionEntity(
-    @PrimaryKey
-    val id: String = UUID.randomUUID().toString(),
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val startTime: Long,
     val endTime: Long,
     val avgHeartRate: Int,
@@ -40,7 +39,8 @@ data class ExerciseSessionEntity(
     val minHeartRate: Int,
     val deviceBrand: String,
     val source: String = "myhealth", // "myhealth" or "health_connect"
-    val healthConnectRecordId: String? = null // Original HC record ID for deduplication
+    val healthConnectRecordId: String? = null, // Original HC record ID for deduplication
+    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
 )
 
 // HC-058: Add composite primary key on (timestamp, source) for deduplication
@@ -52,7 +52,8 @@ data class HeartRateEntity(
     val source: String,
     val sessionId: String? = null, // Nullable - can be null for Health Connect readings
     val bpm: Int,
-    val healthConnectRecordId: String? = null // For deduplication with HC records
+    val healthConnectRecordId: String? = null, // For deduplication with HC records
+    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
 )
 
 class Converters {
