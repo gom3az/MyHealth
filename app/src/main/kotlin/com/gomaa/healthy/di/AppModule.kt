@@ -12,7 +12,6 @@ import com.gomaa.healthy.data.local.dao.HeartRateDao
 import com.gomaa.healthy.data.repository.GoalRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
 import com.gomaa.healthy.data.repository.StepRepositoryImpl
-import com.gomaa.healthy.data.source.MockDataSeeder
 import com.gomaa.healthy.domain.repository.GoalRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
 import com.gomaa.healthy.domain.repository.StepRepository
@@ -73,17 +72,6 @@ object DatabaseModule {
     @Singleton
     fun provideHealthConnectExerciseSessionDao(database: HealthDatabase): HealthConnectExerciseSessionDao {
         return database.healthConnectExerciseSessionDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideMockDataSeeder(
-        stepsDao: DailyStepsDao,
-        goalDao: GoalDao,
-        sessionDao: ExerciseSessionDao,
-        heartRateDao: HeartRateDao
-    ): MockDataSeeder {
-        return MockDataSeeder(stepsDao, goalDao, sessionDao, heartRateDao)
     }
 }
 
