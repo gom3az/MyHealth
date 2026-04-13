@@ -13,10 +13,10 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.HeartRateDao
-import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
+import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -378,26 +378,21 @@ class HealthConnectRepository @Inject constructor(
             }
             val records = response.records
 
-            // Group by date to aggregate steps
-            val stepsByDate = records.groupBy { record ->
-                Instant.ofEpochMilli(record.startTime.toEpochMilli()).atZone(ZoneId.systemDefault())
-                    .toLocalDate().toEpochDay()
-            }
-
-            // Convert to DailyStepsEntity with source
-            val entities = stepsByDate.map { (date, recordsForDate) ->
-                val totalSteps = recordsForDate.sumOf { it.count }.toInt()
-                DailyStepsEntity(
-                    date = date,
-                    totalSteps = totalSteps,
-                    totalDistanceMeters = 0.0,
-                    activeMinutes = 0,
-                    lightActivityMinutes = 0,
-                    moderateActivityMinutes = 0,
-                    vigorousActivityMinutes = 0,
-                    source = SOURCE_HEALTH_CONNECT
-                )
-            }
+            // Map each record to entity, then aggregate by date
+            val entities = records
+                .map { record ->
+                    val date = Instant.ofEpochMilli(record.startTime.toEpochMilli())
+                        .atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+                    mapStepsRecordToEntity(record, date)
+                }
+                .groupBy { it.date }
+                .map { (date, entitiesForDate) ->
+                    val totalSteps = entitiesForDate.sumOf { it.totalSteps }
+                    entitiesForDate.first().copy(
+                        date = date,
+                        totalSteps = totalSteps
+                    )
+                }
 
             // Insert aggregated steps (composite key handles duplicates for same date/source)
             if (entities.isNotEmpty()) {

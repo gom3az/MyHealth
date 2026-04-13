@@ -1,6 +1,7 @@
 package com.gomaa.healthy.data.mapper
 
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
@@ -33,7 +34,7 @@ fun DailyStepsEntity.toDomain(): DailySteps {
     )
 }
 
-fun DailySteps.toEntity(): DailyStepsEntity {
+fun DailySteps.toEntity(source: String = "myhealth"): DailyStepsEntity {
     return DailyStepsEntity(
         date = date.toEpochDay(),
         totalSteps = totalSteps,
@@ -41,7 +42,8 @@ fun DailySteps.toEntity(): DailyStepsEntity {
         activeMinutes = activeMinutes,
         lightActivityMinutes = lightActivityMinutes,
         moderateActivityMinutes = moderateActivityMinutes,
-        vigorousActivityMinutes = vigorousActivityMinutes
+        vigorousActivityMinutes = vigorousActivityMinutes,
+        source = source
     )
 }
 
@@ -176,5 +178,18 @@ fun mapExerciseSessionRecordToEntity(
         deviceBrand = "Health Connect",
         source = SOURCE_HEALTH_CONNECT,
         healthConnectRecordId = healthConnectRecordId
+    )
+}
+
+fun mapStepsRecordToEntity(record: StepsRecord, date: Long): DailyStepsEntity {
+    return DailyStepsEntity(
+        date = date,
+        totalSteps = record.count.toInt(),
+        totalDistanceMeters = 0.0,
+        activeMinutes = 0,
+        lightActivityMinutes = 0,
+        moderateActivityMinutes = 0,
+        vigorousActivityMinutes = 0,
+        source = SOURCE_HEALTH_CONNECT
     )
 }
