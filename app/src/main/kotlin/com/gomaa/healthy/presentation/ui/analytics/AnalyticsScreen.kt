@@ -2,6 +2,7 @@ package com.gomaa.healthy.presentation.ui.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ExerciseSession
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -64,7 +66,7 @@ fun AnalyticsScreen(
         AnalyticsContent(
             uiState = uiState,
             onSessionClick = viewModel::processIntent,
-            modifier = Modifier.padding(paddingValues)
+            paddingValues = paddingValues
         )
     }
 }
@@ -73,13 +75,14 @@ fun AnalyticsScreen(
 private fun AnalyticsContent(
     uiState: AnalyticsUiState,
     onSessionClick: (AnalyticsIntent) -> Unit,
-    modifier: Modifier = Modifier,
+    paddingValues: PaddingValues = PaddingValues(16.dp),
 
     ) {
     LazyColumn(
-        modifier = modifier
+        contentPadding = paddingValues,
+        modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = Dimensions.contentPadding),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (uiState.sessions.isEmpty()) {

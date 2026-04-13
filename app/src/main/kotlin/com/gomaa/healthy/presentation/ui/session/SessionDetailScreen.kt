@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,10 +79,10 @@ fun SessionDetailScreen(
             uiState.session != null -> {
                 val session = uiState.session!!
                 LazyColumn(
+                    contentPadding = paddingValues,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(16.dp)
+                        .padding(horizontal = Dimensions.contentPadding)
                 ) {
                     item {
                         Text(

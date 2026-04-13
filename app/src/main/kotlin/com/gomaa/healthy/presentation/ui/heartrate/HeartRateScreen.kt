@@ -2,6 +2,7 @@ package com.gomaa.healthy.presentation.ui.heartrate
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -81,7 +83,7 @@ fun HeartRateScreen(
 
 @Composable
 private fun HeartRateContent(
-    paddingValues: androidx.compose.foundation.layout.PaddingValues,
+    paddingValues: PaddingValues,
     uiState: HeartRateUiState,
     onIntent: (HeartRateIntent) -> Unit
 ) {
@@ -103,7 +105,7 @@ private fun HeartRateContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(horizontal = Dimensions.contentPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -134,10 +136,10 @@ private fun HeartRateContent(
 
         is HeartRateUiState.Loaded -> {
             LazyColumn(
+                contentPadding = paddingValues,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(horizontal = Dimensions.contentPadding),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Source Filter
@@ -196,7 +198,7 @@ private fun HeartRateContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(horizontal = Dimensions.contentPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {

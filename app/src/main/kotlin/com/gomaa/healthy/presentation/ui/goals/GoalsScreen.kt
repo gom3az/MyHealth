@@ -41,6 +41,7 @@ import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.presentation.ui.PreviewData
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -138,7 +139,7 @@ private fun GoalsContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(horizontal = Dimensions.contentPadding),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -154,10 +155,10 @@ private fun GoalsContent(
             }
         } else {
             LazyColumn(
+                contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(horizontal = Dimensions.contentPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(goals) { goal ->

@@ -50,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectRepository.Companion.HEALTH_CONNECT_PACKAGE
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import kotlinx.coroutines.launch
 
 @Composable
@@ -111,10 +112,10 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         LazyColumn(
+            contentPadding = innerPadding,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = Dimensions.contentPadding)
         ) {
             item {
                 SettingsItem(

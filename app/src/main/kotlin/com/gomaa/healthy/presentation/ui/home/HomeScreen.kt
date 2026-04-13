@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
+import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -150,8 +151,8 @@ private fun HomeContent(
         contentPadding = paddingValues,
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = Dimensions.contentPadding),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
     ) {
         item {
             StepsFilterChips(
@@ -228,7 +229,7 @@ private fun StepsFilterChips(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(scrollState),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         FilterChip(
             selected = selectedFilter == StepSourceFilter.ALL,
@@ -345,7 +346,7 @@ private fun ExpandableStepsSection(
     var healthConnectExpanded by remember { mutableStateOf(false) }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         // MyHealth Section
         Card(
@@ -556,7 +557,7 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
             ) {
                 val (icon, text, color) = when (uiState.connectionState) {
                     ConnectionState.Connected -> Triple(
@@ -608,7 +609,7 @@ private fun ProviderSelectionCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
             ) {
                 availableProviders.forEach { provider ->
                     FilterChip(
