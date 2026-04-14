@@ -32,10 +32,11 @@ fun HealthConnectSection(
     lastSyncTime: Long?,
     isSyncing: Boolean,
     onConnect: () -> Unit,
-    onSyncNow: () -> Unit
+    onSyncNow: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )

@@ -29,27 +29,24 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed class SettingsIntent {
-    // Initialization
     data object Initialize : SettingsIntent()
 
-    // Health Connect intents
-    data object SyncNow : SettingsIntent()
+    data object SyncHealthConnectNow : SettingsIntent()
     data object RequestHealthConnectPermissions : SettingsIntent()
-    data object PermissionsRequested : SettingsIntent()
+    data object HealthConnectPermissionsRequested : SettingsIntent()
     data class SetMasterSync(val enabled: Boolean) : SettingsIntent()
     data class SetStepsSync(val enabled: Boolean) : SettingsIntent()
     data class SetExerciseSync(val enabled: Boolean) : SettingsIntent()
     data class SetHeartRateSync(val enabled: Boolean) : SettingsIntent()
 
-    // Health Kit intents (Phase 4)
     data object ConnectHealthKit : SettingsIntent()
     data object DisconnectHealthKit : SettingsIntent()
-    data class SetSyncWindow(val days: Int) : SettingsIntent()
     data object SyncHealthKitNow : SettingsIntent()
+    data class SetHealthKitSyncWindow(val days: Int) : SettingsIntent()
 }
 
 sealed class SettingsSideEffect {
-    data object RequestPermissions : SettingsSideEffect()
+    data object RequestHealthConnectPermissions : SettingsSideEffect()
     data object RequestHealthKitSignIn : SettingsSideEffect()
     data class ShowError(val message: String) : SettingsSideEffect()
     data class ShowSuccess(val message: String) : SettingsSideEffect()
@@ -58,20 +55,20 @@ sealed class SettingsSideEffect {
 sealed interface SettingsUiState {
     data class Idle(
         // Health Connect state
-        val isAvailable: Boolean = false,
-        val isConnected: Boolean = false,
-        val stepCount: Int = 0,
-        val exerciseSessionCount: Int = 0,
-        val heartRateCount: Int = 0,
-        val lastSyncTime: Long? = null,
-        val isSyncing: Boolean = false,
+        val healthConnectAvailable: Boolean = false,
+        val healthConnectConnected: Boolean = false,
+        val healthConnectStepCount: Int = 0,
+        val healthConnectExerciseSessionCount: Int = 0,
+        val healthConnectHeartRateCount: Int = 0,
+        val healthConnectLastSyncTime: Long? = null,
+        val healthConnectSyncing: Boolean = false,
         val syncPreferences: SyncPreferences = SyncPreferences(),
         // Health Kit state
         val healthKitSignedIn: Boolean = false,
         val healthKitAuthState: AuthState = AuthState.NOT_SIGNED_IN,
         val healthKitSyncWindowDays: Int = 1,
-        val lastHealthKitSyncTime: Long? = null,
-        val isHealthKitSyncing: Boolean = false
+        val healthKitLastSyncTime: Long? = null,
+        val healthKitSyncing: Boolean = false
     ) : SettingsUiState
 }
 
@@ -83,7 +80,7 @@ private data class HealthConnectState(
     val isAvailable: Boolean,
     val isConnected: Boolean,
     val stepCount: Int,
-    val exerciseCount: Int,
+    val exerciseSessionCount: Int,
     val heartRateCount: Int,
     val lastSyncTime: Long?
 )
@@ -133,42 +130,25 @@ class SettingsViewModel @Inject constructor(
 
     fun processIntent(intent: SettingsIntent) {
         when (intent) {
-            // Initialization
             is SettingsIntent.Initialize -> initialize()
 
-            // Health Connect intents
-            is SettingsIntent.SyncNow -> syncNow()
+            is SettingsIntent.SyncHealthConnectNow -> syncHealthConnectNow()
             is SettingsIntent.RequestHealthConnectPermissions -> requestHealthConnectPermissions()
-            is SettingsIntent.PermissionsRequested -> checkHealthConnectStatus()
-            is SettingsIntent.SetMasterSync -> viewModelScope.launch {
-                setSyncEnabled(
-                    SyncType.MASTER_SYNC, intent.enabled
-                )
-            }
+            is SettingsIntent.HealthConnectPermissionsRequested -> checkHealthConnectStatus()
+            is SettingsIntent.SetMasterSync -> setSyncEnabled(SyncType.MASTER_SYNC, intent.enabled)
+            is SettingsIntent.SetStepsSync -> setSyncEnabled(SyncType.STEPS_SYNC, intent.enabled)
+            is SettingsIntent.SetExerciseSync -> setSyncEnabled(
+                SyncType.EXERCISE_SYNC, intent.enabled
+            )
 
-            is SettingsIntent.SetStepsSync -> viewModelScope.launch {
-                setSyncEnabled(
-                    SyncType.STEPS_SYNC, intent.enabled
-                )
-            }
+            is SettingsIntent.SetHeartRateSync -> setSyncEnabled(
+                SyncType.HEART_RATE_SYNC, intent.enabled
+            )
 
-            is SettingsIntent.SetExerciseSync -> viewModelScope.launch {
-                setSyncEnabled(
-                    SyncType.EXERCISE_SYNC, intent.enabled
-                )
-            }
-
-            is SettingsIntent.SetHeartRateSync -> viewModelScope.launch {
-                setSyncEnabled(
-                    SyncType.HEART_RATE_SYNC, intent.enabled
-                )
-            }
-
-            // Health Kit intents (Phase 4)
             is SettingsIntent.ConnectHealthKit -> connectHealthKit()
             is SettingsIntent.DisconnectHealthKit -> disconnectHealthKit()
-            is SettingsIntent.SetSyncWindow -> viewModelScope.launch { setSyncWindow(intent.days) }
             is SettingsIntent.SyncHealthKitNow -> syncHealthKitNow()
+            is SettingsIntent.SetHealthKitSyncWindow -> setHealthKitSyncWindow(intent.days)
         }
     }
 
@@ -183,16 +163,16 @@ class SettingsViewModel @Inject constructor(
                     val healthKitState = healthKitDeferred.await()
 
                     _state.value = SettingsUiState.Idle(
-                        isAvailable = healthConnectState.isAvailable,
-                        isConnected = healthConnectState.isConnected,
-                        stepCount = healthConnectState.stepCount,
-                        exerciseSessionCount = healthConnectState.exerciseCount,
-                        heartRateCount = healthConnectState.heartRateCount,
-                        lastSyncTime = healthConnectState.lastSyncTime,
+                        healthConnectAvailable = healthConnectState.isAvailable,
+                        healthConnectConnected = healthConnectState.isConnected,
+                        healthConnectStepCount = healthConnectState.stepCount,
+                        healthConnectExerciseSessionCount = healthConnectState.exerciseSessionCount,
+                        healthConnectHeartRateCount = healthConnectState.heartRateCount,
+                        healthConnectLastSyncTime = healthConnectState.lastSyncTime,
                         healthKitSignedIn = healthKitState.isSignedIn,
                         healthKitAuthState = healthKitState.authState,
                         healthKitSyncWindowDays = healthKitState.syncWindowDays,
-                        lastHealthKitSyncTime = healthKitState.lastSyncTime
+                        healthKitLastSyncTime = healthKitState.lastSyncTime
                     )
                 }
             } catch (e: Exception) {
@@ -218,7 +198,7 @@ class SettingsViewModel @Inject constructor(
         val isConnected = isAvailable && hasPerms
 
         val stepCount: Int
-        val exerciseCount: Int
+        val exerciseSessionCount: Int
         val heartRateCount: Int
         val lastSyncTime: Long?
 
@@ -232,12 +212,12 @@ class SettingsViewModel @Inject constructor(
                 viewModelScope.async { healthConnectRepository.getLastSyncTime() }
 
             stepCount = stepDeferred.await()
-            exerciseCount = exerciseDeferred.await()
+            exerciseSessionCount = exerciseDeferred.await()
             heartRateCount = heartRateDeferred.await()
             lastSyncTime = lastSyncDeferred.await()
         } else {
             stepCount = 0
-            exerciseCount = 0
+            exerciseSessionCount = 0
             heartRateCount = 0
             lastSyncTime = null
         }
@@ -246,7 +226,7 @@ class SettingsViewModel @Inject constructor(
             isAvailable = isAvailable,
             isConnected = isConnected,
             stepCount = stepCount,
-            exerciseCount = exerciseCount,
+            exerciseSessionCount = exerciseSessionCount,
             heartRateCount = heartRateCount,
             lastSyncTime = lastSyncTime
         )
@@ -279,56 +259,60 @@ class SettingsViewModel @Inject constructor(
 
             updateIfIdle {
                 copy(
-                    isAvailable = healthConnectState.isAvailable,
-                    isConnected = healthConnectState.isConnected,
-                    stepCount = healthConnectState.stepCount,
-                    exerciseSessionCount = healthConnectState.exerciseCount,
-                    heartRateCount = healthConnectState.heartRateCount,
-                    lastSyncTime = healthConnectState.lastSyncTime
+                    healthConnectAvailable = healthConnectState.isAvailable,
+                    healthConnectConnected = healthConnectState.isConnected,
+                    healthConnectStepCount = healthConnectState.stepCount,
+                    healthConnectExerciseSessionCount = healthConnectState.exerciseSessionCount,
+                    healthConnectHeartRateCount = healthConnectState.heartRateCount,
+                    healthConnectLastSyncTime = healthConnectState.lastSyncTime
                 )
             }
         }
     }
 
-    private suspend fun setSyncEnabled(type: SyncType, enabled: Boolean) {
-        when (type) {
-            SyncType.MASTER_SYNC -> {
-                syncPreferencesManager.setMasterSyncEnabled(enabled)
-                updateScheduler(enabled = enabled)
-            }
+    private fun setSyncEnabled(type: SyncType, enabled: Boolean) {
+        viewModelScope.launch {
+            when (type) {
+                SyncType.MASTER_SYNC -> {
+                    syncPreferencesManager.setMasterSyncEnabled(enabled)
+                    updateScheduler(enabled = enabled)
+                }
 
-            SyncType.STEPS_SYNC -> {
-                syncPreferencesManager.setStepsSyncEnabled(enabled)
-                updateScheduler()
-            }
+                SyncType.STEPS_SYNC -> {
+                    syncPreferencesManager.setStepsSyncEnabled(enabled)
+                    updateScheduler()
+                }
 
-            SyncType.EXERCISE_SYNC -> {
-                syncPreferencesManager.setExerciseSyncEnabled(enabled)
-                updateScheduler()
-            }
+                SyncType.EXERCISE_SYNC -> {
+                    syncPreferencesManager.setExerciseSyncEnabled(enabled)
+                    updateScheduler()
+                }
 
-            SyncType.HEART_RATE_SYNC -> {
-                syncPreferencesManager.setHeartRateSyncEnabled(enabled)
-                updateScheduler()
+                SyncType.HEART_RATE_SYNC -> {
+                    syncPreferencesManager.setHeartRateSyncEnabled(enabled)
+                    updateScheduler()
+                }
             }
         }
     }
 
-    private suspend fun setSyncWindow(days: Int) {
-        syncPreferencesManager.setSyncWindowDays(days)
-        _state.value = (_state.value as? SettingsUiState.Idle)?.copy(
-            healthKitSyncWindowDays = days
-        ) ?: _state.value
+    private fun setHealthKitSyncWindow(days: Int) {
+        viewModelScope.launch {
+            syncPreferencesManager.setSyncWindowDays(days)
+            _state.value = (_state.value as? SettingsUiState.Idle)?.copy(
+                healthKitSyncWindowDays = days
+            ) ?: _state.value
 
-        _sideEffect.emit(
-            SettingsSideEffect.ShowSuccess(
-                "Sync window updated to ${
-                    SyncPreferencesManager.getSyncWindowLabel(
-                        days
-                    )
-                }"
+            _sideEffect.emit(
+                SettingsSideEffect.ShowSuccess(
+                    "Sync window updated to ${
+                        SyncPreferencesManager.getSyncWindowLabel(
+                            days
+                        )
+                    }"
+                )
             )
-        )
+        }
     }
 
     private suspend fun updateScheduler(enabled: Boolean? = null) {
@@ -343,11 +327,10 @@ class SettingsViewModel @Inject constructor(
 
     private fun requestHealthConnectPermissions() {
         viewModelScope.launch {
-            _sideEffect.emit(SettingsSideEffect.RequestPermissions)
+            _sideEffect.emit(SettingsSideEffect.RequestHealthConnectPermissions)
         }
     }
 
-    // Connect to Health Kit (initiate sign-in)
     private fun connectHealthKit() {
         viewModelScope.launch {
             setHealthKitSyncing(true)
@@ -358,7 +341,7 @@ class SettingsViewModel @Inject constructor(
                         copy(
                             healthKitSignedIn = true,
                             healthKitAuthState = AuthState.SIGNED_IN,
-                            isHealthKitSyncing = false
+                            healthKitSyncing = false
                         )
                     }
                     _sideEffect.emit(SettingsSideEffect.ShowSuccess("Connected to Huawei Health Kit"))
@@ -373,7 +356,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // Disconnect from Health Kit
     private fun disconnectHealthKit() {
         viewModelScope.launch {
             healthKitAuthManager.signOut()
@@ -388,7 +370,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // Trigger immediate Health Kit sync
     private fun syncHealthKitNow() {
         viewModelScope.launch {
             setHealthKitSyncing(true)
@@ -397,16 +378,16 @@ class SettingsViewModel @Inject constructor(
             val lastSyncTime = syncPreferencesManager.getLastHealthKitSyncTime()
             updateIfIdle {
                 copy(
-                    isHealthKitSyncing = false, lastHealthKitSyncTime = lastSyncTime
+                    healthKitSyncing = false, healthKitLastSyncTime = lastSyncTime
                 )
             }
             _sideEffect.emit(SettingsSideEffect.ShowSuccess("Health Kit sync started"))
         }
     }
 
-    private fun syncNow() {
+    private fun syncHealthConnectNow() {
         viewModelScope.launch {
-            setSyncing(true)
+            setHealthConnectSyncing(true)
 
             val prefs = syncPreferencesManager.getPreferences()
 
@@ -428,20 +409,20 @@ class SettingsViewModel @Inject constructor(
 
                             updateIfIdle {
                                 copy(
-                                    isAvailable = true,
-                                    isConnected = true,
-                                    stepCount = stepCount,
-                                    exerciseSessionCount = exerciseCount,
-                                    heartRateCount = heartRateCount,
-                                    lastSyncTime = lastSyncTime,
-                                    isSyncing = false,
+                                    healthConnectAvailable = true,
+                                    healthConnectConnected = true,
+                                    healthConnectStepCount = stepCount,
+                                    healthConnectExerciseSessionCount = exerciseCount,
+                                    healthConnectHeartRateCount = heartRateCount,
+                                    healthConnectLastSyncTime = lastSyncTime,
+                                    healthConnectSyncing = false,
                                     syncPreferences = prefs
                                 )
                             }
                         }
 
                         WorkInfo.State.FAILED -> {
-                            setSyncing(false)
+                            setHealthConnectSyncing(false)
                             _sideEffect.emit(
                                 SettingsSideEffect.ShowError(
                                     "Sync failed. Please check Health Connect permissions and try again."
@@ -450,7 +431,7 @@ class SettingsViewModel @Inject constructor(
                         }
 
                         WorkInfo.State.CANCELLED -> {
-                            setSyncing(false)
+                            setHealthConnectSyncing(false)
                             _sideEffect.emit(SettingsSideEffect.ShowError("Sync was cancelled"))
                         }
 
@@ -461,12 +442,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun setSyncing(syncing: Boolean) {
-        updateIfIdle { copy(isSyncing = syncing) }
+    private fun setHealthConnectSyncing(syncing: Boolean) {
+        updateIfIdle { copy(healthConnectSyncing = syncing) }
     }
 
     private fun setHealthKitSyncing(syncing: Boolean) {
-        updateIfIdle { copy(isHealthKitSyncing = syncing) }
+        updateIfIdle { copy(healthKitSyncing = syncing) }
     }
 
     private fun updateIfIdle(transform: SettingsUiState.Idle.() -> SettingsUiState) {

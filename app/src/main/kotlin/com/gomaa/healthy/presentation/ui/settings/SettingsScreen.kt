@@ -62,13 +62,13 @@ fun SettingsScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { _ ->
-        viewModel.processIntent(SettingsIntent.PermissionsRequested)
+        viewModel.processIntent(SettingsIntent.HealthConnectPermissionsRequested)
     }
 
     LaunchedEffect(Unit) {
         viewModel.sideEffect.collect { sideEffect ->
             when (sideEffect) {
-                is SettingsSideEffect.RequestPermissions -> {
+                is SettingsSideEffect.RequestHealthConnectPermissions -> {
                     try {
                         permissionLauncher.launch(HealthConnectRepository.PERMISSIONS)
                     } catch (e: Exception) {
@@ -134,17 +134,17 @@ fun SettingsScreen(
 
             item {
                 HealthConnectSection(
-                    isAvailable = idleState?.isAvailable ?: false,
-                    isConnected = idleState?.isConnected ?: false,
-                    stepCount = idleState?.stepCount ?: 0,
-                    exerciseSessionCount = idleState?.exerciseSessionCount ?: 0,
-                    heartRateCount = idleState?.heartRateCount ?: 0,
-                    lastSyncTime = idleState?.lastSyncTime,
-                    isSyncing = idleState?.isSyncing ?: false,
+                    isAvailable = idleState?.healthConnectAvailable ?: false,
+                    isConnected = idleState?.healthConnectConnected ?: false,
+                    stepCount = idleState?.healthConnectStepCount ?: 0,
+                    exerciseSessionCount = idleState?.healthConnectExerciseSessionCount ?: 0,
+                    heartRateCount = idleState?.healthConnectHeartRateCount ?: 0,
+                    lastSyncTime = idleState?.healthConnectLastSyncTime,
+                    isSyncing = idleState?.healthConnectSyncing ?: false,
                     onConnect = {
                         viewModel.processIntent(SettingsIntent.RequestHealthConnectPermissions)
                     },
-                    onSyncNow = { viewModel.processIntent(SettingsIntent.SyncNow) }
+                    onSyncNow = { viewModel.processIntent(SettingsIntent.SyncHealthConnectNow) }
                 )
             }
 
@@ -155,12 +155,18 @@ fun SettingsScreen(
                     isSignedIn = idleState?.healthKitSignedIn ?: false,
                     authState = idleState?.healthKitAuthState ?: AuthState.NOT_SIGNED_IN,
                     syncWindowDays = idleState?.healthKitSyncWindowDays ?: 1,
-                    lastSyncTime = idleState?.lastHealthKitSyncTime,
-                    isSyncing = idleState?.isHealthKitSyncing ?: false,
+                    lastSyncTime = idleState?.healthKitLastSyncTime,
+                    isSyncing = idleState?.healthKitSyncing ?: false,
                     onConnect = { viewModel.processIntent(SettingsIntent.ConnectHealthKit) },
                     onDisconnect = { viewModel.processIntent(SettingsIntent.DisconnectHealthKit) },
                     onSyncNow = { viewModel.processIntent(SettingsIntent.SyncHealthKitNow) },
-                    onSyncWindowChanged = { viewModel.processIntent(SettingsIntent.SetSyncWindow(it)) }
+                    onSyncWindowChanged = {
+                        viewModel.processIntent(
+                            SettingsIntent.SetHealthKitSyncWindow(
+                                it
+                            )
+                        )
+                    }
                 )
             }
 
@@ -169,7 +175,7 @@ fun SettingsScreen(
             item {
                 SyncPreferencesSection(
                     preferences = idleState?.syncPreferences ?: SyncPreferences(),
-                    isConnected = idleState?.isConnected ?: false,
+                    healthConnectConnected = idleState?.healthConnectConnected ?: false,
                     onMasterSyncChanged = { viewModel.processIntent(SettingsIntent.SetMasterSync(it)) },
                     onStepsSyncChanged = { viewModel.processIntent(SettingsIntent.SetStepsSync(it)) },
                     onExerciseSyncChanged = {

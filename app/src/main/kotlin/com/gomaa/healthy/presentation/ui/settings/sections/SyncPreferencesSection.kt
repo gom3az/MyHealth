@@ -21,7 +21,7 @@ import com.gomaa.healthy.presentation.ui.theme.Dimensions
 @Composable
 fun SyncPreferencesSection(
     preferences: SyncPreferences,
-    isConnected: Boolean,
+    healthConnectConnected: Boolean,
     onMasterSyncChanged: (Boolean) -> Unit,
     onStepsSyncChanged: (Boolean) -> Unit,
     onExerciseSyncChanged: (Boolean) -> Unit,
@@ -54,7 +54,7 @@ fun SyncPreferencesSection(
                 title = "Master Sync",
                 description = "Enable/disable all background sync",
                 checked = preferences.masterSyncEnabled,
-                enabled = isConnected,
+                enabled = healthConnectConnected,
                 onCheckedChange = onMasterSyncChanged
             )
 
@@ -62,7 +62,7 @@ fun SyncPreferencesSection(
                 title = "Steps",
                 description = "Sync daily step count",
                 checked = preferences.syncStepsEnabled && preferences.masterSyncEnabled,
-                enabled = isConnected && preferences.masterSyncEnabled,
+                enabled = healthConnectConnected && preferences.masterSyncEnabled,
                 onCheckedChange = onStepsSyncChanged
             )
 
@@ -70,7 +70,7 @@ fun SyncPreferencesSection(
                 title = "Exercise Sessions",
                 description = "Sync workout sessions",
                 checked = preferences.syncExerciseEnabled && preferences.masterSyncEnabled,
-                enabled = isConnected && preferences.masterSyncEnabled,
+                enabled = healthConnectConnected && preferences.masterSyncEnabled,
                 onCheckedChange = onExerciseSyncChanged
             )
 
@@ -78,7 +78,7 @@ fun SyncPreferencesSection(
                 title = "Heart Rate",
                 description = "Sync heart rate readings",
                 checked = preferences.syncHeartRateEnabled && preferences.masterSyncEnabled,
-                enabled = isConnected && preferences.masterSyncEnabled,
+                enabled = healthConnectConnected && preferences.masterSyncEnabled,
                 onCheckedChange = onHeartRateSyncChanged
             )
         }
