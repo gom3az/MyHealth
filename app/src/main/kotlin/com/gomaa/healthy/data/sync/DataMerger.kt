@@ -24,6 +24,10 @@ interface DataMerger {
 @Singleton
 class DataMergerImpl @Inject constructor() : DataMerger {
 
+    companion object {
+        private const val HEART_RATE_BIN_SIZE_MS = 5000L
+    }
+
     override fun mergeSteps(
         hcData: List<DailyStepsEntity>, localData: List<DailyStepsEntity>
     ): List<DailyStepsEntity> {
@@ -47,7 +51,14 @@ class DataMergerImpl @Inject constructor() : DataMerger {
                         DataOriginConstants.getPrecision(hc.dataOrigin, hc.source).priority
                     val localPrecision =
                         DataOriginConstants.getPrecision(local.dataOrigin, local.source).priority
-                    if (localPrecision >= hcPrecision) local else hc
+
+                    when {
+                        localPrecision > hcPrecision -> local
+                        hcPrecision > localPrecision -> hc
+                        else -> {
+                            if (local.totalSteps >= hc.totalSteps) local else hc
+                        }
+                    }
                 }
 
                 else -> throw IllegalStateException("Unexpected state in mergeSteps")
@@ -61,12 +72,40 @@ class DataMergerImpl @Inject constructor() : DataMerger {
         if (hcData.isEmpty()) return localData
         if (localData.isEmpty()) return hcData
 
+        fun roundToBin(timestamp: Long): Long {
+            return (timestamp / HEART_RATE_BIN_SIZE_MS) * HEART_RATE_BIN_SIZE_MS
+        }
+
         val merged = mutableMapOf<Long, HeartRateEntity>()
 
-        hcData.forEach { merged[it.timestamp] = it }
+        hcData.forEach { hr ->
+            val bin = roundToBin(hr.timestamp)
+            val existing = merged[bin]
+            if (existing == null) {
+                merged[bin] = hr.copy(timestamp = bin)
+            } else {
+                val existingPrecision = DataOriginConstants.getPrecision(
+                    existing.dataOrigin, existing.source
+                ).priority
+                val newPrecision = DataOriginConstants.getPrecision(
+                    hr.dataOrigin, hr.source
+                ).priority
+
+                val winner = when {
+                    newPrecision > existingPrecision -> hr
+                    existingPrecision > newPrecision -> existing
+                    else -> {
+                        if (hr.bpm >= existing.bpm) hr else existing
+                    }
+                }
+                merged[bin] = winner.copy(timestamp = bin)
+            }
+        }
 
         localData.forEach { local ->
-            val existing = merged[local.timestamp]
+            val bin = roundToBin(local.timestamp)
+            val existing = merged[bin]
+
             val shouldReplace = when {
                 existing == null -> true
                 local.source == SOURCE_MY_HEALTH -> true
@@ -77,11 +116,17 @@ class DataMergerImpl @Inject constructor() : DataMerger {
                     ).priority
                     val localPrecision =
                         DataOriginConstants.getPrecision(local.dataOrigin, local.source).priority
-                    localPrecision > existingPrecision
+
+                    when {
+                        localPrecision > existingPrecision -> true
+                        existingPrecision > localPrecision -> false
+                        else -> local.bpm >= existing.bpm
+                    }
                 }
             }
+
             if (shouldReplace) {
-                merged[local.timestamp] = local
+                merged[bin] = local.copy(timestamp = bin)
             }
         }
 
@@ -126,7 +171,16 @@ class DataMergerImpl @Inject constructor() : DataMerger {
                         val localPrecision = DataOriginConstants.getPrecision(
                             local.dataOrigin, local.source
                         ).priority
-                        if (localPrecision >= hcPrecision) local else hc
+
+                        when {
+                            localPrecision > hcPrecision -> local
+                            hcPrecision > localPrecision -> hc
+                            else -> {
+                                val hcDuration = hc.endTime - hc.startTime
+                                val localDuration = local.endTime - local.startTime
+                                if (localDuration >= hcDuration) local else hc
+                            }
+                        }
                     } else {
                         null
                     }

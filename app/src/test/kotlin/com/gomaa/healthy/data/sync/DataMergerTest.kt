@@ -159,7 +159,7 @@ class DataMergerTest {
                 healthConnectRecordId = "hc-1"
             ),
             HeartRateEntity(
-                timestamp = 2000L,
+                timestamp = 7000L,
                 source = SOURCE_HEALTH_CONNECT,
                 bpm = 80,
                 healthConnectRecordId = "hc-2"
@@ -167,7 +167,7 @@ class DataMergerTest {
         )
         val localData = listOf(
             HeartRateEntity(
-                timestamp = 3000L,
+                timestamp = 13000L,
                 source = SOURCE_MY_HEALTH,
                 bpm = 85
             )

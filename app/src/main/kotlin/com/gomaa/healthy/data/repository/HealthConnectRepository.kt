@@ -9,7 +9,6 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -25,7 +24,6 @@ import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
 import com.gomaa.healthy.data.sync.DataMerger
-import com.gomaa.healthy.data.sync.DataOriginConstants
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -118,13 +116,6 @@ class HealthConnectRepository @Inject constructor(
             setOf(READ_STEPS, WRITE_STEPS, READ_EXERCISE, WRITE_EXERCISE, READ_HEART_RATE)
 
         const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
-
-        private val DATA_ORIGIN_FILTER = setOf(
-            DataOrigin(DataOriginConstants.PACKAGE_HUAWEI_HEALTH),
-            DataOrigin(DataOriginConstants.PACKAGE_ANDROID),
-            DataOrigin(DataOriginConstants.PACKAGE_GOOGLE_FIT),
-            DataOrigin(DataOriginConstants.PACKAGE_SAMSUNG_HEALTH)
-        )
 
         /** SharedPreferences key for last sync timestamp */
         private const val PREFS_NAME = "health_connect_sync"
@@ -265,7 +256,6 @@ class HealthConnectRepository @Inject constructor(
             val request = ReadRecordsRequest(
                 recordType = ExerciseSessionRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
-                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 
@@ -368,7 +358,6 @@ class HealthConnectRepository @Inject constructor(
             val request = ReadRecordsRequest(
                 recordType = StepsRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
-                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 
@@ -437,7 +426,6 @@ class HealthConnectRepository @Inject constructor(
             val request = ReadRecordsRequest(
                 recordType = HeartRateRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
-                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 

@@ -12,13 +12,6 @@ object DataOriginConstants {
     const val PACKAGE_HUAWEI_HEALTH = "com.huawei.health"
     const val PACKAGE_SAMSUNG_HEALTH = "com.samsung.android.shealth"
 
-    val KNOWN_DATA_ORIGINS = setOf(
-        PACKAGE_ANDROID,
-        PACKAGE_GOOGLE_FIT,
-        PACKAGE_HUAWEI_HEALTH,
-        PACKAGE_SAMSUNG_HEALTH
-    )
-
     enum class DataPrecision(val priority: Int) {
         LOW(0),
         STANDARD(1),
