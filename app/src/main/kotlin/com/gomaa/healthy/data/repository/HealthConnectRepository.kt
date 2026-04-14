@@ -112,8 +112,16 @@ class HealthConnectRepository @Inject constructor(
         private val WRITE_EXERCISE =
             HealthPermission.getWritePermission(ExerciseSessionRecord::class)
         private val READ_HEART_RATE = HealthPermission.getReadPermission(HeartRateRecord::class)
+        private val WRITE_HEART_RATE = HealthPermission.getWritePermission(HeartRateRecord::class)
         val PERMISSIONS =
-            setOf(READ_STEPS, WRITE_STEPS, READ_EXERCISE, WRITE_EXERCISE, READ_HEART_RATE)
+            setOf(
+                READ_STEPS,
+                WRITE_STEPS,
+                READ_EXERCISE,
+                WRITE_EXERCISE,
+                READ_HEART_RATE,
+                WRITE_HEART_RATE
+            )
 
         const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
 

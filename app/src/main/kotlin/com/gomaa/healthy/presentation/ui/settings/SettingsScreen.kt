@@ -106,8 +106,7 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.processIntent(SettingsIntent.CheckHealthConnect)
-        viewModel.processIntent(SettingsIntent.CheckHealthKitStatus)
+        viewModel.processIntent(SettingsIntent.Initialize)
     }
 
     val idleState = state as? SettingsUiState.Idle
