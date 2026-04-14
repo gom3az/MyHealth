@@ -2,11 +2,11 @@ package com.gomaa.healthy.data.repository
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.core.content.edit
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_RUNNING
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Metadata
@@ -19,9 +19,11 @@ import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.HeartRateEntity
 import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
+import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
+import com.gomaa.healthy.data.sync.ConflictResolver
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -81,7 +83,7 @@ interface HealthConnectRepositoryInterface {
     suspend fun writeSteps(dailySteps: List<DailySteps>): HealthConnectResult<Int>
 
     suspend fun writeExerciseSession(session: ExerciseSession): HealthConnectResult<Boolean>
-    suspend fun writeHeartRate(heartRate: HeartRateReading): HealthConnectResult<Boolean>
+    suspend fun writeHeartRates(heartRates: List<HeartRateReading>): HealthConnectResult<Int>
 
     // DAO-accessor methods for Worker (replaces direct DAO access)
     suspend fun getUnsyncedLocalSteps(source: String): List<DailyStepsEntity>
@@ -103,6 +105,7 @@ class HealthConnectRepository @Inject constructor(
 ) : HealthConnectRepositoryInterface {
 
     companion object {
+        private const val TAG = "HealthConnectRepository"
         private val READ_STEPS = HealthPermission.getReadPermission(StepsRecord::class)
         private val WRITE_STEPS = HealthPermission.getWritePermission(StepsRecord::class)
         private val READ_EXERCISE = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
@@ -272,17 +275,33 @@ class HealthConnectRepository @Inject constructor(
             }
             val records = response.records
 
-            // Convert to entities with deduplication using mapper
+            // Convert to entities with conflict resolution
             val entities = records.mapNotNull { record ->
                 val recordId = record.metadata.id
-                // Check if already exists
-                val existing = exerciseSessionDao.getByHealthConnectRecordId(
+                val entity = mapExerciseSessionRecordToEntity(record, recordId)
+
+                // Check for existing HC record (deduplication)
+                val existingByHcId = exerciseSessionDao.getByHealthConnectRecordId(
                     SOURCE_HEALTH_CONNECT, recordId
                 )
-                if (existing != null) {
+                // Check for local MY_HEALTH session at same time range (conflict)
+                val existingLocal = exerciseSessionDao.getBySourceAndTimeRange(
+                    SOURCE_MY_HEALTH, entity.startTime, entity.endTime
+                )
+
+                val shouldApply = ConflictResolver.shouldApplyExercise(
+                    hcRecordId = recordId,
+                    existingByHcId = existingByHcId,
+                    existingLocal = existingLocal
+                )
+                if (!shouldApply) {
+                    Log.d(
+                        TAG,
+                        "syncExerciseSessions: Skipping HC session - conflict (recordId=$recordId)"
+                    )
                     null
                 } else {
-                    mapExerciseSessionRecordToEntity(record, recordId)
+                    entity
                 }
             }
 
@@ -411,10 +430,16 @@ class HealthConnectRepository @Inject constructor(
                 )
             }
 
-            // Insert aggregated steps (composite key handles duplicates for same date/source)
-            if (entities.isNotEmpty()) {
-                dailyStepsDao.insertAll(entities)
-                totalNewRecords += entities.size
+            // Apply conflict resolution: local data wins
+            val filteredEntities = entities.filter { hcEntity ->
+                val localEntity = dailyStepsDao.getByDate(hcEntity.date)
+                ConflictResolver.shouldApplySteps(localEntity)
+            }
+
+            // Insert aggregated steps (only if no local conflict)
+            if (filteredEntities.isNotEmpty()) {
+                dailyStepsDao.insertAll(filteredEntities)
+                totalNewRecords += filteredEntities.size
 
                 val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
                 if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
@@ -468,8 +493,18 @@ class HealthConnectRepository @Inject constructor(
                 mapHeartRateRecordToEntity(record, recordId, SOURCE_HEALTH_CONNECT)
             }
 
-            // Filter out duplicates using healthConnectRecordId
-            val newEntities = entities.filter { it.healthConnectRecordId !in existingRecordIds }
+            // Filter out duplicates AND apply conflict resolution
+            val newEntities = entities.filter { hcEntity ->
+                // Conflict check: no local MY_HEALTH reading at same timestamp
+                val existingLocal = heartRateDao.getBySourceAndTimestamp(
+                    SOURCE_MY_HEALTH, hcEntity.timestamp
+                )
+                ConflictResolver.shouldApplyHeartRate(
+                    hcRecordId = hcEntity.healthConnectRecordId ?: "",
+                    existingRecordIds = existingRecordIds,
+                    existingLocal = existingLocal
+                )
+            }
 
             // Insert new records (with IGNORE strategy - no overwrite)
             if (newEntities.isNotEmpty()) {
@@ -547,6 +582,13 @@ class HealthConnectRepository @Inject constructor(
      * @return HealthConnectResult with count of successfully written records
      */
     override suspend fun writeSteps(dailySteps: List<DailySteps>): HealthConnectResult<Int> {
+        // Validate data
+        val validSteps = dailySteps.filter { it.totalSteps >= 0 }
+        if (validSteps.isEmpty()) {
+            Log.w(TAG, "writeSteps: No valid steps records to write")
+            return HealthConnectResult.Success(0)
+        }
+
         // Check availability and permissions first
         val availabilityResult = isAvailable()
         if (availabilityResult !is HealthConnectResult.Success || !availabilityResult.data) {
@@ -566,7 +608,7 @@ class HealthConnectRepository @Inject constructor(
 
         return try {
             withContext(Dispatchers.IO) {
-                val stepsRecords = dailySteps.map { steps ->
+                val stepsRecords = validSteps.map { steps ->
                     val startInstant = Instant.ofEpochMilli(
                         steps.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                     )
@@ -584,17 +626,22 @@ class HealthConnectRepository @Inject constructor(
                     )
                 }
 
+                Log.d(TAG, "writeSteps: Writing ${stepsRecords.size} steps records")
                 // Batch insert to Health Connect
                 healthConnectClient.insertRecords(stepsRecords)
                 val insertedCount = stepsRecords.size
+                Log.d(TAG, "writeSteps: Successfully wrote $insertedCount records")
 
                 HealthConnectResult.Success(insertedCount)
             }
         } catch (e: SecurityException) {
+            Log.e(TAG, "writeSteps: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
+            Log.e(TAG, "writeSteps: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
+            Log.e(TAG, "writeSteps: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }
@@ -606,6 +653,15 @@ class HealthConnectRepository @Inject constructor(
      * @return HealthConnectResult indicating success
      */
     override suspend fun writeExerciseSession(session: ExerciseSession): HealthConnectResult<Boolean> {
+        // Validate data
+        if (session.startTime >= session.endTime) {
+            Log.w(
+                TAG,
+                "writeExerciseSession: Invalid time range - start=${session.startTime}, end=${session.endTime}"
+            )
+            return HealthConnectResult.Error.Unknown
+        }
+
         // Check availability and permissions first
         val availabilityResult = isAvailable()
         if (availabilityResult !is HealthConnectResult.Success || !availabilityResult.data) {
@@ -628,33 +684,53 @@ class HealthConnectRepository @Inject constructor(
                 val startInstant = Instant.ofEpochMilli(session.startTime)
                 val endInstant = Instant.ofEpochMilli(session.endTime)
 
+                val exerciseType = if (session.exerciseType != 0) {
+                    session.exerciseType
+                } else {
+                    ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
+                }
+
                 val record = ExerciseSessionRecord(
                     metadata = Metadata.manualEntry(),
                     startTime = startInstant,
                     startZoneOffset = ZoneOffset.of(ZoneOffset.systemDefault().id),
                     endTime = endInstant,
                     endZoneOffset = ZoneOffset.of(ZoneOffset.systemDefault().id),
-                    exerciseType = EXERCISE_TYPE_RUNNING,
+                    exerciseType = exerciseType,
+                    title = session.title.takeIf { it.isNotBlank() })
+                Log.d(
+                    TAG,
+                    "writeExerciseSession: Writing session '${record.title}' type=$exerciseType"
                 )
                 healthConnectClient.insertRecords(listOf(record))
                 HealthConnectResult.Success(true)
             }
         } catch (e: SecurityException) {
+            Log.e(TAG, "writeExerciseSession: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
+            Log.e(TAG, "writeExerciseSession: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
+            Log.e(TAG, "writeExerciseSession: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }
 
     /**
      * Write heart rate data to Health Connect.
-     * Converts HeartRateReading domain object to HeartRateRecord and writes to HC.
-     * @param heartRate HeartRateReading to write
-     * @return HealthConnectResult indicating success
+     * Converts HeartRateReading domain objects to HeartRateRecord and writes to HC in batches.
+     * @param heartRates List of HeartRateReading to write
+     * @return HealthConnectResult with count of successfully written records
      */
-    override suspend fun writeHeartRate(heartRate: HeartRateReading): HealthConnectResult<Boolean> {
+    override suspend fun writeHeartRates(heartRates: List<HeartRateReading>): HealthConnectResult<Int> {
+        // Validate data: BPM must be in realistic range (30-220)
+        val validHeartRates = heartRates.filter { it.bpm in 30..220 }
+        if (validHeartRates.isEmpty()) {
+            Log.w(TAG, "writeHeartRates: No valid heart rate records to write")
+            return HealthConnectResult.Success(0)
+        }
+
         // Check availability and permissions first
         val availabilityResult = isAvailable()
         if (availabilityResult !is HealthConnectResult.Success || !availabilityResult.data) {
@@ -674,28 +750,38 @@ class HealthConnectRepository @Inject constructor(
 
         return try {
             withContext(Dispatchers.IO) {
-                val timeInstant = Instant.ofEpochMilli(heartRate.timestamp)
-                val record = HeartRateRecord(
-                    startTime = timeInstant,
-                    startZoneOffset = ZoneId.systemDefault().rules.getOffset(timeInstant),
-                    endTime = timeInstant,
-                    endZoneOffset = ZoneId.systemDefault().rules.getOffset(timeInstant),
-                    samples = listOf(
-                        HeartRateRecord.Sample(
-                            time = timeInstant, beatsPerMinute = heartRate.bpm.toLong()
-                        )
-                    ),
-                    metadata = Metadata.manualEntry(),
-                )
+                // Group by timestamp to batch samples within same time window
+                val records = validHeartRates.map { heartRate ->
+                    val timeInstant = Instant.ofEpochMilli(heartRate.timestamp)
+                    HeartRateRecord(
+                        startTime = timeInstant,
+                        startZoneOffset = ZoneId.systemDefault().rules.getOffset(timeInstant),
+                        endTime = timeInstant,
+                        endZoneOffset = ZoneId.systemDefault().rules.getOffset(timeInstant),
+                        samples = listOf(
+                            HeartRateRecord.Sample(
+                                time = timeInstant, beatsPerMinute = heartRate.bpm.toLong()
+                            )
+                        ),
+                        metadata = Metadata.manualEntry(),
+                    )
+                }
 
-                healthConnectClient.insertRecords(listOf(record))
-                HealthConnectResult.Success(true)
+                Log.d(TAG, "writeHeartRates: Writing ${records.size} heart rate records")
+                healthConnectClient.insertRecords(records)
+                val insertedCount = records.size
+                Log.d(TAG, "writeHeartRates: Successfully wrote $insertedCount records")
+
+                HealthConnectResult.Success(insertedCount)
             }
         } catch (e: SecurityException) {
+            Log.e(TAG, "writeHeartRates: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
+            Log.e(TAG, "writeHeartRates: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
+            Log.e(TAG, "writeHeartRates: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }

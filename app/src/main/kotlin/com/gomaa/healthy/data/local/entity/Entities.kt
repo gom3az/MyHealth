@@ -1,8 +1,8 @@
 package com.gomaa.healthy.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverter
 import java.util.UUID
 
 @Entity(tableName = "daily_steps", primaryKeys = ["date", "source"])
@@ -15,7 +15,7 @@ data class DailyStepsEntity(
     val moderateActivityMinutes: Int,
     val vigorousActivityMinutes: Int,
     val source: String = "myhealth", // "myhealth" or "health_connect"
-    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
+    @ColumnInfo(name = "synced_to_hc") val syncedToHc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
 )
 
 @Entity(tableName = "fitness_goals")
@@ -40,11 +40,12 @@ data class ExerciseSessionEntity(
     val deviceBrand: String,
     val source: String = "myhealth", // "myhealth" or "health_connect"
     val healthConnectRecordId: String? = null, // Original HC record ID for deduplication
-    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
+    @ColumnInfo(name = "synced_to_hc") val syncedToHc: Int = 0, // 0 = not synced, 1 = synced to Health Connect
+    val exerciseType: Int = 0, // ExerciseSessionRecord exercise type constant
+    val title: String = "" // Session title/name
 )
 
 // HC-058: Add composite primary key on (timestamp, source) for deduplication
-// Removed @PrimaryKey(autoGenerate - composite keys handle uniqueness
 @Entity(tableName = "heart_rates", primaryKeys = ["timestamp", "source"])
 data class HeartRateEntity(
     // Using composite key instead of auto-generated ID
@@ -53,13 +54,5 @@ data class HeartRateEntity(
     val sessionId: String? = null, // Nullable - can be null for Health Connect readings
     val bpm: Int,
     val healthConnectRecordId: String? = null, // For deduplication with HC records
-    val synced_to_hc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
+    @ColumnInfo(name = "synced_to_hc") val syncedToHc: Int = 0 // 0 = not synced, 1 = synced to Health Connect
 )
-
-class Converters {
-    @TypeConverter
-    fun fromTimestamp(value: Long): Long = value
-
-    @TypeConverter
-    fun toTimestamp(value: Long): Long = value
-}

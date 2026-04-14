@@ -26,6 +26,7 @@ import com.gomaa.healthy.presentation.ui.dashboard.DashboardScreen
 import com.gomaa.healthy.presentation.ui.goals.GoalsScreen
 import com.gomaa.healthy.presentation.ui.heartrate.HeartRateScreen
 import com.gomaa.healthy.presentation.ui.home.HomeScreen
+import com.gomaa.healthy.presentation.ui.migration.MigrationScreen
 import com.gomaa.healthy.presentation.ui.session.SessionDetailScreen
 import com.gomaa.healthy.presentation.ui.settings.SettingsScreen
 
@@ -40,6 +41,7 @@ sealed class Screen(val route: String, val title: String, val icon: String) {
     }
 
     object HeartRate : Screen("heart_rate", "Heart Rate", "❤️")
+    object Migration : Screen("migration", "Import", "📥")
 }
 
 const val HEART_RATE_ROUTE = "heart_rate"
@@ -50,7 +52,8 @@ val bottomNavItems = listOf(
 
 @Composable
 fun AppNavHost(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = Screen.Home.route
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -59,7 +62,7 @@ fun AppNavHost(
     }) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startDestination,
             modifier = Modifier
                 // .consumeWindowInsets(paddingValues)
                 .padding(bottom = paddingValues.calculateBottomPadding())
@@ -99,6 +102,14 @@ fun AppNavHost(
 
             composable(Screen.Goals.route) {
                 GoalsScreen()
+            }
+
+            composable(Screen.Migration.route) {
+                MigrationScreen(onComplete = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Migration.route) { inclusive = true }
+                    }
+                })
             }
 
             composable(

@@ -106,6 +106,13 @@ interface ExerciseSessionDao {
     @Query("SELECT * FROM exercise_sessions WHERE source = :source AND healthConnectRecordId = :recordId")
     suspend fun getByHealthConnectRecordId(source: String, recordId: String): ExerciseSessionEntity?
 
+    @Query("SELECT * FROM exercise_sessions WHERE source = :source AND startTime = :startTime AND endTime = :endTime")
+    suspend fun getBySourceAndTimeRange(
+        source: String,
+        startTime: Long,
+        endTime: Long
+    ): ExerciseSessionEntity?
+
     // Source-of-truth refactor: Track sync status
     @Query("SELECT * FROM exercise_sessions WHERE source = :source AND synced_to_hc = 0")
     suspend fun getBySourceNotSynced(source: String): List<ExerciseSessionEntity>
@@ -142,6 +149,9 @@ interface HeartRateDao {
     // HC-060: Get all readings for date range - returns all readings, not empty
     @Query("SELECT * FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
     suspend fun getHeartRatesByDateRange(startTime: Long, endTime: Long): List<HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates WHERE source = :source AND timestamp = :timestamp LIMIT 1")
+    suspend fun getBySourceAndTimestamp(source: String, timestamp: Long): HeartRateEntity?
 
     @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatest(): HeartRateEntity?

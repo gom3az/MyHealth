@@ -70,7 +70,7 @@ fun FitnessGoalEntity.toDomain(): FitnessGoal {
 }
 
 fun FitnessGoal.toEntity(): FitnessGoalEntity {
-    val typeStr = when (val t = type) {
+    val typeStr = when (type) {
         is GoalType.Steps -> "steps"
         is GoalType.Distance -> "distance"
         is GoalType.ActivityMinutes -> "activity_minutes"
@@ -102,7 +102,9 @@ fun ExerciseSessionEntity.toDomain(heartRates: List<DomainHeartRateRecord> = emp
         maxHeartRate = maxHeartRate,
         minHeartRate = minHeartRate,
         deviceBrand = deviceBrand,
-        heartRates = heartRates
+        heartRates = heartRates,
+        exerciseType = exerciseType,
+        title = title
     )
 }
 
@@ -114,14 +116,15 @@ fun ExerciseSession.toEntity(): ExerciseSessionEntity {
         avgHeartRate = avgHeartRate,
         maxHeartRate = maxHeartRate,
         minHeartRate = minHeartRate,
-        deviceBrand = deviceBrand
+        deviceBrand = deviceBrand,
+        exerciseType = exerciseType,
+        title = title
     )
 }
 
 fun HeartRateEntity.toDomain(): DomainHeartRateRecord {
     return DomainHeartRateRecord(
-        timestamp = timestamp,
-        bpm = bpm
+        timestamp = timestamp, bpm = bpm
     )
 }
 
@@ -137,18 +140,15 @@ fun HeartRateEntity.toDomainReading(): HeartRateReading {
 
 // HC-062: Added source parameter
 fun DomainHeartRateRecord.toEntity(
-    sessionId: String,
-    source: String = "myhealth"
+    sessionId: String, source: String = "myhealth"
 ): HeartRateEntity {
     return HeartRateEntity(
-        timestamp = timestamp,
-        source = source,
-        sessionId = sessionId,
-        bpm = bpm
+        timestamp = timestamp, source = source, sessionId = sessionId, bpm = bpm
     )
 }
 
 const val SOURCE_HEALTH_CONNECT = "health_connect"
+const val SOURCE_MY_HEALTH = "myhealth"
 
 fun mapHeartRateRecordToEntity(
     record: HealthConnectHeartRateRecord, recordId: String, source: String
@@ -165,8 +165,7 @@ fun mapHeartRateRecordToEntity(
 }
 
 fun mapExerciseSessionRecordToEntity(
-    record: ExerciseSessionRecord,
-    healthConnectRecordId: String
+    record: ExerciseSessionRecord, healthConnectRecordId: String
 ): ExerciseSessionEntity {
     return ExerciseSessionEntity(
         id = UUID.randomUUID().toString(),
@@ -177,7 +176,9 @@ fun mapExerciseSessionRecordToEntity(
         minHeartRate = 0,
         deviceBrand = "Health Connect",
         source = SOURCE_HEALTH_CONNECT,
-        healthConnectRecordId = healthConnectRecordId
+        healthConnectRecordId = healthConnectRecordId,
+        exerciseType = record.exerciseType,
+        title = record.title.orEmpty()
     )
 }
 

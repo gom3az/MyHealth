@@ -29,6 +29,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gomaa.healthy.data.preferences.SyncPreferences
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectRepository.Companion.HEALTH_CONNECT_PACKAGE
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
@@ -141,6 +143,31 @@ fun SettingsScreen(
                         viewModel.processIntent(SettingsIntent.RequestHealthConnectPermissions)
                     },
                     onSyncNow = { viewModel.processIntent(SettingsIntent.SyncNow) }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
+
+            item {
+                SyncPreferencesSection(
+                    preferences = idleState?.syncPreferences ?: SyncPreferences(),
+                    isConnected = idleState?.isConnected ?: false,
+                    onMasterSyncChanged = { viewModel.processIntent(SettingsIntent.SetMasterSync(it)) },
+                    onStepsSyncChanged = { viewModel.processIntent(SettingsIntent.SetStepsSync(it)) },
+                    onExerciseSyncChanged = {
+                        viewModel.processIntent(
+                            SettingsIntent.SetExerciseSync(
+                                it
+                            )
+                        )
+                    },
+                    onHeartRateSyncChanged = {
+                        viewModel.processIntent(
+                            SettingsIntent.SetHeartRateSync(
+                                it
+                            )
+                        )
+                    }
                 )
             }
 
@@ -413,5 +440,109 @@ fun SettingsItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun SyncPreferencesSection(
+    preferences: SyncPreferences,
+    isConnected: Boolean,
+    onMasterSyncChanged: (Boolean) -> Unit,
+    onStepsSyncChanged: (Boolean) -> Unit,
+    onExerciseSyncChanged: (Boolean) -> Unit,
+    onHeartRateSyncChanged: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimensions.spacingLarge)
+        ) {
+            Text(
+                text = "Sync Settings",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Control what data syncs to Health Connect",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
+
+            SyncToggleRow(
+                title = "Master Sync",
+                description = "Enable/disable all background sync",
+                checked = preferences.masterSyncEnabled,
+                enabled = isConnected,
+                onCheckedChange = onMasterSyncChanged
+            )
+
+            SyncToggleRow(
+                title = "Steps",
+                description = "Sync daily step count",
+                checked = preferences.syncStepsEnabled && preferences.masterSyncEnabled,
+                enabled = isConnected && preferences.masterSyncEnabled,
+                onCheckedChange = onStepsSyncChanged
+            )
+
+            SyncToggleRow(
+                title = "Exercise Sessions",
+                description = "Sync workout sessions",
+                checked = preferences.syncExerciseEnabled && preferences.masterSyncEnabled,
+                enabled = isConnected && preferences.masterSyncEnabled,
+                onCheckedChange = onExerciseSyncChanged
+            )
+
+            SyncToggleRow(
+                title = "Heart Rate",
+                description = "Sync heart rate readings",
+                checked = preferences.syncHeartRateEnabled && preferences.masterSyncEnabled,
+                enabled = isConnected && preferences.masterSyncEnabled,
+                onCheckedChange = onHeartRateSyncChanged
+            )
+        }
+    }
+}
+
+@Composable
+private fun SyncToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Dimensions.spacing),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
+        )
     }
 }

@@ -1,16 +1,20 @@
 package com.gomaa.healthy.data.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
+import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toDomainReading
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectResult
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltWorker
 class HealthConnectSyncWorker @AssistedInject constructor(
@@ -19,14 +23,38 @@ class HealthConnectSyncWorker @AssistedInject constructor(
     private val healthConnectRepository: HealthConnectRepository
 ) : CoroutineWorker(context, workerParams) {
 
+    companion object {
+        private const val TAG = "HealthConnectSyncWorker"
+        const val WORK_NAME = "health_connect_sync_work"
+    }
+
     override suspend fun doWork(): Result {
         return try {
+            // Check for cancellation
+            if (!currentCoroutineContext().isActive) {
+                Log.d(TAG, "doWork: Worker cancelled")
+                return Result.failure()
+            }
+
+            // Read sync preferences from inputData
+            val masterSyncEnabled = inputData.getBoolean(KEY_MASTER_SYNC, true)
+            val syncStepsEnabled = inputData.getBoolean(KEY_STEPS_SYNC, true)
+            val syncExerciseEnabled = inputData.getBoolean(KEY_EXERCISE_SYNC, true)
+            val syncHeartRateEnabled = inputData.getBoolean(KEY_HEART_RATE_SYNC, true)
+
+            // Check master toggle
+            if (!masterSyncEnabled) {
+                Log.d(TAG, "doWork: Master sync disabled, skipping sync")
+                return Result.success()
+            }
+
             // Check if Health Connect is available and has permissions
             val isAvailableResult = healthConnectRepository.isAvailable()
             val isAvailable =
                 isAvailableResult is HealthConnectResult.Success && isAvailableResult.data
 
             if (!isAvailable) {
+                Log.w(TAG, "doWork: Health Connect not available")
                 return Result.failure()
             }
 
@@ -34,17 +62,34 @@ class HealthConnectSyncWorker @AssistedInject constructor(
             val hasPerms = hasPermsResult is HealthConnectResult.Success && hasPermsResult.data
 
             if (!hasPerms) {
+                Log.w(TAG, "doWork: Health Connect permissions not granted")
                 return Result.failure()
             }
 
             // Perform bidirectional sync with conflict resolution (local wins)
-            val syncResult = performBidirectionalSync()
+            // Pass per-data-type toggles to control what gets synced
+            val syncResult = performBidirectionalSync(
+                syncStepsEnabled = syncStepsEnabled,
+                syncExerciseEnabled = syncExerciseEnabled,
+                syncHeartRateEnabled = syncHeartRateEnabled
+            )
 
             return when (syncResult) {
-                is HealthConnectResult.Success -> Result.success()
-                else -> Result.retry()
+                is HealthConnectResult.Success -> {
+                    Log.d(TAG, "doWork: Sync completed successfully")
+                    Result.success()
+                }
+
+                else -> {
+                    Log.w(TAG, "doWork: Sync failed, requesting retry")
+                    Result.retry()
+                }
             }
+        } catch (_: CancellationException) {
+            Log.d(TAG, "doWork: Worker cancelled")
+            Result.failure()
         } catch (e: Exception) {
+            Log.e(TAG, "doWork: Exception during sync", e)
             if (runAttemptCount < 3) {
                 Result.retry()
             } else {
@@ -62,16 +107,35 @@ class HealthConnectSyncWorker @AssistedInject constructor(
      * 2. Download changes from Health Connect (reads)
      * 3. Apply conflict resolution (local wins)
      */
-    private suspend fun performBidirectionalSync(): HealthConnectResult<Unit> {
+    private suspend fun performBidirectionalSync(
+        syncStepsEnabled: Boolean, syncExerciseEnabled: Boolean, syncHeartRateEnabled: Boolean
+    ): HealthConnectResult<Unit> {
         return try {
             // Step 1: Upload local changes to Health Connect
-            uploadLocalChangesToHC()
+            val uploadSuccess = uploadLocalChangesToHC(
+                syncStepsEnabled = syncStepsEnabled,
+                syncExerciseEnabled = syncExerciseEnabled,
+                syncHeartRateEnabled = syncHeartRateEnabled
+            )
 
             // Step 2: Download changes from Health Connect and apply (local wins)
-            downloadAndApplyHCChanges()
+            // Always attempt download even if upload failed, to maximize data sync
+            downloadAndApplyHCChanges(
+                syncStepsEnabled = syncStepsEnabled,
+                syncExerciseEnabled = syncExerciseEnabled,
+                syncHeartRateEnabled = syncHeartRateEnabled
+            )
 
-            HealthConnectResult.Success(Unit)
+            if (uploadSuccess) {
+                HealthConnectResult.Success(Unit)
+            } else {
+                HealthConnectResult.Error.Unknown
+            }
+        } catch (e: CancellationException) {
+            Log.d(TAG, "performBidirectionalSync: Sync cancelled")
+            throw e
         } catch (e: Exception) {
+            Log.e(TAG, "performBidirectionalSync: Sync failed", e)
             HealthConnectResult.Error.Unknown
         }
     }
@@ -79,81 +143,182 @@ class HealthConnectSyncWorker @AssistedInject constructor(
     /**
      * Uploads local-only changes to Health Connect.
      * Only uploads records that originated locally (not from HC).
+     * Returns true if all uploads succeeded, false otherwise.
      */
-    private suspend fun uploadLocalChangesToHC() {
+    private suspend fun uploadLocalChangesToHC(
+        syncStepsEnabled: Boolean, syncExerciseEnabled: Boolean, syncHeartRateEnabled: Boolean
+    ): Boolean {
+        var allUploadsSucceeded = true
+
         // Upload local steps
-        val localSteps = healthConnectRepository.getUnsyncedLocalSteps("myhealth")
-        if (localSteps.isNotEmpty()) {
-            val stepsResult = healthConnectRepository.writeSteps(
-                localSteps.map { it.toDomain() })
-            if (stepsResult is HealthConnectResult.Success) {
-                val dates = localSteps.map { it.date }
-                healthConnectRepository.markStepsAsSynced(dates, SOURCE_HEALTH_CONNECT)
+        if (syncStepsEnabled) {
+            val localSteps = healthConnectRepository.getUnsyncedLocalSteps(SOURCE_MY_HEALTH)
+            if (localSteps.isNotEmpty()) {
+                Log.d(TAG, "uploadLocalChangesToHC: Uploading ${localSteps.size} steps records")
+                val stepsResult = healthConnectRepository.writeSteps(
+                    localSteps.map { it.toDomain() })
+                if (stepsResult is HealthConnectResult.Success) {
+                    val dates = localSteps.map { it.date }
+                    healthConnectRepository.markStepsAsSynced(dates, SOURCE_MY_HEALTH)
+                    Log.d(TAG, "uploadLocalChangesToHC: Steps marked as synced")
+                } else {
+                    Log.w(TAG, "uploadLocalChangesToHC: Steps upload failed")
+                    allUploadsSucceeded = false
+                }
+            } else {
+                Log.d(TAG, "uploadLocalChangesToHC: No unsynced steps")
             }
+        } else {
+            Log.d(TAG, "uploadLocalChangesToHC: Steps sync disabled")
+        }
+
+        // Check for cancellation
+        if (!currentCoroutineContext().isActive) {
+            throw CancellationException("Upload cancelled")
         }
 
         // Upload local exercise sessions
-        val localExerciseSessions = healthConnectRepository.getUnsyncedLocalSessions("myhealth")
-        if (localExerciseSessions.isNotEmpty()) {
-            val successfulSessionIds = mutableListOf<String>()
-            localExerciseSessions.forEach { session ->
-                val sessionResult = healthConnectRepository.writeExerciseSession(session.toDomain())
-                if (sessionResult is HealthConnectResult.Success) {
-                    successfulSessionIds.add(session.id)
+        if (syncExerciseEnabled) {
+            val localExerciseSessions =
+                healthConnectRepository.getUnsyncedLocalSessions(SOURCE_MY_HEALTH)
+            if (localExerciseSessions.isNotEmpty()) {
+                Log.d(
+                    TAG,
+                    "uploadLocalChangesToHC: Uploading ${localExerciseSessions.size} exercise sessions"
+                )
+                val successfulSessionIds = mutableListOf<String>()
+                localExerciseSessions.forEach { session ->
+                    if (!currentCoroutineContext().isActive) {
+                        throw CancellationException("Upload cancelled")
+                    }
+                    val sessionResult =
+                        healthConnectRepository.writeExerciseSession(session.toDomain())
+                    if (sessionResult is HealthConnectResult.Success) {
+                        successfulSessionIds.add(session.id)
+                    }
                 }
+                if (successfulSessionIds.isNotEmpty()) {
+                    healthConnectRepository.markSessionsAsSynced(successfulSessionIds)
+                    Log.d(
+                        TAG,
+                        "uploadLocalChangesToHC: ${successfulSessionIds.size} sessions marked as synced"
+                    )
+                } else {
+                    Log.w(TAG, "uploadLocalChangesToHC: No sessions uploaded successfully")
+                    allUploadsSucceeded = false
+                }
+            } else {
+                Log.d(TAG, "uploadLocalChangesToHC: No unsynced exercise sessions")
             }
-            if (successfulSessionIds.isNotEmpty()) {
-                healthConnectRepository.markSessionsAsSynced(successfulSessionIds)
-            }
+        } else {
+            Log.d(TAG, "uploadLocalChangesToHC: Exercise sync disabled")
         }
 
-        // Upload local heart rate readings
-        val localHeartRates = healthConnectRepository.getUnsyncedLocalHeartRates("myhealth")
-        if (localHeartRates.isNotEmpty()) {
-            val successfulTimestamps = mutableListOf<Long>()
-            localHeartRates.forEach { heartRate ->
-                val heartRateResult =
-                    healthConnectRepository.writeHeartRate(heartRate.toDomainReading())
-                if (heartRateResult is HealthConnectResult.Success) {
-                    successfulTimestamps.add(heartRate.timestamp)
-                }
-            }
-            if (successfulTimestamps.isNotEmpty()) {
-                healthConnectRepository.markHeartRatesAsSynced(
-                    successfulTimestamps, SOURCE_HEALTH_CONNECT
-                )
-            }
+        // Check for cancellation
+        if (!currentCoroutineContext().isActive) {
+            throw CancellationException("Upload cancelled")
         }
+
+        // Upload local heart rate readings (batch)
+        if (syncHeartRateEnabled) {
+            val localHeartRates =
+                healthConnectRepository.getUnsyncedLocalHeartRates(SOURCE_MY_HEALTH)
+            if (localHeartRates.isNotEmpty()) {
+                Log.d(
+                    TAG,
+                    "uploadLocalChangesToHC: Uploading ${localHeartRates.size} heart rate readings"
+                )
+                val heartRateResult = healthConnectRepository.writeHeartRates(
+                    localHeartRates.map { it.toDomainReading() })
+                if (heartRateResult is HealthConnectResult.Success && heartRateResult.data > 0) {
+                    // Mark only successfully synced records
+                    val syncedTimestamps = localHeartRates.map { it.timestamp }
+                    healthConnectRepository.markHeartRatesAsSynced(
+                        syncedTimestamps, SOURCE_MY_HEALTH
+                    )
+                    Log.d(TAG, "uploadLocalChangesToHC: Heart rates marked as synced")
+                } else {
+                    Log.w(TAG, "uploadLocalChangesToHC: Heart rate upload failed")
+                    allUploadsSucceeded = false
+                }
+            } else {
+                Log.d(TAG, "uploadLocalChangesToHC: No unsynced heart rate readings")
+            }
+        } else {
+            Log.d(TAG, "uploadLocalChangesToHC: Heart rate sync disabled")
+        }
+
+        return allUploadsSucceeded
     }
 
     /**
      * Downloads changes from Health Connect and applies them to local database.
      * Implements conflict resolution: local data wins.
      */
-    private suspend fun downloadAndApplyHCChanges() {
+    private suspend fun downloadAndApplyHCChanges(
+        syncStepsEnabled: Boolean, syncExerciseEnabled: Boolean, syncHeartRateEnabled: Boolean
+    ) {
+        // Check for cancellation
+        if (!currentCoroutineContext().isActive) {
+            throw CancellationException("Download cancelled")
+        }
+
         // Sync steps from HC (but don't overwrite local)
-        val hcStepsResult = healthConnectRepository.syncSteps()
-        if (hcStepsResult is HealthConnectResult.Success && hcStepsResult.data > 0) {
-            // Steps are already handled by syncSteps which only adds new records
-            // Local data wins by default since we don't overwrite existing local records
+        if (syncStepsEnabled) {
+            Log.d(TAG, "downloadAndApplyHCChanges: Syncing steps from Health Connect")
+            val hcStepsResult = healthConnectRepository.syncSteps()
+            if (hcStepsResult is HealthConnectResult.Success) {
+                Log.d(
+                    TAG,
+                    "downloadAndApplyHCChanges: Synced ${hcStepsResult.data} steps records from HC"
+                )
+            } else {
+                Log.w(TAG, "downloadAndApplyHCChanges: Steps sync failed")
+            }
+        } else {
+            Log.d(TAG, "downloadAndApplyHCChanges: Steps sync disabled")
+        }
+
+        // Check for cancellation
+        if (!currentCoroutineContext().isActive) {
+            throw CancellationException("Download cancelled")
         }
 
         // Sync exercise sessions from HC (don't overwrite local)
-        val hcExerciseResult = healthConnectRepository.syncExerciseSessions()
-        if (hcExerciseResult is HealthConnectResult.Success && hcExerciseResult.data > 0) {
-            // Exercise sessions handled by syncExerciseSessions which uses deduplication
-            // Local data wins by not overwriting existing local records with same HC ID
+        if (syncExerciseEnabled) {
+            Log.d(TAG, "downloadAndApplyHCChanges: Syncing exercise sessions from Health Connect")
+            val hcExerciseResult = healthConnectRepository.syncExerciseSessions()
+            if (hcExerciseResult is HealthConnectResult.Success) {
+                Log.d(
+                    TAG,
+                    "downloadAndApplyHCChanges: Synced ${hcExerciseResult.data} exercise sessions from HC"
+                )
+            } else {
+                Log.w(TAG, "downloadAndApplyHCChanges: Exercise sync failed")
+            }
+        } else {
+            Log.d(TAG, "downloadAndApplyHCChanges: Exercise sync disabled")
+        }
+
+        // Check for cancellation
+        if (!currentCoroutineContext().isActive) {
+            throw CancellationException("Download cancelled")
         }
 
         // Sync heart rate from HC (don't overwrite local)
-        val hcHeartRateResult = healthConnectRepository.syncHeartRates()
-        if (hcHeartRateResult is HealthConnectResult.Success && hcHeartRateResult.data > 0) {
-            // Heart rate handled by syncHeartRates which uses deduplication
-            // Local data wins by not overwriting existing local records
+        if (syncHeartRateEnabled) {
+            Log.d(TAG, "downloadAndApplyHCChanges: Syncing heart rate from Health Connect")
+            val hcHeartRateResult = healthConnectRepository.syncHeartRates()
+            if (hcHeartRateResult is HealthConnectResult.Success) {
+                Log.d(
+                    TAG,
+                    "downloadAndApplyHCChanges: Synced ${hcHeartRateResult.data} heart rate records from HC"
+                )
+            } else {
+                Log.w(TAG, "downloadAndApplyHCChanges: Heart rate sync failed")
+            }
+        } else {
+            Log.d(TAG, "downloadAndApplyHCChanges: Heart rate sync disabled")
         }
-    }
-
-    companion object {
-        const val WORK_NAME = "health_connect_sync_work"
     }
 }

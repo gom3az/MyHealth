@@ -1,5 +1,6 @@
 package com.gomaa.healthy.domain.model
 
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.LocalDate
 
 data class DailySteps(
@@ -18,8 +19,7 @@ sealed class GoalType {
     data class Distance(val targetMeters: Double, val unit: DistanceUnit) : GoalType()
     data class ActivityMinutes(val targetMinutes: Int) : GoalType()
     data class HeartRateZone(
-        val zone: com.gomaa.healthy.domain.model.HeartRateZone,
-        val targetMinutes: Int
+        val zone: com.gomaa.healthy.domain.model.HeartRateZone, val targetMinutes: Int
     ) : GoalType()
 }
 
@@ -36,20 +36,15 @@ data class FitnessGoal(
 )
 
 data class HeartRateRecord(
-    val timestamp: Long,
-    val bpm: Int
+    val timestamp: Long, val bpm: Int
 )
 
 enum class HeartRateSource {
-    MY_HEALTH,
-    HEALTH_CONNECT
+    MY_HEALTH, HEALTH_CONNECT
 }
 
 data class HeartRateReading(
-    val id: Long,
-    val bpm: Int,
-    val timestamp: Long,
-    val source: HeartRateSource
+    val id: Long, val bpm: Int, val timestamp: Long, val source: HeartRateSource
 )
 
 data class HeartRateSummary(
@@ -68,14 +63,13 @@ data class ExerciseSession(
     val maxHeartRate: Int,
     val minHeartRate: Int,
     val deviceBrand: String,
-    val heartRates: List<HeartRateRecord> = emptyList()
+    val heartRates: List<HeartRateRecord> = emptyList(),
+    val exerciseType: Int = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
+    val title: String = ""
 )
 
 data class DeviceInfo(
-    val id: String,
-    val name: String,
-    val brand: String,
-    val isConnected: Boolean
+    val id: String, val name: String, val brand: String, val isConnected: Boolean
 )
 
 enum class HeartRateZone {
@@ -83,17 +77,13 @@ enum class HeartRateZone {
 }
 
 enum class StepSource {
-    MY_HEALTH,
-    HEALTH_CONNECT
+    MY_HEALTH, HEALTH_CONNECT
 }
 
 data class StepsWithSource(
-    val source: StepSource,
-    val steps: Int
+    val source: StepSource, val steps: Int
 )
 
 data class CombinedSteps(
-    val totalSteps: Int,
-    val myHealthSteps: Int,
-    val healthConnectSteps: Int
+    val totalSteps: Int, val myHealthSteps: Int, val healthConnectSteps: Int
 )

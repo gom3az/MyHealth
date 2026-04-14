@@ -73,10 +73,6 @@ fun HomeScreen(
                 is HomeEffect.ShowSuccess -> {
                     snackbarHostState.showSnackbar(effect.message)
                 }
-
-                is HomeEffect.NavigateToSettings -> {
-                    // Handle navigation
-                }
             }
         }
     }
