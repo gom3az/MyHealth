@@ -4,6 +4,7 @@ import com.gomaa.healthy.data.mapper.SOURCE_MANUAL
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.SOURCE_PHONE_SENSOR
 import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_HUAWEI
+import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_HUAWEI_CLOUD
 import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_OTHER
 
 object DataOriginConstants {
@@ -29,7 +30,7 @@ object DataOriginConstants {
 
     fun getPrecision(dataOrigin: String?, resolvedSource: String? = null): DataPrecision {
         return when (resolvedSource) {
-            SOURCE_WEARABLE_HUAWEI, SOURCE_WEARABLE_OTHER -> DataPrecision.HIGH
+            SOURCE_WEARABLE_HUAWEI_CLOUD, SOURCE_WEARABLE_HUAWEI, SOURCE_WEARABLE_OTHER -> DataPrecision.HIGH
             SOURCE_PHONE_SENSOR -> DataPrecision.STANDARD
             SOURCE_MY_HEALTH, SOURCE_MANUAL -> DataPrecision.LOCAL
             else -> getPrecisionForPackage(dataOrigin)

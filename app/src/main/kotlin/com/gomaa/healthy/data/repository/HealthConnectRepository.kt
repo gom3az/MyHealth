@@ -638,6 +638,7 @@ class HealthConnectRepository @Inject constructor(
                     ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
                 }
 
+                @Suppress("RestrictedApi")
                 val record = ExerciseSessionRecord(
                     metadata = Metadata.manualEntry(),
                     startTime = startInstant,

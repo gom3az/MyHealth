@@ -55,6 +55,11 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps WHERE source = :source")
     suspend fun getBySource(source: String): List<DailyStepsEntity>
 
+    @Query("SELECT * FROM daily_steps WHERE source = :source AND date BETWEEN :startDate AND :endDate")
+    suspend fun getBySourceAndDateRange(
+        source: String, startDate: Long, endDate: Long
+    ): List<DailyStepsEntity>
+
     @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date = :date AND source = :source")
     suspend fun markAsSynced(date: Long, source: String)
 
@@ -109,14 +114,17 @@ interface ExerciseSessionDao {
     @Query("SELECT * FROM exercise_sessions WHERE source = :source")
     suspend fun getBySource(source: String): List<ExerciseSessionEntity>
 
+    @Query("SELECT * FROM exercise_sessions WHERE source = :source AND startTime BETWEEN :startTime AND :endTime")
+    suspend fun getBySourceAndDateRange(
+        source: String, startTime: Long, endTime: Long
+    ): List<ExerciseSessionEntity>
+
     @Query("SELECT * FROM exercise_sessions WHERE source = :source AND healthConnectRecordId = :recordId")
     suspend fun getByHealthConnectRecordId(source: String, recordId: String): ExerciseSessionEntity?
 
     @Query("SELECT * FROM exercise_sessions WHERE source = :source AND startTime = :startTime AND endTime = :endTime")
     suspend fun getBySourceAndTimeRange(
-        source: String,
-        startTime: Long,
-        endTime: Long
+        source: String, startTime: Long, endTime: Long
     ): ExerciseSessionEntity?
 
     // Source-of-truth refactor: Track sync status
@@ -151,9 +159,7 @@ interface HeartRateDao {
 
     @Query("SELECT * FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
     suspend fun getBySourceAndDateRange(
-        source: String,
-        startTime: Long,
-        endTime: Long
+        source: String, startTime: Long, endTime: Long
     ): List<HeartRateEntity>
 
     @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
