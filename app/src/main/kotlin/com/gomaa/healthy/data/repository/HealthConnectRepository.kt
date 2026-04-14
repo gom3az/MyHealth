@@ -32,7 +32,6 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -127,16 +126,6 @@ class HealthConnectRepository @Inject constructor(
         private const val KEY_LAST_STEPS_SYNC = "last_steps_sync"
         private const val KEY_LAST_EXERCISE_SYNC = "last_exercise_sync"
         private const val KEY_LAST_HEART_RATE_SYNC = "last_heart_rate_sync"
-
-        /** SharedPreferences key for last upload timestamp (local -> HC) */
-        private const val KEY_LAST_STEPS_UPLOAD = "last_steps_upload"
-        private const val KEY_LAST_EXERCISE_UPLOAD = "last_exercise_upload"
-        private const val KEY_LAST_HEART_RATE_UPLOAD = "last_heart_rate_upload"
-
-        /** Retry configuration */
-        private const val MAX_RETRY_ATTEMPTS = 3
-        private const val INITIAL_RETRY_DELAY_MS = 1000L
-        private const val MAX_RETRY_DELAY_MS = 5000L
     }
 
     private val healthConnectClient: HealthConnectClient by lazy {
@@ -157,12 +146,10 @@ class HealthConnectRepository @Inject constructor(
                 context.packageManager.getPackageInfo(HEALTH_CONNECT_PACKAGE, 0)
             }
             val sdkStatus = HealthConnectClient.getSdkStatus(context, HEALTH_CONNECT_PACKAGE)
-            return executeWithRetry {
-                if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
-                    HealthConnectResult.Success(true)
-                } else {
-                    HealthConnectResult.Error.NotAvailable
-                }
+            return if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
+                HealthConnectResult.Success(true)
+            } else {
+                HealthConnectResult.Error.NotAvailable
             }
         } catch (_: PackageManager.NameNotFoundException) {
             return HealthConnectResult.Error.NotAvailable
@@ -181,11 +168,9 @@ class HealthConnectRepository @Inject constructor(
      */
     override suspend fun hasPermissions(): HealthConnectResult<Boolean> {
         return try {
-            executeWithRetry {
-                val granted = healthConnectClient.permissionController.getGrantedPermissions()
-                val allGranted = PERMISSIONS.all { granted.contains(it) }
-                HealthConnectResult.Success(allGranted)
-            }
+            val granted = healthConnectClient.permissionController.getGrantedPermissions()
+            val allGranted = PERMISSIONS.all { granted.contains(it) }
+            HealthConnectResult.Success(allGranted)
         } catch (_: SecurityException) {
             HealthConnectResult.Error.PermissionDenied
         } catch (_: IOException) {
@@ -275,9 +260,7 @@ class HealthConnectRepository @Inject constructor(
                 pageToken = pageToken
             )
 
-            val response = executeWithRetry {
-                healthConnectClient.readRecords(request)
-            }
+            val response = healthConnectClient.readRecords(request)
             val records = response.records
 
             // Convert to entities with conflict resolution
@@ -362,40 +345,6 @@ class HealthConnectRepository @Inject constructor(
     }
 
     /**
-     * Supports cancellation via coroutine's isActive check.
-     */
-    private suspend fun <T> executeWithRetry(
-        maxAttempts: Int = MAX_RETRY_ATTEMPTS, operation: suspend () -> T
-    ): T {
-        var lastException: Exception? = null
-        var currentDelay = INITIAL_RETRY_DELAY_MS
-
-        repeat(maxAttempts) { attempt ->
-            if (!currentCoroutineContext().isActive) {
-                throw CancellationException("Operation cancelled")
-            }
-
-            try {
-                return operation()
-            } catch (e: Exception) {
-                lastException = e
-                // Don't retry on certain exceptions
-                when (e) {
-                    is SecurityException, is PackageManager.NameNotFoundException -> throw e
-                }
-
-                // Exponential backoff, capped at max delay
-                if (attempt < maxAttempts - 1) {
-                    delay(currentDelay)
-                    currentDelay = (currentDelay * 2).coerceAtMost(MAX_RETRY_DELAY_MS)
-                }
-            }
-        }
-
-        throw lastException ?: Exception("Retry exhausted")
-    }
-
-    /**
      * Syncs steps with pagination support using unified DailyStepsEntity.
      * Groups steps by date and aggregates.
      */
@@ -411,16 +360,14 @@ class HealthConnectRepository @Inject constructor(
                 throw CancellationException("Sync operation cancelled")
             }
 
-            // Read page of steps records with retry
+            // Read page of steps records
             val request = ReadRecordsRequest(
                 recordType = StepsRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
                 pageToken = pageToken
             )
 
-            val response = executeWithRetry {
-                healthConnectClient.readRecords(request)
-            }
+            val response = healthConnectClient.readRecords(request)
             val records = response.records
 
             // Map each record to entity, then aggregate by date
@@ -486,9 +433,7 @@ class HealthConnectRepository @Inject constructor(
                 pageToken = pageToken
             )
 
-            val response = executeWithRetry {
-                healthConnectClient.readRecords(request)
-            }
+            val response = healthConnectClient.readRecords(request)
             val records = response.records
 
             // Convert to entities with UUID record ID for deduplication

@@ -2,6 +2,8 @@ package com.gomaa.healthy.presentation.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.gomaa.healthy.data.preferences.SyncPreferences
 import com.gomaa.healthy.data.preferences.SyncPreferencesManager
 import com.gomaa.healthy.data.repository.HealthConnectRepository
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,6 +53,7 @@ sealed interface SettingsUiState {
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    private val workManager: WorkManager,
     private val healthConnectRepository: HealthConnectRepository,
     private val syncPreferencesManager: SyncPreferencesManager,
     private val syncScheduler: HealthConnectSyncScheduler
@@ -64,8 +68,7 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
-                _state,
-                syncPreferencesManager.preferencesFlow
+                _state, syncPreferencesManager.preferencesFlow
             ) { uiState, prefs ->
                 uiState to prefs
             }.collect { (uiState, prefs) ->
@@ -87,7 +90,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsIntent.SetExerciseSync -> viewModelScope.launch { setExerciseSync(intent.enabled) }
             is SettingsIntent.SetHeartRateSync -> viewModelScope.launch { setHeartRateSync(intent.enabled) }
         }
-    }
+    }HiltWorkerFactory
 
     private suspend fun setMasterSync(enabled: Boolean) {
         syncPreferencesManager.setMasterSyncEnabled(enabled)
@@ -183,35 +186,61 @@ class SettingsViewModel @Inject constructor(
                 _state.value = currentState.copy(isSyncing = true)
             }
 
-            val stepsResult = healthConnectRepository.syncSteps()
-            val exerciseResult = healthConnectRepository.syncExerciseSessions()
-            val heartRateResult = healthConnectRepository.syncHeartRates()
+            val prefs = syncPreferencesManager.getPreferences()
 
-            val stepsSuccess = stepsResult is HealthConnectResult.Success
-            val exerciseSuccess = exerciseResult is HealthConnectResult.Success
-            val heartRateSuccess = heartRateResult is HealthConnectResult.Success
+            val workId = syncScheduler.enqueueImmediateSync(
+                masterSyncEnabled = prefs.masterSyncEnabled,
+                syncStepsEnabled = prefs.syncStepsEnabled,
+                syncExerciseEnabled = prefs.syncExerciseEnabled,
+                syncHeartRateEnabled = prefs.syncHeartRateEnabled
+            )
 
-            val updatedState = _state.value
-            if (updatedState is SettingsUiState.Idle) {
-                if (stepsSuccess && exerciseSuccess && heartRateSuccess) {
-                    _state.value = updatedState.copy(
-                        isSyncing = false,
-                        stepCount = healthConnectRepository.getStepCount(),
-                        exerciseSessionCount = healthConnectRepository.getExerciseSessionCount(),
-                        heartRateCount = healthConnectRepository.getHeartRateCount(),
-                        lastSyncTime = healthConnectRepository.getLastSyncTime()
-                    )
-                } else {
-                    _state.value = updatedState.copy(isSyncing = false)
-                    val error = when {
-                        stepsResult is HealthConnectResult.Error -> stepsResult.exception.message
-                        exerciseResult is HealthConnectResult.Error -> exerciseResult.exception.message
-                        heartRateResult is HealthConnectResult.Error -> heartRateResult.exception.message
-                        else -> "Unknown error"
+            workManager.getWorkInfoByIdFlow(workId).first { it?.state?.isFinished == true }
+                ?.let { finishedWorkInfo ->
+                    val current = _state.value
+                    when (finishedWorkInfo.state) {
+                        WorkInfo.State.SUCCEEDED -> {
+                            val stepCount = healthConnectRepository.getStepCount()
+                            val exerciseCount = healthConnectRepository.getExerciseSessionCount()
+                            val heartRateCount = healthConnectRepository.getHeartRateCount()
+                            val lastSyncTime = healthConnectRepository.getLastSyncTime()
+
+                            _state.value = SettingsUiState.Idle(
+                                isAvailable = true,
+                                isConnected = true,
+                                stepCount = stepCount,
+                                exerciseSessionCount = exerciseCount,
+                                heartRateCount = heartRateCount,
+                                lastSyncTime = lastSyncTime,
+                                isSyncing = false,
+                                syncPreferences = prefs
+                            )
+                        }
+
+                        WorkInfo.State.FAILED -> {
+                            _state.value = current.let {
+                                if (it is SettingsUiState.Idle) it.copy(isSyncing = false)
+                                else it
+                            }
+                            _sideEffect.emit(
+                                SettingsSideEffect.ShowError(
+                                    "Sync failed. Please check Health Connect permissions and try again."
+                                )
+                            )
+                        }
+
+                        WorkInfo.State.CANCELLED -> {
+                            _state.value = current.let {
+                                if (it is SettingsUiState.Idle) it.copy(isSyncing = false)
+                                else it
+                            }
+                            _sideEffect.emit(SettingsSideEffect.ShowError("Sync was cancelled"))
+                        }
+
+                        else -> { /* Handle other states */
+                        }
                     }
-                    _sideEffect.emit(SettingsSideEffect.ShowError(error ?: "Sync failed"))
                 }
-            }
         }
     }
 }

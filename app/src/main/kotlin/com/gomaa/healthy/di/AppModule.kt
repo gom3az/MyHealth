@@ -1,6 +1,7 @@
 package com.gomaa.healthy.di
 
 import android.content.Context
+import androidx.work.WorkManager
 import com.gomaa.healthy.data.local.HealthDatabase
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
@@ -30,6 +31,20 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+
+
+@Module
+@InstallIn(SingletonComponent::class)
+object ApplicationModule {
+
+    @Provides
+    fun provideWorkManager(
+        @ApplicationContext context: Context
+    ): WorkManager {
+        return WorkManager.getInstance(context)
+    }
+}
+
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -73,8 +88,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideSessionRepository(
-        sessionDao: ExerciseSessionDao,
-        heartRateDao: HeartRateDao
+        sessionDao: ExerciseSessionDao, heartRateDao: HeartRateDao
     ): SessionRepository {
         return SessionRepositoryImpl(sessionDao, heartRateDao)
     }

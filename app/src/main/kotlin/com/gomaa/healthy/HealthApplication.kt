@@ -1,6 +1,9 @@
 package com.gomaa.healthy
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import androidx.work.WorkManager
 import com.gomaa.healthy.data.preferences.AppPreferencesManager
 import com.gomaa.healthy.data.preferences.SyncPreferencesManager
 import com.gomaa.healthy.data.worker.HealthConnectSyncScheduler
@@ -12,7 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class HealthApplication : Application() {
+class HealthApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var syncScheduler: HealthConnectSyncScheduler
@@ -25,10 +28,20 @@ class HealthApplication : Application() {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+
+
     override fun onCreate() {
         super.onCreate()
         initializeFirstRun()
         scheduleSyncWithPreferences()
+        WorkManager.initialize(this, workManagerConfiguration)
     }
 
     private fun initializeFirstRun() {

@@ -5,9 +5,11 @@ import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -66,5 +68,26 @@ class HealthConnectSyncScheduler @Inject constructor(
 
     fun cancelPeriodicSync() {
         WorkManager.getInstance(context).cancelUniqueWork(HealthConnectSyncWorker.WORK_NAME)
+    }
+
+    fun enqueueImmediateSync(
+        masterSyncEnabled: Boolean = true,
+        syncStepsEnabled: Boolean = true,
+        syncExerciseEnabled: Boolean = true,
+        syncHeartRateEnabled: Boolean = true
+    ): UUID {
+        val inputData = Data.Builder()
+            .putBoolean(KEY_MASTER_SYNC, masterSyncEnabled)
+            .putBoolean(KEY_STEPS_SYNC, syncStepsEnabled)
+            .putBoolean(KEY_EXERCISE_SYNC, syncExerciseEnabled)
+            .putBoolean(KEY_HEART_RATE_SYNC, syncHeartRateEnabled)
+            .build()
+
+        val syncRequest = OneTimeWorkRequestBuilder<HealthConnectSyncWorker>()
+            .setInputData(inputData)
+            .build()
+
+        WorkManager.getInstance(context).enqueue(syncRequest)
+        return syncRequest.id
     }
 }
