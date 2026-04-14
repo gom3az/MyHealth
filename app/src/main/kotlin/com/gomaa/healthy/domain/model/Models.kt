@@ -77,7 +77,7 @@ enum class HeartRateZone {
 }
 
 enum class StepSource {
-    MY_HEALTH, HEALTH_CONNECT
+    MY_HEALTH, HEALTH_CONNECT, WEARABLE
 }
 
 data class StepsWithSource(

@@ -65,10 +65,20 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // HMS Core
     implementation(libs.agconnect.core)
-    // HMS WearEngine - using older version that's available in Maven
+    // TODO: Uncomment these when Health Kit is enabled in AppGallery Connect console (Phase 1)
+    // Note: Health Kit SDK requires:
+    // 1. Health Service Kit card enabled in AppGallery Connect
+    // 2. Read permissions approved for DT_CONTINUOUS_STEPS_DELTA, DT_CONTINUOUS_HEART_RATE_STATISTICS
+    // 3. Account Kit enabled for Huawei ID Sign-In
+    // implementation(libs.huawei.health)  // Cloud-based health data SDK
+    // implementation(libs.huawei.account) // Account Kit for OAuth
+
+    // Wear Engine - Keep for now (can be removed after Health Kit migration complete)
     implementation(libs.wearengine)
     // DataStore Preferences
     implementation(libs.datastore.preferences)
+    // Security - Encrypted SharedPreferences for OAuth tokens
+    implementation(libs.security.crypto)
     // Health Connect
     implementation(libs.health.connect.client)
     // WorkManager for background sync

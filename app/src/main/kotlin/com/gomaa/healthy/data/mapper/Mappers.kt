@@ -30,7 +30,11 @@ fun DailyStepsEntity.toDomain(): DailySteps {
         lightActivityMinutes = lightActivityMinutes,
         moderateActivityMinutes = moderateActivityMinutes,
         vigorousActivityMinutes = vigorousActivityMinutes,
-        source = if (source == "health_connect") StepSource.HEALTH_CONNECT else StepSource.MY_HEALTH
+        source = when (source) {
+            "health_connect" -> StepSource.HEALTH_CONNECT
+            SOURCE_WEARABLE_HUAWEI_CLOUD -> StepSource.WEARABLE  // Cloud-based wearable data (Health Kit)
+            else -> StepSource.MY_HEALTH
+        }
     )
 }
 
@@ -147,12 +151,21 @@ fun DomainHeartRateRecord.toEntity(
     )
 }
 
+// Health Connect source constant (for reference)
 const val SOURCE_HEALTH_CONNECT = "health_connect"
+
+// App's own source
 const val SOURCE_MY_HEALTH = "myhealth"
 
+// Wearable sources
 const val SOURCE_WEARABLE_HUAWEI = "wearable_huawei"
+const val SOURCE_WEARABLE_HUAWEI_CLOUD = "wearable_huawei_cloud"  // Cloud-based (Health Kit)
 const val SOURCE_WEARABLE_OTHER = "wearable_other"
+
+// Phone sensor source
 const val SOURCE_PHONE_SENSOR = "phone_sensor"
+
+// Manual entry source
 const val SOURCE_MANUAL = "manual"
 
 fun resolveSource(dataOrigin: String?, isLocalApp: Boolean): String {
