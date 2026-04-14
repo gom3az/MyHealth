@@ -90,7 +90,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsIntent.SetExerciseSync -> viewModelScope.launch { setExerciseSync(intent.enabled) }
             is SettingsIntent.SetHeartRateSync -> viewModelScope.launch { setHeartRateSync(intent.enabled) }
         }
-    }HiltWorkerFactory
+    }
 
     private suspend fun setMasterSync(enabled: Boolean) {
         syncPreferencesManager.setMasterSyncEnabled(enabled)
