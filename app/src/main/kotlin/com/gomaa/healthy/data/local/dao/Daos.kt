@@ -49,6 +49,12 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps WHERE source = :source AND synced_to_hc = 0")
     suspend fun getBySourceNotSynced(source: String): List<DailyStepsEntity>
 
+    @Query("SELECT * FROM daily_steps WHERE source = :source AND date IN (:dates)")
+    suspend fun getBySourceAndDates(source: String, dates: Set<Long>): List<DailyStepsEntity>
+
+    @Query("SELECT * FROM daily_steps WHERE source = :source")
+    suspend fun getBySource(source: String): List<DailyStepsEntity>
+
     @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date = :date AND source = :source")
     suspend fun markAsSynced(date: Long, source: String)
 
@@ -142,6 +148,13 @@ interface HeartRateDao {
     // HC-064: Get all readings by source (not just latest)
     @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
     suspend fun getAllBySource(source: String): List<HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
+    suspend fun getBySourceAndDateRange(
+        source: String,
+        startTime: Long,
+        endTime: Long
+    ): List<HeartRateEntity>
 
     @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
     fun getAllHeartRates(): Flow<List<HeartRateEntity>>

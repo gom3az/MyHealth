@@ -145,6 +145,7 @@ private fun BottomNavigationBar(navController: NavHostController) {
                 onClick = {
                     navController.navigate(screen.route) {
                         popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
                     }
                 })
         }

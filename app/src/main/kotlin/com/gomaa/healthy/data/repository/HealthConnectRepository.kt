@@ -9,6 +9,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -23,9 +24,8 @@ import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
-import com.gomaa.healthy.data.sync.ExerciseConflictResolver
-import com.gomaa.healthy.data.sync.HeartRateConflictResolver
-import com.gomaa.healthy.data.sync.StepsConflictResolver
+import com.gomaa.healthy.data.sync.DataMerger
+import com.gomaa.healthy.data.sync.DataOriginConstants
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -103,9 +103,7 @@ class HealthConnectRepository @Inject constructor(
     private val dailyStepsDao: DailyStepsDao,
     private val heartRateDao: HeartRateDao,
     private val exerciseSessionDao: ExerciseSessionDao,
-    private val stepsConflictResolver: StepsConflictResolver,
-    private val exerciseConflictResolver: ExerciseConflictResolver,
-    private val heartRateConflictResolver: HeartRateConflictResolver
+    private val dataMerger: DataMerger
 ) : HealthConnectRepositoryInterface {
 
     companion object {
@@ -120,6 +118,13 @@ class HealthConnectRepository @Inject constructor(
             setOf(READ_STEPS, WRITE_STEPS, READ_EXERCISE, WRITE_EXERCISE, READ_HEART_RATE)
 
         const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
+
+        private val DATA_ORIGIN_FILTER = setOf(
+            DataOrigin(DataOriginConstants.PACKAGE_HUAWEI_HEALTH),
+            DataOrigin(DataOriginConstants.PACKAGE_ANDROID),
+            DataOrigin(DataOriginConstants.PACKAGE_GOOGLE_FIT),
+            DataOrigin(DataOriginConstants.PACKAGE_SAMSUNG_HEALTH)
+        )
 
         /** SharedPreferences key for last sync timestamp */
         private const val PREFS_NAME = "health_connect_sync"
@@ -241,6 +246,7 @@ class HealthConnectRepository @Inject constructor(
 
     /**
      * Syncs exercise sessions with pagination support.
+     * Uses dataOriginFilter to prioritize wearable data and DataMerger for conflict resolution.
      */
     private suspend fun syncExerciseSessionsWithPagination(lastSyncTime: Long?): SyncResult {
         val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
@@ -248,6 +254,8 @@ class HealthConnectRepository @Inject constructor(
         var totalNewRecords = 0
         var latestRecordTime: Long? = null
         var pageToken: String? = null
+
+        val allHcEntities = mutableListOf<ExerciseSessionEntity>()
 
         do {
             if (!currentCoroutineContext().isActive) {
@@ -257,54 +265,48 @@ class HealthConnectRepository @Inject constructor(
             val request = ReadRecordsRequest(
                 recordType = ExerciseSessionRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
+                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 
             val response = healthConnectClient.readRecords(request)
             val records = response.records
 
-            // Convert to entities with conflict resolution
             val entities = records.mapNotNull { record ->
                 val recordId = record.metadata.id
                 val entity = mapExerciseSessionRecordToEntity(record, recordId)
 
-                // Check for existing HC record (deduplication)
                 val existingByHcId = exerciseSessionDao.getByHealthConnectRecordId(
                     SOURCE_HEALTH_CONNECT, recordId
                 )
-                // Check for local MY_HEALTH session at same time range (conflict)
-                val existingLocal = exerciseSessionDao.getBySourceAndTimeRange(
-                    SOURCE_MY_HEALTH, entity.startTime, entity.endTime
-                )
-
-                val shouldApply = exerciseConflictResolver.shouldApply(
-                    hcRecordId = recordId,
-                    existingByHcId = existingByHcId,
-                    existingLocal = existingLocal
-                )
-                if (!shouldApply) {
-                    Log.d(
-                        TAG,
-                        "syncExerciseSessions: Skipping HC session - conflict (recordId=$recordId)"
-                    )
+                if (existingByHcId != null) {
+                    Log.d(TAG, "syncExerciseSessions: Skipping duplicate HC recordId=$recordId")
                     null
                 } else {
                     entity
                 }
             }
 
-            if (entities.isNotEmpty()) {
-                entities.forEach { exerciseSessionDao.insert(it) }
-                totalNewRecords += entities.size
+            allHcEntities.addAll(entities)
 
-                val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
-                if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
-                    latestRecordTime = maxEndTime
-                }
+            val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
+            if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
+                latestRecordTime = maxEndTime
             }
 
             pageToken = response.pageToken
         } while (pageToken != null)
+
+        if (allHcEntities.isNotEmpty()) {
+            val localMyHealthSessions = exerciseSessionDao.getBySource(SOURCE_MY_HEALTH)
+            val mergedSessions =
+                dataMerger.mergeExerciseSessions(allHcEntities, localMyHealthSessions)
+
+            if (mergedSessions.isNotEmpty()) {
+                mergedSessions.forEach { exerciseSessionDao.insert(it) }
+                totalNewRecords = mergedSessions.size
+            }
+        }
 
         return SyncResult(totalNewRecords, latestRecordTime)
     }
@@ -347,6 +349,7 @@ class HealthConnectRepository @Inject constructor(
     /**
      * Syncs steps with pagination support using unified DailyStepsEntity.
      * Groups steps by date and aggregates.
+     * Uses dataOriginFilter to prioritize wearable data and DataMerger for conflict resolution.
      */
     private suspend fun syncStepsWithPagination(lastSyncTime: Long?): SyncResult {
         val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
@@ -355,71 +358,75 @@ class HealthConnectRepository @Inject constructor(
         var latestRecordTime: Long? = null
         var pageToken: String? = null
 
+        val allHcEntities = mutableListOf<DailyStepsEntity>()
+
         do {
             if (!currentCoroutineContext().isActive) {
                 throw CancellationException("Sync operation cancelled")
             }
 
-            // Read page of steps records
             val request = ReadRecordsRequest(
                 recordType = StepsRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
+                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 
             val response = healthConnectClient.readRecords(request)
             val records = response.records
 
-            // Map each record to entity, then aggregate by date
             val entities = records.map { record ->
                 val date = Instant.ofEpochMilli(record.startTime.toEpochMilli())
                     .atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
                 mapStepsRecordToEntity(record, date)
-            }.groupBy { it.date }.map { (date, entitiesForDate) ->
-                val totalSteps = entitiesForDate.sumOf { it.totalSteps }
-                entitiesForDate.first().copy(
-                    date = date, totalSteps = totalSteps
-                )
-            }
-
-            // Apply conflict resolution: local data wins
-            val filteredEntities = entities.filter { hcEntity ->
-                val localEntity = dailyStepsDao.getByDate(hcEntity.date)
-                stepsConflictResolver.shouldApply(localEntity)
-            }
-
-            // Insert aggregated steps (only if no local conflict)
-            if (filteredEntities.isNotEmpty()) {
-                dailyStepsDao.insertAll(filteredEntities)
-                totalNewRecords += filteredEntities.size
-
-                val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
-                if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
-                    latestRecordTime = maxEndTime
+            }.groupBy { it.date }
+                .map { (date, entitiesForDate): Map.Entry<Long, List<DailyStepsEntity>> ->
+                    val totalSteps = entitiesForDate.sumOf { ent -> ent.totalSteps }
+                    entitiesForDate.first().copy(
+                        date = date, totalSteps = totalSteps
+                    )
                 }
+
+            allHcEntities.addAll(entities)
+
+            val maxEndTime = records.maxOfOrNull { it.endTime.toEpochMilli() }
+            if (maxEndTime != null && (latestRecordTime == null || maxEndTime > latestRecordTime)) {
+                latestRecordTime = maxEndTime
             }
 
             pageToken = response.pageToken
         } while (pageToken != null)
+
+        if (allHcEntities.isNotEmpty()) {
+            val datesToSync = allHcEntities.map { it.date }.toSet()
+            val localMyHealthSteps =
+                dailyStepsDao.getBySourceAndDates(SOURCE_MY_HEALTH, datesToSync)
+
+            val mergedSteps = dataMerger.mergeSteps(allHcEntities, localMyHealthSteps)
+
+            if (mergedSteps.isNotEmpty()) {
+                dailyStepsDao.insertAll(mergedSteps)
+                totalNewRecords = mergedSteps.size
+            }
+        }
 
         return SyncResult(totalNewRecords, latestRecordTime)
     }
 
     /**
      * Syncs heart rates with pagination support using unified HeartRateEntity.
-     * HC-059: Query ALL existing record IDs for proper deduplication
-     * HC-066: Use UUID.randomUUID() for recordId to prevent collisions
+     * Uses dataOriginFilter to prioritize wearable data and DataMerger for conflict resolution.
      */
     private suspend fun syncHeartRatesWithPagination(lastSyncTime: Long?): SyncResult {
-        // Default to last 30 days on first sync to avoid importing massive historical data
         val startTime = lastSyncTime?.let { Instant.ofEpochMilli(it) } ?: Instant.now()
             .minus(30, java.time.temporal.ChronoUnit.DAYS)
 
         var totalNewRecords = 0
         var latestRecordTime: Long? = null
         var pageToken: String? = null
+        var minRecordTime: Long? = null
 
-        // Query all existing record IDs for deduplication
+        val allHcEntities = mutableListOf<HeartRateEntity>()
         val existingRecordIds = heartRateDao.getAllRecordIdsBySource(SOURCE_HEALTH_CONNECT).toSet()
 
         do {
@@ -430,46 +437,49 @@ class HealthConnectRepository @Inject constructor(
             val request = ReadRecordsRequest(
                 recordType = HeartRateRecord::class,
                 timeRangeFilter = TimeRangeFilter.after(startTime),
+                dataOriginFilter = DATA_ORIGIN_FILTER,
                 pageToken = pageToken
             )
 
             val response = healthConnectClient.readRecords(request)
             val records = response.records
 
-            // Convert to entities with UUID record ID for deduplication
-            // HC-066: Use UUID instead of timestamp to prevent collisions
             val entities = records.flatMap { record ->
                 val recordId = UUID.randomUUID().toString()
                 mapHeartRateRecordToEntity(record, recordId, SOURCE_HEALTH_CONNECT)
+            }.filter { it.healthConnectRecordId !in existingRecordIds }
+
+            allHcEntities.addAll(entities)
+
+            val minMeasurementTime =
+                records.flatMap { it.samples }.minOfOrNull { it.time.toEpochMilli() }
+            if (minMeasurementTime != null && (minRecordTime == null || minMeasurementTime < minRecordTime)) {
+                minRecordTime = minMeasurementTime
             }
 
-            // Filter out duplicates AND apply conflict resolution
-            val newEntities = entities.filter { hcEntity ->
-                // Conflict check: no local MY_HEALTH reading at same timestamp
-                val existingLocal = heartRateDao.getBySourceAndTimestamp(
-                    SOURCE_MY_HEALTH, hcEntity.timestamp
-                )
-                heartRateConflictResolver.shouldApply(
-                    hcRecordId = hcEntity.healthConnectRecordId ?: "",
-                    existingRecordIds = existingRecordIds,
-                    existingLocal = existingLocal
-                )
-            }
-
-            // Insert new records (with IGNORE strategy - no overwrite)
-            if (newEntities.isNotEmpty()) {
-                heartRateDao.insertAll(newEntities)
-                totalNewRecords += newEntities.size
-
-                val maxMeasurementTime =
-                    records.flatMap { it.samples }.maxOfOrNull { it.time.toEpochMilli() }
-                if (maxMeasurementTime != null && (latestRecordTime == null || maxMeasurementTime > latestRecordTime)) {
-                    latestRecordTime = maxMeasurementTime
-                }
+            val maxMeasurementTime =
+                records.flatMap { it.samples }.maxOfOrNull { it.time.toEpochMilli() }
+            if (maxMeasurementTime != null && (latestRecordTime == null || maxMeasurementTime > latestRecordTime)) {
+                latestRecordTime = maxMeasurementTime
             }
 
             pageToken = response.pageToken
         } while (pageToken != null)
+
+        if (allHcEntities.isNotEmpty()) {
+            val queryStartTime = minRecordTime ?: startTime.toEpochMilli()
+            val queryEndTime = latestRecordTime ?: System.currentTimeMillis()
+            val localMyHealthHeartRates = heartRateDao.getBySourceAndDateRange(
+                SOURCE_MY_HEALTH, queryStartTime, queryEndTime
+            )
+            val mergedHeartRates =
+                dataMerger.mergeHeartRates(allHcEntities, localMyHealthHeartRates)
+
+            if (mergedHeartRates.isNotEmpty()) {
+                heartRateDao.insertAll(mergedHeartRates)
+                totalNewRecords = mergedHeartRates.size
+            }
+        }
 
         return SyncResult(totalNewRecords, latestRecordTime)
     }

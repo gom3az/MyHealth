@@ -22,7 +22,7 @@ import com.gomaa.healthy.data.local.entity.HeartRateEntity
         DailyStepsEntity::class,
         FitnessGoalEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class HealthDatabase : RoomDatabase() {
@@ -124,6 +124,15 @@ abstract class HealthDatabase : RoomDatabase() {
             }
         }
 
+        // Migration v7 to v8: Add dataOrigin column to all tables
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE daily_steps ADD COLUMN dataOrigin TEXT")
+                database.execSQL("ALTER TABLE heart_rates ADD COLUMN dataOrigin TEXT")
+                database.execSQL("ALTER TABLE exercise_sessions ADD COLUMN dataOrigin TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): HealthDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -131,7 +140,13 @@ abstract class HealthDatabase : RoomDatabase() {
                     HealthDatabase::class.java,
                     "health_database"
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(
+                        MIGRATION_3_4,
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8
+                    )
                     .build()
                 INSTANCE = instance
                 instance

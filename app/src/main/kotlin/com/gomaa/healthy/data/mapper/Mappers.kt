@@ -150,16 +150,39 @@ fun DomainHeartRateRecord.toEntity(
 const val SOURCE_HEALTH_CONNECT = "health_connect"
 const val SOURCE_MY_HEALTH = "myhealth"
 
+const val SOURCE_WEARABLE_HUAWEI = "wearable_huawei"
+const val SOURCE_WEARABLE_OTHER = "wearable_other"
+const val SOURCE_PHONE_SENSOR = "phone_sensor"
+const val SOURCE_MANUAL = "manual"
+
+fun resolveSource(dataOrigin: String?, isLocalApp: Boolean): String {
+    return when {
+        isLocalApp -> SOURCE_MANUAL
+        dataOrigin == null -> SOURCE_PHONE_SENSOR
+        dataOrigin == "com.huawei.health" -> SOURCE_WEARABLE_HUAWEI
+        dataOrigin in listOf(
+            "com.garmin",
+            "com.ouraring",
+            "com.fitbit",
+            "com.gopro"
+        ) -> SOURCE_WEARABLE_OTHER
+
+        else -> SOURCE_PHONE_SENSOR
+    }
+}
+
 fun mapHeartRateRecordToEntity(
     record: HealthConnectHeartRateRecord, recordId: String, source: String
 ): List<HeartRateEntity> {
+    val dataOrigin = record.metadata.dataOrigin.packageName
     return record.samples.map { sample ->
         HeartRateEntity(
             sessionId = null,
             timestamp = sample.time.toEpochMilli(),
             bpm = sample.beatsPerMinute.toInt(),
             source = source,
-            healthConnectRecordId = recordId
+            healthConnectRecordId = recordId,
+            dataOrigin = dataOrigin
         )
     }
 }
@@ -167,6 +190,7 @@ fun mapHeartRateRecordToEntity(
 fun mapExerciseSessionRecordToEntity(
     record: ExerciseSessionRecord, healthConnectRecordId: String
 ): ExerciseSessionEntity {
+    val dataOrigin = record.metadata.dataOrigin.packageName
     return ExerciseSessionEntity(
         id = UUID.randomUUID().toString(),
         startTime = record.startTime.toEpochMilli(),
@@ -178,11 +202,13 @@ fun mapExerciseSessionRecordToEntity(
         source = SOURCE_HEALTH_CONNECT,
         healthConnectRecordId = healthConnectRecordId,
         exerciseType = record.exerciseType,
-        title = record.title.orEmpty()
+        title = record.title.orEmpty(),
+        dataOrigin = dataOrigin
     )
 }
 
 fun mapStepsRecordToEntity(record: StepsRecord, date: Long): DailyStepsEntity {
+    val dataOrigin = record.metadata.dataOrigin.packageName
     return DailyStepsEntity(
         date = date,
         totalSteps = record.count.toInt(),
@@ -191,6 +217,7 @@ fun mapStepsRecordToEntity(record: StepsRecord, date: Long): DailyStepsEntity {
         lightActivityMinutes = 0,
         moderateActivityMinutes = 0,
         vigorousActivityMinutes = 0,
-        source = SOURCE_HEALTH_CONNECT
+        source = SOURCE_HEALTH_CONNECT,
+        dataOrigin = dataOrigin
     )
 }
