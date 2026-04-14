@@ -12,6 +12,12 @@ import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
 import com.gomaa.healthy.data.repository.HeartRateRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
 import com.gomaa.healthy.data.repository.StepRepositoryImpl
+import com.gomaa.healthy.data.sync.ExerciseConflictResolver
+import com.gomaa.healthy.data.sync.ExerciseConflictResolverImpl
+import com.gomaa.healthy.data.sync.HeartRateConflictResolver
+import com.gomaa.healthy.data.sync.HeartRateConflictResolverImpl
+import com.gomaa.healthy.data.sync.StepsConflictResolver
+import com.gomaa.healthy.data.sync.StepsConflictResolverImpl
 import com.gomaa.healthy.domain.repository.GoalRepository
 import com.gomaa.healthy.domain.repository.HeartRateRepository
 import com.gomaa.healthy.domain.repository.SessionRepository
@@ -104,6 +110,24 @@ object RepositoryModule {
     ): HealthConnectRepositoryInterface {
         return healthConnectRepository
     }
+
+    @Provides
+    @Singleton
+    fun provideStepsConflictResolver(
+        impl: StepsConflictResolverImpl
+    ): StepsConflictResolver = impl
+
+    @Provides
+    @Singleton
+    fun provideExerciseConflictResolver(
+        impl: ExerciseConflictResolverImpl
+    ): ExerciseConflictResolver = impl
+
+    @Provides
+    @Singleton
+    fun provideHeartRateConflictResolver(
+        impl: HeartRateConflictResolverImpl
+    ): HeartRateConflictResolver = impl
 }
 
 @Module

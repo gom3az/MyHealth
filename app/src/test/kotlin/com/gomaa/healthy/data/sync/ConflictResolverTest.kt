@@ -7,13 +7,25 @@ import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class ConflictResolverTest {
 
+    private lateinit var stepsConflictResolver: StepsConflictResolver
+    private lateinit var exerciseConflictResolver: ExerciseConflictResolver
+    private lateinit var heartRateConflictResolver: HeartRateConflictResolver
+
+    @Before
+    fun setup() {
+        stepsConflictResolver = StepsConflictResolverImpl()
+        exerciseConflictResolver = ExerciseConflictResolverImpl()
+        heartRateConflictResolver = HeartRateConflictResolverImpl()
+    }
+
     @Test
     fun `shouldApplySteps returns true when no local data exists`() {
-        val result = ConflictResolver.shouldApplySteps(null)
+        val result = stepsConflictResolver.shouldApply(null)
         assertTrue(result)
     }
 
@@ -30,13 +42,12 @@ class ConflictResolverTest {
             source = SOURCE_MY_HEALTH,
             syncedToHc = 1
         )
-        val result = ConflictResolver.shouldApplySteps(localSteps)
+        val result = stepsConflictResolver.shouldApply(localSteps)
         assertFalse(result)
     }
 
     @Test
     fun `shouldApplySteps returns true when HC data exists from different source`() {
-        // HC data can coexist with existing HC data from same source
         val hcSteps = DailyStepsEntity(
             date = 0,
             totalSteps = 500,
@@ -48,8 +59,8 @@ class ConflictResolverTest {
             source = SOURCE_HEALTH_CONNECT,
             syncedToHc = 1
         )
-        val result = ConflictResolver.shouldApplySteps(hcSteps)
-        assertTrue(result)  // HC data can coexist
+        val result = stepsConflictResolver.shouldApply(hcSteps)
+        assertTrue(result)
     }
 
     @Test
@@ -66,7 +77,7 @@ class ConflictResolverTest {
             healthConnectRecordId = "hc-record-id",
             syncedToHc = 1
         )
-        val result = ConflictResolver.shouldApplyExercise(
+        val result = exerciseConflictResolver.shouldApply(
             hcRecordId = "hc-record-id",
             existingByHcId = existingByHcId,
             existingLocal = null
@@ -87,7 +98,7 @@ class ConflictResolverTest {
             source = SOURCE_MY_HEALTH,
             syncedToHc = 1
         )
-        val result = ConflictResolver.shouldApplyExercise(
+        val result = exerciseConflictResolver.shouldApply(
             hcRecordId = "new-hc-id",
             existingByHcId = null,
             existingLocal = existingLocal
@@ -97,7 +108,7 @@ class ConflictResolverTest {
 
     @Test
     fun `shouldApplyExercise returns true when no conflicts`() {
-        val result = ConflictResolver.shouldApplyExercise(
+        val result = exerciseConflictResolver.shouldApply(
             hcRecordId = "new-hc-id",
             existingByHcId = null,
             existingLocal = null
@@ -108,7 +119,7 @@ class ConflictResolverTest {
     @Test
     fun `shouldApplyHeartRate returns false when HC record already synced`() {
         val existingRecordIds = setOf("hc-record-id-1", "hc-record-id-2")
-        val result = ConflictResolver.shouldApplyHeartRate(
+        val result = heartRateConflictResolver.shouldApply(
             hcRecordId = "hc-record-id-1",
             existingRecordIds = existingRecordIds,
             existingLocal = null
@@ -125,7 +136,7 @@ class ConflictResolverTest {
             healthConnectRecordId = null,
             syncedToHc = 1
         )
-        val result = ConflictResolver.shouldApplyHeartRate(
+        val result = heartRateConflictResolver.shouldApply(
             hcRecordId = "new-hc-id",
             existingRecordIds = emptySet(),
             existingLocal = existingLocal
@@ -135,7 +146,7 @@ class ConflictResolverTest {
 
     @Test
     fun `shouldApplyHeartRate returns true when no conflicts`() {
-        val result = ConflictResolver.shouldApplyHeartRate(
+        val result = heartRateConflictResolver.shouldApply(
             hcRecordId = "new-hc-id",
             existingRecordIds = emptySet(),
             existingLocal = null

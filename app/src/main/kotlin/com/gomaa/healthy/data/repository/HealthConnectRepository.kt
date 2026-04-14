@@ -23,7 +23,9 @@ import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
-import com.gomaa.healthy.data.sync.ConflictResolver
+import com.gomaa.healthy.data.sync.ExerciseConflictResolver
+import com.gomaa.healthy.data.sync.HeartRateConflictResolver
+import com.gomaa.healthy.data.sync.StepsConflictResolver
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -101,7 +103,10 @@ class HealthConnectRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val dailyStepsDao: DailyStepsDao,
     private val heartRateDao: HeartRateDao,
-    private val exerciseSessionDao: ExerciseSessionDao
+    private val exerciseSessionDao: ExerciseSessionDao,
+    private val stepsConflictResolver: StepsConflictResolver,
+    private val exerciseConflictResolver: ExerciseConflictResolver,
+    private val heartRateConflictResolver: HeartRateConflictResolver
 ) : HealthConnectRepositoryInterface {
 
     companion object {
@@ -289,7 +294,7 @@ class HealthConnectRepository @Inject constructor(
                     SOURCE_MY_HEALTH, entity.startTime, entity.endTime
                 )
 
-                val shouldApply = ConflictResolver.shouldApplyExercise(
+                val shouldApply = exerciseConflictResolver.shouldApply(
                     hcRecordId = recordId,
                     existingByHcId = existingByHcId,
                     existingLocal = existingLocal
@@ -433,7 +438,7 @@ class HealthConnectRepository @Inject constructor(
             // Apply conflict resolution: local data wins
             val filteredEntities = entities.filter { hcEntity ->
                 val localEntity = dailyStepsDao.getByDate(hcEntity.date)
-                ConflictResolver.shouldApplySteps(localEntity)
+                stepsConflictResolver.shouldApply(localEntity)
             }
 
             // Insert aggregated steps (only if no local conflict)
@@ -499,7 +504,7 @@ class HealthConnectRepository @Inject constructor(
                 val existingLocal = heartRateDao.getBySourceAndTimestamp(
                     SOURCE_MY_HEALTH, hcEntity.timestamp
                 )
-                ConflictResolver.shouldApplyHeartRate(
+                heartRateConflictResolver.shouldApply(
                     hcRecordId = hcEntity.healthConnectRecordId ?: "",
                     existingRecordIds = existingRecordIds,
                     existingLocal = existingLocal
