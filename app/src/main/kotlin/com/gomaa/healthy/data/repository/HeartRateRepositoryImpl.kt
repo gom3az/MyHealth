@@ -41,6 +41,15 @@ class HeartRateRepositoryImpl @Inject constructor(
         return entities.map { it.toDomainReading() }
     }
 
+    override suspend fun getAllHeartRatesBySource(source: HeartRateSource): List<HeartRateReading> {
+        val sourceString = when (source) {
+            HeartRateSource.MY_HEALTH -> "myhealth"
+            HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
+        }
+        val entities = heartRateDao.getAllBySource(sourceString)
+        return entities.map { it.toDomainReading() }
+    }
+
     override suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int? {
         return heartRateDao.getAverageHeartRate(startTime, endTime)?.toInt()
     }

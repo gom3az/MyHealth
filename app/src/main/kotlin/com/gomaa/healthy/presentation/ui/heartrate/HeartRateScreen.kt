@@ -1,5 +1,9 @@
 package com.gomaa.healthy.presentation.ui.heartrate
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,9 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -29,7 +32,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -38,9 +43,10 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +62,7 @@ fun HeartRateScreen(
             navigationIcon = {
                 androidx.compose.material3.IconButton(onClick = onNavigateBack) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back"
                     )
                 }
@@ -158,36 +164,18 @@ private fun HeartRateContent(
                 }
 
                 // Recent Readings - HC-064: Show all readings by source, not just latest
-                if (uiState.recentReadings.isNotEmpty()) {
+                if (uiState.hourlyReadings.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Recent Readings",
+                            text = "Readings by Hour",
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
 
-                    items(uiState.recentReadings) { reading ->
-                        HeartRateReadingItem(reading = reading)
-                    }
-                }
-
-                // Sync Button
-                item {
-                    Button(
-                        onClick = { onIntent(HeartRateIntent.OnSync) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isSyncing
-                    ) {
-                        if (uiState.isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.height(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
+                    uiState.hourlyReadings.forEach { (hour, readings) ->
+                        item {
+                            HourlyReadingSummary(hour = hour, readings = readings)
                         }
-                        Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
-                        Text("Sync from Health Connect")
                     }
                 }
             }
@@ -308,11 +296,10 @@ private fun SummaryCard(
     }
 }
 
-// HC-067: Use remember for SimpleDateFormat to avoid recreation on every composition
+// HC-067: Use remember for DateTimeFormatter to avoid recreation on every composition
 @Composable
 private fun HeartRateReadingItem(reading: HeartRateReading) {
-    // HC-067: Use remember to cache SimpleDateFormat instance
-    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
 
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -326,7 +313,9 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
         ) {
             Column {
                 Text(
-                    text = timeFormat.format(Date(reading.timestamp)),
+                    text = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(reading.timestamp), ZoneId.systemDefault()
+                    ).format(timeFormatter),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
@@ -350,6 +339,69 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HourlyReadingSummary(hour: Int, readings: List<HeartRateReading>) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val avgBpm = readings.map { it.bpm }.average().toInt()
+    val minBpm = readings.minOf { it.bpm }
+    val maxBpm = readings.maxOf { it.bpm }
+    val count = readings.size
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded }) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimensions.spacingLarge)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text(
+                        text = "$avgBpm BPM",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
+            Text(
+                text = "Readings: $count | Min: $minBpm | Max: $maxBpm",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            AnimatedVisibility(
+                visible = isExpanded, enter = expandVertically(), exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = Dimensions.spacingMedium)
+                ) {
+                    readings.forEach { reading ->
+                        HeartRateReadingItem(reading = reading)
+                        Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
+                    }
+                }
             }
         }
     }

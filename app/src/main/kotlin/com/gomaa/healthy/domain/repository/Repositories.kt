@@ -39,6 +39,7 @@ interface HeartRateRepository {
     suspend fun getLatestHeartRateBySource(source: HeartRateSource): HeartRateReading?
     suspend fun getHeartRatesForDateRange(startTime: Long, endTime: Long): List<HeartRateReading>
     suspend fun getAllHeartRates(): List<HeartRateReading>
+    suspend fun getAllHeartRatesBySource(source: HeartRateSource): List<HeartRateReading>
     suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int?
     suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
     suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?

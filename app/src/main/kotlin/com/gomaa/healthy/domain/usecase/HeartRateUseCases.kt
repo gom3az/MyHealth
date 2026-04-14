@@ -41,3 +41,19 @@ class GetHeartRateSummaryUseCase @Inject constructor(
         )
     }
 }
+
+class GetRecentHeartRateReadingsUseCase @Inject constructor(
+    private val heartRateRepository: HeartRateRepository
+) {
+    suspend operator fun invoke(
+        limit: Int = 20,
+        source: HeartRateSource? = null
+    ): List<HeartRateReading> {
+        val readings = if (source != null) {
+            heartRateRepository.getAllHeartRatesBySource(source)
+        } else {
+            heartRateRepository.getAllHeartRates()
+        }
+        return readings.take(limit)
+    }
+}

@@ -8,8 +8,8 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.usecase.GetHeartRateSummaryUseCase
-import com.gomaa.healthy.domain.usecase.GetLatestHeartRateBySourceUseCase
 import com.gomaa.healthy.domain.usecase.GetLatestHeartRateUseCase
+import com.gomaa.healthy.domain.usecase.GetRecentHeartRateReadingsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,10 +18,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
+
+typealias HourlyReadings = Map<Int, List<HeartRateReading>>
 
 enum class HeartRateSourceFilter {
     ALL, MY_HEALTH, HEALTH_CONNECT
@@ -32,6 +35,7 @@ sealed class HeartRateUiState {
     data class Loaded(
         val todaySummary: HeartRateSummary?,
         val recentReadings: List<HeartRateReading>,
+        val hourlyReadings: HourlyReadings,
         val sourceFilter: HeartRateSourceFilter = HeartRateSourceFilter.ALL,
         val isSyncing: Boolean = false
     ) : HeartRateUiState()
@@ -55,9 +59,8 @@ sealed class HeartRateEffect {
 @HiltViewModel
 class HeartRateViewModel @Inject constructor(
     private val getLatestHeartRateUseCase: GetLatestHeartRateUseCase,
-    private val getLatestHeartRateBySourceUseCase: GetLatestHeartRateBySourceUseCase,
     private val getHeartRateSummaryUseCase: GetHeartRateSummaryUseCase,
-    // HC-063: Inject HealthConnectRepository to call syncHeartRates()
+    private val getRecentHeartRateReadingsUseCase: GetRecentHeartRateReadingsUseCase,
     private val healthConnectRepository: HealthConnectRepositoryInterface
 ) : ViewModel() {
 
@@ -80,27 +83,31 @@ class HeartRateViewModel @Inject constructor(
         }
     }
 
-    private fun loadData() {
+    private fun loadData(filter: HeartRateSourceFilter = HeartRateSourceFilter.ALL) {
         viewModelScope.launch {
             _uiState.value = HeartRateUiState.Loading
             try {
-                // Get today's date range
                 val startOfDay =
                     LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endOfDay =
                     LocalDate.now().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant()
                         .toEpochMilli()
 
-                // Get summary for today
                 val summary = getHeartRateSummaryUseCase(startOfDay, endOfDay)
 
-                // Get latest reading
-                val latestReading = getLatestHeartRateUseCase()
+                val source = when (filter) {
+                    HeartRateSourceFilter.ALL -> null
+                    HeartRateSourceFilter.MY_HEALTH -> HeartRateSource.MY_HEALTH
+                    HeartRateSourceFilter.HEALTH_CONNECT -> HeartRateSource.HEALTH_CONNECT
+                }
+                val recentReadings = getRecentHeartRateReadingsUseCase(limit = 20, source = source)
 
-                if (latestReading != null || summary != null) {
+                if (recentReadings.isNotEmpty() || summary != null) {
                     _uiState.value = HeartRateUiState.Loaded(
                         todaySummary = summary,
-                        recentReadings = listOfNotNull(latestReading)
+                        recentReadings = recentReadings,
+                        hourlyReadings = groupReadingsByHour(recentReadings),
+                        sourceFilter = filter
                     )
                 } else {
                     _uiState.value = HeartRateUiState.Empty
@@ -152,40 +159,21 @@ class HeartRateViewModel @Inject constructor(
     }
 
     private fun updateFilter(filter: HeartRateSourceFilter) {
-        viewModelScope.launch {
-            val currentState = _uiState.value
-            if (currentState is HeartRateUiState.Loaded) {
-                _uiState.value = currentState.copy(sourceFilter = filter)
-                // Reload data with filter
-                loadDataWithFilter(filter)
-            }
-        }
+        loadData(filter)
     }
 
-    private fun loadDataWithFilter(filter: HeartRateSourceFilter) {
-        viewModelScope.launch {
-            try {
-                val source = when (filter) {
-                    HeartRateSourceFilter.ALL -> null
-                    HeartRateSourceFilter.MY_HEALTH -> HeartRateSource.MY_HEALTH
-                    HeartRateSourceFilter.HEALTH_CONNECT -> HeartRateSource.HEALTH_CONNECT
-                }
-
-                val readings = source?.let { getLatestHeartRateBySourceUseCase(it) }
-
-                if (readings != null) {
-                    val currentState = _uiState.value
-                    if (currentState is HeartRateUiState.Loaded) {
-                        _uiState.value = currentState.copy(recentReadings = listOf(readings))
-                    }
-                }
-            } catch (e: Exception) {
-                _effect.emit(
-                    HeartRateEffect.ShowError(
-                        e.message ?: "Failed to filter heart rate data"
-                    )
-                )
+    private fun groupReadingsByHour(readings: List<HeartRateReading>): HourlyReadings {
+        return readings
+            .map { reading ->
+                val hour = Instant.ofEpochMilli(reading.timestamp)
+                    .atZone(ZoneId.systemDefault())
+                    .hour
+                hour to reading
             }
-        }
+            .groupBy(
+                keySelector = { (hour, _) -> hour },
+                valueTransform = { (_, reading) -> reading }
+            )
+            .toSortedMap()
     }
 }
