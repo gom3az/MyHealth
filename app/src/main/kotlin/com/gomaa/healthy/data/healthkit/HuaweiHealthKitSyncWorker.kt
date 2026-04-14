@@ -26,9 +26,12 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * WorkManager Worker for periodic sync with Huawei Health Cloud.
@@ -67,9 +70,8 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
         private const val DEFAULT_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000L
 
         // Network constraints
-        private val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        private val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
     }
 
     override suspend fun doWork(): Result {
@@ -89,8 +91,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 val startTime = endTime - (syncWindowDays * 24L * 60L * 60L * 1000L)
 
                 Log.d(
-                    TAG,
-                    "doWork: Sync window = $syncWindowDays days (from $startTime to $endTime)"
+                    TAG, "doWork: Sync window = $syncWindowDays days (from $startTime to $endTime)"
                 )
 
                 // Step 3: Fetch steps data
@@ -167,8 +168,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 when (val writeResult = healthConnectRepository.writeSteps(domainSteps)) {
                     is HealthConnectResult.Success -> {
                         Log.d(
-                            TAG,
-                            "fetchStepsData: Wrote ${writeResult.data} steps to Health Connect"
+                            TAG, "fetchStepsData: Wrote ${writeResult.data} steps to Health Connect"
                         )
                     }
 
@@ -204,8 +204,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 // Step 1: Insert cloud data to staging
                 heartRateDao.insertAll(cloudEntities)
                 Log.d(
-                    TAG,
-                    "fetchHeartRateData: Stored ${cloudEntities.size} heart rates to staging"
+                    TAG, "fetchHeartRateData: Stored ${cloudEntities.size} heart rates to staging"
                 )
 
                 // Step 2: Get existing local data for merging
@@ -332,29 +331,27 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
  * Schedules the periodic sync work request.
  * Call this on app startup to begin background syncing.
  */
-object HuaweiHealthKitScheduler {
-    private const val TAG = "HealthKitScheduler"
-    private const val SYNC_INTERVAL_MINUTES = 15L
+@Singleton
+class HuaweiHealthKitScheduler @Inject constructor(
+    @param:ApplicationContext private val context: Context
+) {
+    companion object {
+        private const val TAG = "HealthKitScheduler"
+        private const val SYNC_INTERVAL_MINUTES = 15L
+    }
 
-    private val constraints = Constraints.Builder()
-        .setRequiredNetworkType(NetworkType.CONNECTED)
-        .build()
+    private val constraints =
+        Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-    fun schedule(context: Context) {
+    fun schedule() {
         val workRequest = PeriodicWorkRequestBuilder<HuaweiHealthKitSyncWorker>(
             SYNC_INTERVAL_MINUTES, TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                1, TimeUnit.MINUTES
-            )
-            .build()
+        ).setConstraints(constraints).setBackoffCriteria(
+            BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES
+        ).build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            HuaweiHealthKitSyncWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
+            HuaweiHealthKitSyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, workRequest
         )
 
         Log.i(TAG, "schedule: Health Kit sync scheduled every $SYNC_INTERVAL_MINUTES minutes")
@@ -363,7 +360,7 @@ object HuaweiHealthKitScheduler {
     /**
      * Cancels the periodic sync.
      */
-    fun cancel(context: Context) {
+    fun cancel() {
         WorkManager.getInstance(context).cancelUniqueWork(HuaweiHealthKitSyncWorker.WORK_NAME)
         Log.i(TAG, "cancel: Health Kit sync cancelled")
     }
@@ -372,10 +369,10 @@ object HuaweiHealthKitScheduler {
      * Runs an immediate one-time sync.
      * Useful for manual refresh from UI.
      */
-    fun runImmediate(context: Context) {
-        val workRequest = OneTimeWorkRequestBuilder<HuaweiHealthKitSyncWorker>()
-            .setConstraints(constraints)
-            .build()
+    fun runImmediate() {
+        val workRequest =
+            OneTimeWorkRequestBuilder<HuaweiHealthKitSyncWorker>().setConstraints(constraints)
+                .build()
 
         WorkManager.getInstance(context).enqueue(workRequest)
         Log.i(TAG, "runImmediate: Immediate sync triggered")

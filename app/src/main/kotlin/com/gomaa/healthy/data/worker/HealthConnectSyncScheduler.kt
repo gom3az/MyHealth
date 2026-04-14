@@ -21,7 +21,7 @@ const val KEY_HEART_RATE_SYNC = "sync_heart_rate_enabled"
 
 @Singleton
 class HealthConnectSyncScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     companion object {
         private const val SYNC_INTERVAL_HOURS = 6L

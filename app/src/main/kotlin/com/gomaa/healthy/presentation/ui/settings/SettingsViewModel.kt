@@ -1,6 +1,5 @@
 package com.gomaa.healthy.presentation.ui.settings
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
@@ -14,7 +13,6 @@ import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectResult
 import com.gomaa.healthy.data.worker.HealthConnectSyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -99,7 +97,7 @@ class SettingsViewModel @Inject constructor(
     private val syncPreferencesManager: SyncPreferencesManager,
     private val syncScheduler: HealthConnectSyncScheduler,
     private val healthKitAuthManager: HuaweiHealthKitAuthManager,
-    @ApplicationContext private val context: Context
+    private val huaweiHealthKitScheduler: HuaweiHealthKitScheduler,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle())
@@ -345,7 +343,7 @@ class SettingsViewModel @Inject constructor(
                         )
                     }
                     _sideEffect.emit(SettingsSideEffect.ShowSuccess("Connected to Huawei Health Kit"))
-                    HuaweiHealthKitScheduler.schedule(context)
+                    huaweiHealthKitScheduler.schedule()
                 }
 
                 is com.gomaa.healthy.data.healthkit.HealthKitAuthResult.Error -> {
@@ -359,7 +357,7 @@ class SettingsViewModel @Inject constructor(
     private fun disconnectHealthKit() {
         viewModelScope.launch {
             healthKitAuthManager.signOut()
-            HuaweiHealthKitScheduler.cancel(context)
+            huaweiHealthKitScheduler.cancel()
 
             updateIfIdle {
                 copy(
@@ -373,7 +371,7 @@ class SettingsViewModel @Inject constructor(
     private fun syncHealthKitNow() {
         viewModelScope.launch {
             setHealthKitSyncing(true)
-            HuaweiHealthKitScheduler.runImmediate(context)
+            huaweiHealthKitScheduler.runImmediate()
             kotlinx.coroutines.delay(HEALTH_KIT_SYNC_CHECK_DELAY_MS)
             val lastSyncTime = syncPreferencesManager.getLastHealthKitSyncTime()
             updateIfIdle {
