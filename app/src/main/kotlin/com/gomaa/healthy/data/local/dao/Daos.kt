@@ -1,5 +1,6 @@
 package com.gomaa.healthy.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -160,38 +161,11 @@ interface HeartRateDao {
         source: String, startTime: Long, endTime: Long
     ): List<HeartRateEntity>
 
-    @Query("SELECT * FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
-    suspend fun getHeartRatesByDateRange(startTime: Long, endTime: Long): List<HeartRateEntity>
-
     @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatest(): HeartRateEntity?
 
     @Query("SELECT healthConnectRecordId FROM heart_rates WHERE source = :source AND healthConnectRecordId IS NOT NULL")
     suspend fun getAllRecordIdsBySource(source: String): List<String>
-
-    @Query("SELECT AVG(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Double?
-
-    @Query("SELECT MAX(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
-
-    @Query("SELECT MIN(bpm) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
-
-    @Query("SELECT COUNT(*) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int
-
-    @Query("SELECT AVG(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getAverageHeartRateBySource(source: String, startTime: Long, endTime: Long): Double?
-
-    @Query("SELECT MAX(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getMaxHeartRateBySource(source: String, startTime: Long, endTime: Long): Int?
-
-    @Query("SELECT MIN(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getMinHeartRateBySource(source: String, startTime: Long, endTime: Long): Int?
-
-    @Query("SELECT COUNT(*) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
-    suspend fun getHeartRateCountBySource(source: String, startTime: Long, endTime: Long): Int
 
     @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
@@ -213,4 +187,24 @@ interface HeartRateDao {
 
     @Query("SELECT DISTINCT source FROM heart_rates ORDER BY source")
     suspend fun getDistinctSources(): List<String>
+
+    // Paging3 support for infinite scroll
+    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
+    fun getHeartRateReadingsPaged(): PagingSource<Int, HeartRateEntity>
+
+    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
+    fun getHeartRateReadingsBySourcePaged(source: String): PagingSource<Int, HeartRateEntity>
+
+    // All-time summary queries (date-agnostic - no date range)
+    @Query("SELECT AVG(bpm) FROM heart_rates")
+    suspend fun getOverallAverageBpm(): Double?
+
+    @Query("SELECT MAX(bpm) FROM heart_rates")
+    suspend fun getOverallMaxBpm(): Int?
+
+    @Query("SELECT MIN(bpm) FROM heart_rates")
+    suspend fun getOverallMinBpm(): Int?
+
+    @Query("SELECT COUNT(*) FROM heart_rates")
+    suspend fun getOverallCount(): Int
 }

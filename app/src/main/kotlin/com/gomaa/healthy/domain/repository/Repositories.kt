@@ -1,11 +1,14 @@
 package com.gomaa.healthy.domain.repository
 
+import androidx.paging.PagingData
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateRecord
 import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.domain.model.HeartRateSummary
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 interface StepRepository {
@@ -36,41 +39,12 @@ interface SessionRepository {
 
 interface HeartRateRepository {
     suspend fun getLatestHeartRate(): HeartRateReading?
-    suspend fun getAllHeartRates(): List<HeartRateReading>
-    suspend fun getAllHeartRatesBySource(source: HeartRateSource): List<HeartRateReading>
-    suspend fun getAllHeartRatesByDateRange(startTime: Long, endTime: Long): List<HeartRateReading>
-    suspend fun getHeartRatesBySourceAndDateRange(
-        source: HeartRateSource,
-        startTime: Long,
-        endTime: Long
-    ): List<HeartRateReading>
-    suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int?
-    suspend fun getMaxHeartRate(startTime: Long, endTime: Long): Int?
-    suspend fun getMinHeartRate(startTime: Long, endTime: Long): Int?
-    suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int
-    suspend fun getAverageHeartRateBySource(
-        source: HeartRateSource,
-        startTime: Long,
-        endTime: Long
-    ): Int?
-
-    suspend fun getMaxHeartRateBySource(
-        source: HeartRateSource,
-        startTime: Long,
-        endTime: Long
-    ): Int?
-
-    suspend fun getMinHeartRateBySource(
-        source: HeartRateSource,
-        startTime: Long,
-        endTime: Long
-    ): Int?
-
-    suspend fun getHeartRateCountBySource(
-        source: HeartRateSource,
-        startTime: Long,
-        endTime: Long
-    ): Int
-
     suspend fun getAvailableSources(): List<String>
+
+    // Paging3 support for infinite scroll
+    fun getHeartRatesPaged(): Flow<PagingData<HeartRateReading>>
+    fun getHeartRatesBySourcePaged(source: HeartRateSource): Flow<PagingData<HeartRateReading>>
+
+    // All-time summary (date-agnostic)
+    suspend fun getOverallSummary(): HeartRateSummary?
 }
