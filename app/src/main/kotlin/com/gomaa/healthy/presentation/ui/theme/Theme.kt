@@ -9,8 +9,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Uber Typography Scale - Full hierarchy for MaterialTheme.typography
-val UberTypography = Typography(
+// =============================================================================
+// MyHealth Typography Scale - Clean, modern, accessible
+// =============================================================================
+// Font: System default sans-serif (Roboto on Android)
+// Keeping the hierarchy from the original but with improved readability
+// =============================================================================
+
+val HealthTypography = Typography(
+    // Display - Hero headlines
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
@@ -32,6 +39,8 @@ val UberTypography = Typography(
         lineHeight = 40.sp, // 1.25
         letterSpacing = 0.sp
     ),
+
+    // Headlines - Section titles
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
@@ -41,14 +50,23 @@ val UberTypography = Typography(
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 28.sp, // 1.40
         letterSpacing = 0.sp
     ),
+    headlineSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        lineHeight = 24.sp, // 1.33
+        letterSpacing = 0.sp
+    ),
+
+    // Titles - Cards and features
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 24.sp, // 1.33
         letterSpacing = 0.sp
@@ -60,6 +78,15 @@ val UberTypography = Typography(
         lineHeight = 24.sp, // 1.50
         letterSpacing = 0.15.sp
     ),
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 20.sp, // 1.43
+        letterSpacing = 0.1.sp
+    ),
+
+    // Body - Main content
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
@@ -74,6 +101,15 @@ val UberTypography = Typography(
         lineHeight = 20.sp, // 1.43
         letterSpacing = 0.25.sp
     ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 16.sp, // 1.33
+        letterSpacing = 0.4.sp
+    ),
+
+    // Labels - Buttons, chips, navigation
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
@@ -83,51 +119,84 @@ val UberTypography = Typography(
     ),
     labelMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
-        lineHeight = 20.sp, // 1.67
+        lineHeight = 16.sp, // 1.33
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp, // 1.45
         letterSpacing = 0.5.sp
     )
 )
 
-// Uber-inspired Light Color Scheme - all colors from Theme, not static references
-private val UberColorScheme = lightColorScheme(
-    primary = UberBlack,           // #000000 - main actions
-    onPrimary = PureWhite,          // #ffffff - text on primary
-    primaryContainer = ChipGray,   // #efefef
-    onPrimaryContainer = UberBlack,
+// =============================================================================
+// MyHealth Color Scheme - Health & Energy Theme
+// =============================================================================
+//
+// Design Principles:
+// - NO pure black (#000000) - replaced with ForestDark (#0D3311)
+// - NO shadows - use color differentiation and borders instead
+// - Vibrant green as primary - health, vitality, growth
+// - Energetic orange for secondary - energy, motivation
+// - Trust blue for tertiary - reliability, medical credibility
+// =============================================================================
 
-    secondary = BodyGray,           // #4b4b4b - secondary text
-    onSecondary = PureWhite,        // #ffffff
-    secondaryContainer = ChipGray, // #efefef
-    onSecondaryContainer = UberBlack,
+private val HealthEnergyColorScheme = lightColorScheme(
+    // Primary - Health Green
+    primary = md_primary,                    // #00C853
+    onPrimary = md_onPrimary,                // #FFFFFF
+    primaryContainer = md_primaryContainer,  // #E8F5E9
+    onPrimaryContainer = md_onPrimaryContainer, // #0D3311
 
-    tertiary = MutedGray,           // #afafaf
-    onTertiary = PureWhite,
-    tertiaryContainer = ChipGray,
-    onTertiaryContainer = UberBlack,
+    // Secondary - Energy Orange  
+    secondary = md_secondary,               // #FF9100
+    onSecondary = md_onSecondary,           // #FFFFFF
+    secondaryContainer = md_secondaryContainer, // #FFF3E0
+    onSecondaryContainer = md_onSecondaryContainer, // #3E2723
 
-    error = Error,                  // Keep standard red
-    onError = OnError,
-    errorContainer = ErrorContainer,
-    onErrorContainer = OnErrorContainer,
+    // Tertiary - Trust Blue
+    tertiary = md_tertiary,                  // #2979FF
+    onTertiary = md_onTertiary,             // #FFFFFF
+    tertiaryContainer = md_tertiaryContainer, // #E3F2FD
+    onTertiaryContainer = md_onTertiaryContainer, // #0D47A1
 
-    background = PureWhite,         // #ffffff - screen backgrounds
-    onBackground = UberBlack,       // #000000 - main text
-    surface = PureWhite,            // #ffffff - card backgrounds
-    onSurface = UberBlack,          // #000000 - text on surface
-    surfaceVariant = ChipGray,     // #efefef - chip backgrounds
-    onSurfaceVariant = BodyGray,   // #4b4b4b - secondary text
+    // Error
+    error = md_error,                        // #BA1A1A
+    onError = md_onError,                   // #FFFFFF
+    errorContainer = md_errorContainer,     // #FFCDD2
+    onErrorContainer = md_onErrorContainer, // #410002
 
-    outline = BorderBlack,          // #000000 - borders
-    outlineVariant = ChipGray
+    // Background & Surface
+    background = md_background,              // #FAFAFA
+    onBackground = md_onBackground,         // #0D3311
+    surface = md_surface,                   // #FFFFFF
+    onSurface = md_onSurface,               // #0D3311
+    surfaceVariant = md_surfaceVariant,     // #E8F5E9
+    onSurfaceVariant = md_onSurfaceVariant, // #388E3C
+
+    // Outline
+    outline = md_outline,                    // #C8E6C9
+    outlineVariant = md_outlineVariant,     // #E8F5E9
+
+    // Inverse (for dark surfaces if needed)
+    inverseSurface = md_inverseSurface,      // #0D3311
+    inverseOnSurface = md_inverseOnSurface, // #E8F5E9
+    inversePrimary = md_inversePrimary,     // #69F0AE
+
+    // Surface tint & containers
+    surfaceTint = md_surfaceTint,            // #00C853
+    surfaceContainerLowest = md_surfaceContainerLowest, // #FFFFFF
+    surfaceContainerLow = md_surfaceContainerLow,     // #F1F8E9
+    surfaceContainer = md_surfaceContainer,           // #EDFAE8
+    surfaceContainerHigh = md_surfaceContainerHigh, // #E8F5DE
+    surfaceContainerHighest = md_surfaceContainerHighest, // #EFF7EC
+
+    // Scrim
+    scrim = md_scrim                        // #000000
 )
 
 @Composable
@@ -135,8 +204,8 @@ fun HealthTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = UberColorScheme,
-        typography = UberTypography,
+        colorScheme = HealthEnergyColorScheme,
+        typography = HealthTypography,
         content = content
     )
 }

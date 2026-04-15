@@ -39,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -157,11 +156,6 @@ private fun IdleContent(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -228,11 +222,6 @@ private fun InProgressContent(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -305,11 +294,6 @@ private fun SuccessContent(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -374,11 +358,6 @@ private fun ErrorContent(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer
         )
@@ -454,11 +433,6 @@ private fun HealthKitConnectionDialog(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

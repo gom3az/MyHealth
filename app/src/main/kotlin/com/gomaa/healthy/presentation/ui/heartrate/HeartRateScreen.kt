@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -305,13 +304,7 @@ private fun SummaryCard(
     title: String, value: String, unit: String, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
-            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        modifier = modifier.clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
@@ -348,11 +341,6 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)
@@ -407,11 +395,6 @@ private fun HourlyReadingSummary(hour: Int, readings: List<HeartRateReading>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius))
             .clickable { isExpanded = !isExpanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

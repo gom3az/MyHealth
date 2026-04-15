@@ -25,8 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import java.text.SimpleDateFormat
@@ -178,11 +176,6 @@ private fun DetailItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = Dimensions.spacingSmall)
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

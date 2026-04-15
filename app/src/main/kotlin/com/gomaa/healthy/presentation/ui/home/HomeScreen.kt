@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
@@ -326,11 +325,6 @@ private fun StepsProgressCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -419,11 +413,6 @@ private fun HeartRateCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -493,11 +482,6 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)
@@ -566,11 +550,6 @@ private fun ProviderSelectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)
@@ -624,8 +603,7 @@ private fun ActionButtonRow(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                ), contentPadding = PaddingValues(
                     vertical = Dimensions.buttonPaddingVertical,
                     horizontal = Dimensions.buttonPaddingHorizontal
                 )
@@ -671,11 +649,6 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)

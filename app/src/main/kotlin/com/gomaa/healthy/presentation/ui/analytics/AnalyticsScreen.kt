@@ -28,8 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
@@ -101,11 +99,6 @@ private fun AnalyticsContent(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(Dimensions.cardRadius),
-                            spotColor = MaterialTheme.colorScheme.outline
-                        )
                         .clip(RoundedCornerShape(Dimensions.cardRadius)),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(Dimensions.cardRadius)
@@ -137,11 +130,6 @@ private fun SessionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

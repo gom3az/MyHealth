@@ -40,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -102,11 +101,7 @@ fun GoalsScreen(
             elevation = FloatingActionButtonDefaults.elevation(
                 defaultElevation = 0.dp, pressedElevation = 0.dp
             ),
-            modifier = Modifier.shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(Dimensions.fabRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
+            modifier = Modifier
         ) {
             Text("+", color = MaterialTheme.colorScheme.onSurface)
         }
@@ -164,11 +159,7 @@ private fun GoalsContent(
             elevation = FloatingActionButtonDefaults.elevation(
                 defaultElevation = 0.dp, pressedElevation = 0.dp
             ),
-            modifier = Modifier.shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(Dimensions.fabRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
+            modifier = Modifier
         ) {
             Text("+", color = MaterialTheme.colorScheme.onSurface)
         }
@@ -234,11 +225,6 @@ private fun GoalCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(Dimensions.cardRadius),
-                spotColor = MaterialTheme.colorScheme.outline
-            )
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius)
