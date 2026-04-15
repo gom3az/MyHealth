@@ -16,23 +16,6 @@ class HeartRateRepositoryImpl @Inject constructor(
         return heartRateDao.getLatest()?.toDomainReading()
     }
 
-    override suspend fun getLatestHeartRateBySource(source: HeartRateSource): HeartRateReading? {
-        val sourceString = when (source) {
-            HeartRateSource.MY_HEALTH -> "myhealth"
-            HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
-        }
-        return heartRateDao.getLatestBySource(sourceString)?.toDomainReading()
-    }
-
-    // HC-060: Implement actual database queries instead of emptyList()
-    override suspend fun getHeartRatesForDateRange(
-        startTime: Long,
-        endTime: Long
-    ): List<HeartRateReading> {
-        return heartRateDao.getHeartRatesByDateRange(startTime, endTime)
-            .map { it.toDomainReading() }
-    }
-
     // HC-060: Implement actual database queries instead of emptyList()
     override suspend fun getAllHeartRates(): List<HeartRateReading> {
         // Collect from the flow or use the suspend version
@@ -45,9 +28,34 @@ class HeartRateRepositoryImpl @Inject constructor(
         val sourceString = when (source) {
             HeartRateSource.MY_HEALTH -> "myhealth"
             HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
+            HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "wearable_huawei_cloud"
         }
         val entities = heartRateDao.getAllBySource(sourceString)
         return entities.map { it.toDomainReading() }
+    }
+
+    // HC-066: Get all sources within date range (for ALL filter)
+    override suspend fun getAllHeartRatesByDateRange(
+        startTime: Long,
+        endTime: Long
+    ): List<HeartRateReading> {
+        return heartRateDao.getHeartRatesByDateRange(startTime, endTime)
+            .map { it.toDomainReading() }
+    }
+
+    // HC-066: Get specific source within date range (for MY_HEALTH/HEALTH_CONNECT filters)
+    override suspend fun getHeartRatesBySourceAndDateRange(
+        source: HeartRateSource,
+        startTime: Long,
+        endTime: Long
+    ): List<HeartRateReading> {
+        val sourceString = when (source) {
+            HeartRateSource.MY_HEALTH -> "myhealth"
+            HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
+            HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "wearable_huawei_cloud"
+        }
+        return heartRateDao.getBySourceAndDateRange(sourceString, startTime, endTime)
+            .map { it.toDomainReading() }
     }
 
     override suspend fun getAverageHeartRate(startTime: Long, endTime: Long): Int? {
@@ -64,5 +72,51 @@ class HeartRateRepositoryImpl @Inject constructor(
 
     override suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int {
         return heartRateDao.getHeartRateCount(startTime, endTime)
+    }
+
+    // Methods with source filter for filtering summary calculations
+    private fun sourceToString(source: HeartRateSource): String {
+        return when (source) {
+            HeartRateSource.MY_HEALTH -> "myhealth"
+            HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
+            HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "wearable_huawei_cloud"
+        }
+    }
+
+    override suspend fun getAverageHeartRateBySource(
+        source: HeartRateSource,
+        startTime: Long,
+        endTime: Long
+    ): Int? {
+        return heartRateDao.getAverageHeartRateBySource(sourceToString(source), startTime, endTime)
+            ?.toInt()
+    }
+
+    override suspend fun getMaxHeartRateBySource(
+        source: HeartRateSource,
+        startTime: Long,
+        endTime: Long
+    ): Int? {
+        return heartRateDao.getMaxHeartRateBySource(sourceToString(source), startTime, endTime)
+    }
+
+    override suspend fun getMinHeartRateBySource(
+        source: HeartRateSource,
+        startTime: Long,
+        endTime: Long
+    ): Int? {
+        return heartRateDao.getMinHeartRateBySource(sourceToString(source), startTime, endTime)
+    }
+
+    override suspend fun getHeartRateCountBySource(
+        source: HeartRateSource,
+        startTime: Long,
+        endTime: Long
+    ): Int {
+        return heartRateDao.getHeartRateCountBySource(sourceToString(source), startTime, endTime)
+    }
+
+    override suspend fun getAvailableSources(): List<String> {
+        return heartRateDao.getDistinctSources()
     }
 }

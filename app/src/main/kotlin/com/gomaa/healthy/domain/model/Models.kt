@@ -40,7 +40,9 @@ data class HeartRateRecord(
 )
 
 enum class HeartRateSource {
-    MY_HEALTH, HEALTH_CONNECT
+    MY_HEALTH,
+    HEALTH_CONNECT,
+    WEARABLE_HUAWEI_CLOUD
 }
 
 data class HeartRateReading(

@@ -140,7 +140,6 @@ interface ExerciseSessionDao {
 
 @Dao
 interface HeartRateDao {
-    // HC-061: Change to IGNORE to prevent overwriting existing records
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(heartRates: List<HeartRateEntity>)
 
@@ -153,7 +152,6 @@ interface HeartRateDao {
     @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
     fun getBySource(source: String): Flow<List<HeartRateEntity>>
 
-    // HC-064: Get all readings by source (not just latest)
     @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
     suspend fun getAllBySource(source: String): List<HeartRateEntity>
 
@@ -162,24 +160,12 @@ interface HeartRateDao {
         source: String, startTime: Long, endTime: Long
     ): List<HeartRateEntity>
 
-    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
-    fun getAllHeartRates(): Flow<List<HeartRateEntity>>
-
-    // HC-060: Get all readings for date range - returns all readings, not empty
     @Query("SELECT * FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
     suspend fun getHeartRatesByDateRange(startTime: Long, endTime: Long): List<HeartRateEntity>
-
-    @Query("SELECT * FROM heart_rates WHERE source = :source AND timestamp = :timestamp LIMIT 1")
-    suspend fun getBySourceAndTimestamp(source: String, timestamp: Long): HeartRateEntity?
 
     @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatest(): HeartRateEntity?
 
-    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLatestBySource(source: String): HeartRateEntity?
-
-    // HC-059: Query ALL existing record IDs for deduplication
-    // Fixed: Return List<String> instead of List<String?>
     @Query("SELECT healthConnectRecordId FROM heart_rates WHERE source = :source AND healthConnectRecordId IS NOT NULL")
     suspend fun getAllRecordIdsBySource(source: String): List<String>
 
@@ -195,6 +181,18 @@ interface HeartRateDao {
     @Query("SELECT COUNT(*) FROM heart_rates WHERE timestamp >= :startTime AND timestamp <= :endTime")
     suspend fun getHeartRateCount(startTime: Long, endTime: Long): Int
 
+    @Query("SELECT AVG(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getAverageHeartRateBySource(source: String, startTime: Long, endTime: Long): Double?
+
+    @Query("SELECT MAX(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getMaxHeartRateBySource(source: String, startTime: Long, endTime: Long): Int?
+
+    @Query("SELECT MIN(bpm) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getMinHeartRateBySource(source: String, startTime: Long, endTime: Long): Int?
+
+    @Query("SELECT COUNT(*) FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime")
+    suspend fun getHeartRateCountBySource(source: String, startTime: Long, endTime: Long): Int
+
     @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
 
@@ -204,7 +202,6 @@ interface HeartRateDao {
     @Query("DELETE FROM heart_rates WHERE source = :source")
     suspend fun deleteBySource(source: String)
 
-    // Source-of-truth refactor: Track sync status
     @Query("SELECT * FROM heart_rates WHERE source = :source AND synced_to_hc = 0")
     suspend fun getBySourceNotSynced(source: String): List<HeartRateEntity>
 
@@ -213,4 +210,7 @@ interface HeartRateDao {
 
     @Query("UPDATE heart_rates SET synced_to_hc = 1 WHERE timestamp IN (:timestamps) AND source = :source")
     suspend fun markAsSynced(timestamps: List<Long>, source: String)
+
+    @Query("SELECT DISTINCT source FROM heart_rates ORDER BY source")
+    suspend fun getDistinctSources(): List<String>
 }

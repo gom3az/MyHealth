@@ -45,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 import java.time.Instant
@@ -160,6 +161,7 @@ private fun HeartRateContent(
                 item {
                     SourceFilterChips(
                         selectedFilter = uiState.sourceFilter,
+                        availableFilters = uiState.availableFilters,
                         onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
                 }
 
@@ -220,15 +222,18 @@ private fun HeartRateContent(
 
 @Composable
 private fun SourceFilterChips(
-    selectedFilter: HeartRateSourceFilter, onFilterChanged: (HeartRateSourceFilter) -> Unit
+    selectedFilter: String?,
+    availableFilters: List<SourceFilterOption>,
+    onFilterChanged: (String?) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
+        // ALL option - shows combined data from all sources
         FilterChip(
-            selected = selectedFilter == HeartRateSourceFilter.ALL,
-            onClick = { onFilterChanged(HeartRateSourceFilter.ALL) },
+            selected = selectedFilter == null,
+            onClick = { onFilterChanged(null) },
             label = { Text("All") },
             colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -238,30 +243,22 @@ private fun SourceFilterChips(
             ),
             shape = RoundedCornerShape(Dimensions.chipRadius)
         )
-        FilterChip(
-            selected = selectedFilter == HeartRateSourceFilter.MY_HEALTH,
-            onClick = { onFilterChanged(HeartRateSourceFilter.MY_HEALTH) },
-            label = { Text("MyHealth") },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(Dimensions.chipRadius)
-        )
-        FilterChip(
-            selected = selectedFilter == HeartRateSourceFilter.HEALTH_CONNECT,
-            onClick = { onFilterChanged(HeartRateSourceFilter.HEALTH_CONNECT) },
-            label = { Text("Health Connect") },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(Dimensions.chipRadius)
-        )
+
+        // Dynamic filters from database
+        availableFilters.forEach { filter ->
+            FilterChip(
+                selected = selectedFilter == filter.id,
+                onClick = { onFilterChanged(filter.id) },
+                label = { Text(filter.displayName) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(Dimensions.chipRadius)
+            )
+        }
     }
 }
 
@@ -349,6 +346,7 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
                     text = when (reading.source) {
                         HeartRateSource.MY_HEALTH -> "MyHealth"
                         HeartRateSource.HEALTH_CONNECT -> "Health Connect"
+                        HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "Huawei"
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
