@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,6 +29,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,7 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
@@ -76,10 +84,31 @@ fun GoalsScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Goals") })
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Goals", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        )
     }, floatingActionButton = {
-        FloatingActionButton(onClick = { viewModel.processIntent(GoalsIntent.ShowCreateDialog) }) {
-            Text("+")
+        FloatingActionButton(
+            onClick = { viewModel.processIntent(GoalsIntent.ShowCreateDialog) },
+            shape = RoundedCornerShape(Dimensions.fabRadius),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 0.dp, pressedElevation = 0.dp
+            ),
+            modifier = Modifier.shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(Dimensions.fabRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+        ) {
+            Text("+", color = MaterialTheme.colorScheme.onSurface)
         }
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         GoalsContent(
@@ -117,10 +146,31 @@ private fun GoalsContent(
     onHideCreateDialog: () -> Unit
 ) {
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Goals") })
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Goals", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        )
     }, floatingActionButton = {
-        FloatingActionButton(onClick = onShowCreateDialog) {
-            Text("+")
+        FloatingActionButton(
+            onClick = onShowCreateDialog,
+            shape = RoundedCornerShape(Dimensions.fabRadius),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 0.dp, pressedElevation = 0.dp
+            ),
+            modifier = Modifier.shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(Dimensions.fabRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+        ) {
+            Text("+", color = MaterialTheme.colorScheme.onSurface)
         }
     }) { innerPadding ->
         if (isLoading) {
@@ -143,12 +193,12 @@ private fun GoalsContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "No goals yet", style = MaterialTheme.typography.titleMedium
+                    text = "No goals yet", style = MaterialTheme.typography.headlineLarge
                 )
                 Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
                     text = "Tap + to create your first goal",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -181,11 +231,22 @@ private fun GoalsContent(
 private fun GoalCard(
     goal: FitnessGoal, progress: Float, onDelete: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge)
+                .padding(Dimensions.cardPadding)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -193,10 +254,10 @@ private fun GoalCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = goal.name, style = MaterialTheme.typography.titleMedium
+                    text = goal.name, style = MaterialTheme.typography.headlineMedium
                 )
                 TextButton(onClick = onDelete) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
 
@@ -211,7 +272,7 @@ private fun GoalCard(
 
             Text(
                 text = targetText,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -220,13 +281,15 @@ private fun GoalCard(
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
 
             Text(
                 text = "${(progress * 100).toInt()}% complete",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -241,7 +304,11 @@ private fun CreateGoalDialog(
     var selectedType by remember { mutableStateOf<GoalType>(GoalType.Steps(10000)) }
     var selectedPeriod by remember { mutableStateOf(GoalPeriod.DAILY) }
 
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Create New Goal") }, text = {
+    AlertDialog(onDismissRequest = onDismiss, title = {
+        Text(
+            text = "Create New Goal", style = MaterialTheme.typography.headlineLarge
+        )
+    }, text = {
         Column {
             OutlinedTextField(
                 value = name,
@@ -250,18 +317,38 @@ private fun CreateGoalDialog(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-            Text("Goal Type", style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = "Goal Type", style = MaterialTheme.typography.labelLarge
+            )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
                 Button(
                     onClick = { selectedType = GoalType.Steps(10000) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        vertical = Dimensions.buttonPaddingVertical,
+                        horizontal = Dimensions.buttonPaddingHorizontal
+                    )
                 ) {
                     Text("Steps")
                 }
                 Button(
                     onClick = { selectedType = GoalType.ActivityMinutes(30) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        vertical = Dimensions.buttonPaddingVertical,
+                        horizontal = Dimensions.buttonPaddingHorizontal
+                    )
                 ) {
                     Text("Mins")
                 }
@@ -270,13 +357,31 @@ private fun CreateGoalDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
                 Button(
                     onClick = { selectedPeriod = GoalPeriod.DAILY },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        vertical = Dimensions.buttonPaddingVertical,
+                        horizontal = Dimensions.buttonPaddingHorizontal
+                    )
                 ) {
                     Text("Daily")
                 }
                 Button(
                     onClick = { selectedPeriod = GoalPeriod.WEEKLY },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        vertical = Dimensions.buttonPaddingVertical,
+                        horizontal = Dimensions.buttonPaddingHorizontal
+                    )
                 ) {
                     Text("Weekly")
                 }
@@ -285,13 +390,18 @@ private fun CreateGoalDialog(
     }, confirmButton = {
         Button(
             onClick = { onCreate(name, selectedType, selectedPeriod) },
-            enabled = name.isNotBlank()
+            enabled = name.isNotBlank(),
+            shape = RoundedCornerShape(Dimensions.buttonRadius),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             Text("Create")
         }
     }, dismissButton = {
         TextButton(onClick = onDismiss) {
-            Text("Cancel")
+            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
         }
     })
 }
@@ -309,8 +419,7 @@ private fun GoalsContentPreview() {
             onCreateGoal = { _, _, _ -> },
             onDeleteGoal = {},
             onShowCreateDialog = {},
-            onHideCreateDialog = {}
-        )
+            onHideCreateDialog = {})
     }
 }
 
@@ -327,8 +436,7 @@ private fun GoalsContentLoadingPreview() {
             onCreateGoal = { _, _, _ -> },
             onDeleteGoal = {},
             onShowCreateDialog = {},
-            onHideCreateDialog = {}
-        )
+            onHideCreateDialog = {})
     }
 }
 
@@ -345,7 +453,6 @@ private fun GoalsContentEmptyPreview() {
             onCreateGoal = { _, _, _ -> },
             onDeleteGoal = {},
             onShowCreateDialog = {},
-            onHideCreateDialog = {}
-        )
+            onHideCreateDialog = {})
     }
 }

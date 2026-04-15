@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +26,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,9 +34,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,8 +56,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
-    onNavigateToGoals: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    onNavigateToGoals: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -82,8 +86,7 @@ fun SettingsScreen(
                                     data = Uri.parse(uriString)
                                     putExtra("overlay", true)
                                     putExtra("callerId", context.packageName)
-                                }
-                            )
+                                })
                         } catch (e2: Exception) {
                             Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
                         }
@@ -111,10 +114,17 @@ fun SettingsScreen(
 
     val idleState = state as? SettingsUiState.Idle
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings") }) },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Settings", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         LazyColumn(
             contentPadding = innerPadding,
             modifier = Modifier
@@ -130,7 +140,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge)) }
 
             item {
                 HealthConnectSection(
@@ -144,11 +154,10 @@ fun SettingsScreen(
                     onConnect = {
                         viewModel.processIntent(SettingsIntent.RequestHealthConnectPermissions)
                     },
-                    onSyncNow = { viewModel.processIntent(SettingsIntent.SyncHealthConnectNow) }
-                )
+                    onSyncNow = { viewModel.processIntent(SettingsIntent.SyncHealthConnectNow) })
             }
 
-            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge)) }
 
             item {
                 HealthKitSection(
@@ -166,11 +175,10 @@ fun SettingsScreen(
                                 it
                             )
                         )
-                    }
-                )
+                    })
             }
 
-            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge)) }
 
             item {
                 SyncPreferencesSection(
@@ -191,11 +199,10 @@ fun SettingsScreen(
                                 it
                             )
                         )
-                    }
-                )
+                    })
             }
 
-            item { Spacer(modifier = Modifier.height(Dimensions.spacingLarge)) }
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge)) }
 
             item {
                 ExportSection(
@@ -205,8 +212,7 @@ fun SettingsScreen(
                                 "Export started - including Health Connect: $includeHealthConnect"
                             )
                         }
-                    }
-                )
+                    })
             }
         }
     }
@@ -214,40 +220,41 @@ fun SettingsScreen(
 
 @Composable
 private fun SettingsItem(
-    title: String,
-    description: String,
-    icon: String,
-    onClick: () -> Unit
+    title: String, description: String, icon: String, onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius))
             .clickable { onClick() }
             .semantics { contentDescription = "$title: $description" },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = icon,
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { }
-            )
+                modifier = Modifier.semantics { })
             Spacer(modifier = Modifier.width(Dimensions.spacingLarge))
             Column {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
+                    text = title, style = MaterialTheme.typography.headlineMedium
                 )
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

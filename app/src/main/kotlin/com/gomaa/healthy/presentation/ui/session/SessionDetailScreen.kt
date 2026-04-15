@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,12 +17,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import java.text.SimpleDateFormat
@@ -31,8 +36,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(
-    sessionId: String,
-    viewModel: SessionDetailViewModel = hiltViewModel()
+    sessionId: String, viewModel: SessionDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -43,10 +47,12 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Session Details") }
+                title = { Text("Session Details", style = MaterialTheme.typography.displaySmall) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
-        }
-    ) { paddingValues ->
+        }) { paddingValues ->
         when {
             uiState.isLoading -> {
                 Column(
@@ -97,8 +103,7 @@ fun SessionDetailScreen(
 
                     item {
                         DetailItem(
-                            label = "Date",
-                            value = formatTimestamp(session.startTime)
+                            label = "Date", value = formatTimestamp(session.startTime)
                         )
                     }
 
@@ -113,22 +118,19 @@ fun SessionDetailScreen(
 
                     item {
                         DetailItem(
-                            label = "Avg Heart Rate",
-                            value = "${session.avgHeartRate} bpm"
+                            label = "Avg Heart Rate", value = "${session.avgHeartRate} bpm"
                         )
                     }
 
                     item {
                         DetailItem(
-                            label = "Max Heart Rate",
-                            value = "${session.maxHeartRate} bpm"
+                            label = "Max Heart Rate", value = "${session.maxHeartRate} bpm"
                         )
                     }
 
                     item {
                         DetailItem(
-                            label = "Min Heart Rate",
-                            value = "${session.minHeartRate} bpm"
+                            label = "Min Heart Rate", value = "${session.minHeartRate} bpm"
                         )
                     }
 
@@ -145,8 +147,7 @@ fun SessionDetailScreen(
                         session.heartRates.take(10).forEach { hr ->
                             item {
                                 DetailItem(
-                                    label = formatTimestamp(hr.timestamp),
-                                    value = "${hr.bpm} bpm"
+                                    label = formatTimestamp(hr.timestamp), value = "${hr.bpm} bpm"
                                 )
                             }
                         }
@@ -171,15 +172,19 @@ fun SessionDetailScreen(
 
 @Composable
 private fun DetailItem(
-    label: String,
-    value: String
+    label: String, value: String
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = Dimensions.spacingSmall),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            .padding(vertical = Dimensions.spacingSmall)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -194,8 +199,7 @@ private fun DetailItem(
             )
             Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
             Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge
+                text = value, style = MaterialTheme.typography.bodyLarge
             )
         }
     }

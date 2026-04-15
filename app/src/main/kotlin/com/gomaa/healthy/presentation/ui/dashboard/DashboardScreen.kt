@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,8 +40,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
@@ -77,11 +81,15 @@ fun DashboardScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Active Pulse") }, actions = {
-            uiState.deviceBrand?.let { brand ->
-                ConnectionBadge(brand = brand)
-            }
-        })
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Active Pulse", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         DashboardContent(
             paddingValues = paddingValues,
@@ -153,7 +161,7 @@ private fun DashboardContent(
 
 @Composable
 private fun HeartRateDisplay(
-    heartRate: Int, zone: HeartRateZone, color: Color, scale: Float
+    heartRate: Int, zone: HeartRateZone, color: androidx.compose.ui.graphics.Color, scale: Float
 ) {
     Box(
         modifier = Modifier
@@ -177,12 +185,12 @@ private fun HeartRateDisplay(
                 )
                 Text(
                     text = "BPM",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = zone.name.replace("_", " "),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = color
                 )
             }
@@ -195,13 +203,22 @@ private fun TrackingStats(
     elapsedTime: Long, avgHeartRate: Int, maxHeartRate: Int, minHeartRate: Int
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
-            modifier = Modifier.padding(Dimensions.spacingLarge)
+            modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = "Session Stats", style = MaterialTheme.typography.titleMedium
+                text = "Session Stats", style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
@@ -222,11 +239,12 @@ private fun StatItem(label: String, value: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = value, style = MaterialTheme.typography.titleSmall
+            text = value,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -242,29 +260,45 @@ private fun ConnectionStatusRow(
     ) {
         when (connectionState) {
             is ConnectionState.Connected -> {
-                Text(text = "●", color = MaterialTheme.colorScheme.primary)
-                Text(text = "Connected", color = MaterialTheme.colorScheme.primary)
+                Text(text = "●", color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = "Connected",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
 
             is ConnectionState.Connecting -> {
-                Text(text = "○", color = MaterialTheme.colorScheme.tertiary)
-                Text(text = "Connecting...", color = MaterialTheme.colorScheme.tertiary)
+                Text(text = "○", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "Connecting...",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
 
             is ConnectionState.Disconnected -> {
-                Text(text = "○", color = MaterialTheme.colorScheme.outline)
-                Text(text = "Disconnected", color = MaterialTheme.colorScheme.outline)
+                Text(text = "○", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "Disconnected",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
 
             is ConnectionState.Error -> {
                 Text(text = "!", color = MaterialTheme.colorScheme.error)
-                Text(text = "Error", color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = "Error",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
         deviceBrand?.let { brand ->
             Text(
                 text = "($brand)",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -281,13 +315,19 @@ private fun TrackingButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp),
+        shape = RoundedCornerShape(Dimensions.buttonRadius),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isTracking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            containerColor = if (isTracking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            contentColor = if (isTracking) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+        ),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            vertical = Dimensions.buttonPaddingVertical,
+            horizontal = Dimensions.buttonPaddingHorizontal
         )
     ) {
         Text(
             text = if (isTracking) "Stop Session" else "Start Session",
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
         )
     }
 }
@@ -295,23 +335,24 @@ private fun TrackingButton(
 @Composable
 private fun ConnectionBadge(brand: String) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(Dimensions.chipRadius)
     ) {
         Text(
             text = brand,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = Dimensions.spacing, vertical = 4.dp)
         )
     }
 }
 
-private fun getZoneColor(zone: HeartRateZone): Color {
+private fun getZoneColor(zone: HeartRateZone): androidx.compose.ui.graphics.Color {
     return when (zone) {
         HeartRateZone.REST -> HeartRateZoneLow
         HeartRateZone.LOW -> HeartRateZoneMedium
         HeartRateZone.MODERATE -> HeartRateZoneHigh
         HeartRateZone.HIGH -> HeartRateZoneVeryHigh
-        HeartRateZone.VERY_HIGH -> Color(0xFFB71C1C)
+        HeartRateZone.VERY_HIGH -> androidx.compose.ui.graphics.Color(0xFFB71C1C)
     }
 }
 

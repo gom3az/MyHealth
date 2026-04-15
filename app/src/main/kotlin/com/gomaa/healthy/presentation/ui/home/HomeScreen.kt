@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsWalk
@@ -20,9 +21,12 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +35,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
@@ -106,7 +114,14 @@ fun HomeScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("MyHealth") })
+            title = {
+                Text(
+                    text = "MyHealth", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         HomeContent(
             paddingValues = paddingValues,
@@ -214,7 +229,19 @@ private fun StepsFilterChips(
         FilterChip(
             selected = selectedFilter == StepSourceFilter.ALL,
             onClick = { onFilterChanged(StepSourceFilter.ALL) },
-            label = { Text("All") })
+            label = { Text("All") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius),
+            modifier = Modifier.padding(
+                horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
+                vertical = Dimensions.chipPaddingVertical - 14.dp
+            )
+        )
         FilterChip(
             selected = selectedFilter == StepSourceFilter.MY_HEALTH,
             onClick = { onFilterChanged(StepSourceFilter.MY_HEALTH) },
@@ -225,7 +252,16 @@ private fun StepsFilterChips(
                     contentDescription = null,
                     modifier = Modifier.height(18.dp)
                 )
-            })
+            }, colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ), shape = RoundedCornerShape(Dimensions.chipRadius), modifier = Modifier.padding(
+                horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
+                vertical = Dimensions.chipPaddingVertical - 14.dp
+            )
+        )
         if (healthConnectAvailable) {
             FilterChip(
                 selected = selectedFilter == StepSourceFilter.HEALTH_CONNECT,
@@ -237,7 +273,44 @@ private fun StepsFilterChips(
                         contentDescription = null,
                         modifier = Modifier.height(18.dp)
                     )
-                })
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(Dimensions.chipRadius),
+                modifier = Modifier.padding(
+                    horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
+                    vertical = Dimensions.chipPaddingVertical - 14.dp
+                )
+            )
+            if (healthConnectAvailable) {
+                FilterChip(
+                    selected = selectedFilter == StepSourceFilter.HEALTH_CONNECT,
+                    onClick = { onFilterChanged(StepSourceFilter.HEALTH_CONNECT) },
+                    label = { Text("Health Connect") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            modifier = Modifier.height(18.dp)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        labelColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(Dimensions.chipRadius),
+                    modifier = Modifier.padding(
+                        horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
+                        vertical = Dimensions.chipPaddingVertical - 14.dp
+                    )
+                )
+            }
         }
     }
 }
@@ -251,12 +324,22 @@ private fun StepsProgressCard(
     selectedFilter: StepSourceFilter
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(), onClick = onClick
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge)
+                .padding(Dimensions.cardPadding)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -264,19 +347,17 @@ private fun StepsProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Today's Steps", style = MaterialTheme.typography.titleMedium
+                    text = "Today's Steps", style = MaterialTheme.typography.headlineMedium
                 )
                 if (combinedSteps.healthConnectSteps > 0 && selectedFilter == StepSourceFilter.ALL) {
                     Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = MaterialTheme.shapes.small
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(Dimensions.chipRadius)
                     ) {
                         Text(
-                            text = "Combined",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "Combined", style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(
-                                horizontal = Dimensions.spacing,
-                                vertical = 4.dp
+                                horizontal = Dimensions.spacing, vertical = 4.dp
                             )
                         )
                     }
@@ -285,18 +366,20 @@ private fun StepsProgressCard(
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Text(
                 text = "%,d".format(steps),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             LinearProgressIndicator(
                 progress = { goalProgress },
                 modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${(goalProgress * 100).toInt()}% of daily goal",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (selectedFilter == StepSourceFilter.ALL && combinedSteps.healthConnectSteps > 0) {
@@ -307,13 +390,13 @@ private fun StepsProgressCard(
                 ) {
                     Text(
                         text = "MyHealth: %,d".format(combinedSteps.myHealthSteps),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "Health Connect: %,d".format(combinedSteps.healthConnectSteps),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -334,12 +417,22 @@ private fun HeartRateCard(
     latestHeartRate: Int?, lastUpdate: Long?, isLoading: Boolean, onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(), onClick = onClick
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge)
+                .padding(Dimensions.cardPadding)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -347,12 +440,11 @@ private fun HeartRateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Heart Rate", style = MaterialTheme.typography.titleMedium
+                    text = "Heart Rate", style = MaterialTheme.typography.headlineMedium
                 )
                 Icon(
                     imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
+                    contentDescription = null, tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -360,13 +452,14 @@ private fun HeartRateCard(
 
             if (isLoading) {
                 androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    color = MaterialTheme.colorScheme.primary
                 )
             } else if (latestHeartRate != null) {
                 Text(
                     text = "$latestHeartRate BPM",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 lastUpdate?.let { timestamp ->
@@ -375,20 +468,19 @@ private fun HeartRateCard(
                         java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
                     Text(
                         text = "Last updated: ${timeFormat.format(java.util.Date(timestamp))}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 Text(
-                    text = "No heart rate data yet",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "No heart rate data yet", style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Sync from Health Connect to see readings",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -399,21 +491,30 @@ private fun HeartRateCard(
 @Composable
 private fun ConnectionStatusCard(uiState: HomeUiState) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Current Heart Rate", style = MaterialTheme.typography.titleMedium
+                text = "Current Heart Rate", style = MaterialTheme.typography.headlineMedium
             )
             Text(
                 text = if (uiState.heartRate > 0) "${uiState.heartRate} BPM" else "-- BPM",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
@@ -422,15 +523,19 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             ) {
                 val (icon, text, color) = when (uiState.connectionState) {
                     ConnectionState.Connected -> Triple(
-                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.primary
+                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.onSurface
                     )
 
                     ConnectionState.Connecting -> Triple(
-                        Icons.Default.Refresh, "Connecting...", MaterialTheme.colorScheme.tertiary
+                        Icons.Default.Refresh,
+                        "Connecting...",
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     ConnectionState.Disconnected -> Triple(
-                        Icons.Default.Refresh, "Disconnected", MaterialTheme.colorScheme.outline
+                        Icons.Default.Refresh,
+                        "Disconnected",
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     is ConnectionState.Error -> Triple(
@@ -442,12 +547,11 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
                 Icon(
                     imageVector = icon, contentDescription = null, tint = color
                 )
-                Text(text = text, color = color)
+                Text(text = text, color = color, style = MaterialTheme.typography.bodyLarge)
             }
             uiState.connectedDeviceBrand?.let { brand ->
                 Text(
-                    text = "Device: $brand",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Device: $brand", style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -460,13 +564,22 @@ private fun ProviderSelectionCard(
     availableProviders: List<String>, onProviderSelected: (String) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
-            modifier = Modifier.padding(Dimensions.spacingLarge)
+            modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = "Select Wearable Provider", style = MaterialTheme.typography.titleMedium
+                text = "Select Wearable Provider", style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Row(
@@ -476,7 +589,15 @@ private fun ProviderSelectionCard(
                     FilterChip(
                         selected = false,
                         onClick = { onProviderSelected(provider) },
-                        label = { Text(provider) })
+                        label = { Text(provider) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(Dimensions.chipRadius)
+                    )
                 }
             }
         }
@@ -498,18 +619,47 @@ private fun ActionButtonRow(
         ) {
             Button(
                 onClick = if (isConnected) onDisconnect else onConnect,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    vertical = Dimensions.buttonPaddingVertical,
+                    horizontal = Dimensions.buttonPaddingHorizontal
+                )
             ) {
                 Text(if (isConnected) "Disconnect" else "Connect")
             }
             Button(
-                onClick = onNavigateToDashboard, modifier = Modifier.weight(1f)
+                onClick = onNavigateToDashboard,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    vertical = Dimensions.buttonPaddingVertical,
+                    horizontal = Dimensions.buttonPaddingHorizontal
+                )
             ) {
                 Text("Start Run")
             }
         }
         Button(
-            onClick = onChangeProvider, modifier = Modifier.fillMaxWidth()
+            onClick = onChangeProvider,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(Dimensions.buttonRadius),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                vertical = Dimensions.buttonPaddingVertical,
+                horizontal = Dimensions.buttonPaddingHorizontal
+            )
         ) {
             Text("Change Provider")
         }
@@ -519,18 +669,26 @@ private fun ActionButtonRow(
 @Composable
 private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.ExerciseSession>) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
-            modifier = Modifier.padding(Dimensions.spacingLarge)
+            modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = "Recent Sessions", style = MaterialTheme.typography.titleMedium
+                text = "Recent Sessions", style = MaterialTheme.typography.headlineMedium
             )
             if (sessions.isEmpty()) {
                 Text(
-                    text = "No sessions yet",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "No sessions yet", style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -544,9 +702,14 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
                         Text(
                             text = java.text.SimpleDateFormat(
                                 "MMM dd, HH:mm", java.util.Locale.getDefault()
-                            ).format(java.util.Date(session.startTime))
+                            ).format(java.util.Date(session.startTime)),
+                            style = MaterialTheme.typography.bodyLarge
                         )
-                        Text(text = "${session.avgHeartRate} BPM avg")
+                        Text(
+                            text = "${session.avgHeartRate} BPM avg",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -563,35 +726,33 @@ private fun ProviderSelectionDialog(
 ) {
     val otherProviders = availableProviders.filter { it != currentProvider }
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Healthcare Provider") },
-        text = {
+    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, title = {
+        Text(
+            text = "Select Healthcare Provider", style = MaterialTheme.typography.headlineLarge
+        )
+    }, text = {
             if (otherProviders.isEmpty()) {
                 Text("No other providers available for switching")
             } else {
                 Column {
                     Text(
-                        text = "Choose a new provider",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Choose a new provider", style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
                     otherProviders.forEach { provider ->
-                        androidx.compose.material3.TextButton(
+                        TextButton(
                             onClick = { onProviderSelected(provider) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(provider)
+                            Text(provider, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+    }, confirmButton = {}, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
             }
         })
 }
@@ -600,20 +761,29 @@ private fun ProviderSelectionDialog(
 private fun SwitchProviderConfirmationDialog(
     currentProvider: String, newProvider: String, onConfirm: () -> Unit, onDismiss: () -> Unit
 ) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Switch Provider?") },
-        text = {
-            Text("You are switching from $currentProvider to $newProvider")
-        },
-        confirmButton = {
-            Button(onClick = onConfirm) {
+    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, title = {
+        Text(
+            text = "Switch Provider?", style = MaterialTheme.typography.headlineLarge
+        )
+    }, text = {
+        Text(
+            text = "You are switching from $currentProvider to $newProvider",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }, confirmButton = {
+        Button(
+            onClick = onConfirm,
+            shape = RoundedCornerShape(Dimensions.buttonRadius),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
                 Text("Confirm")
             }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+    }, dismissButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
             }
         })
 }

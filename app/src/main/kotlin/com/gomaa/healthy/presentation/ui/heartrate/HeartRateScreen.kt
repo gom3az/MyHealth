@@ -14,21 +14,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -51,47 +58,48 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartRateScreen(
-    viewModel: HeartRateViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {}
+    viewModel: HeartRateViewModel = hiltViewModel(), onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Heart Rate") },
-            navigationIcon = {
-                androidx.compose.material3.IconButton(onClick = onNavigateBack) {
+            title = {
+                Text(
+                    text = "Heart Rate", style = MaterialTheme.typography.displaySmall
+                )
+            }, navigationIcon = {
+                IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-            },
-            actions = {
-                androidx.compose.material3.IconButton(
-                    onClick = { viewModel.processIntent(HeartRateIntent.OnSync) }
-                ) {
+            }, actions = {
+                IconButton(
+                    onClick = { viewModel.processIntent(HeartRateIntent.OnSync) }) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Sync"
+                        contentDescription = "Sync",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-            }
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
         )
     }) { paddingValues ->
         HeartRateContent(
             paddingValues = paddingValues,
             uiState = uiState,
-            onIntent = { intent -> viewModel.processIntent(intent) }
-        )
+            onIntent = { intent -> viewModel.processIntent(intent) })
     }
 }
 
 @Composable
 private fun HeartRateContent(
-    paddingValues: PaddingValues,
-    uiState: HeartRateUiState,
-    onIntent: (HeartRateIntent) -> Unit
+    paddingValues: PaddingValues, uiState: HeartRateUiState, onIntent: (HeartRateIntent) -> Unit
 ) {
     when (uiState) {
         is HeartRateUiState.Loading -> {
@@ -102,7 +110,7 @@ private fun HeartRateContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -122,18 +130,32 @@ private fun HeartRateContent(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "No heart rate data yet",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "No heart rate data yet", style = MaterialTheme.typography.headlineLarge
                 )
                 Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
                     text = "Sync from Health Connect to see your heart rate readings",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-                Button(onClick = { onIntent(HeartRateIntent.OnSync) }) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                Button(
+                    onClick = { onIntent(HeartRateIntent.OnSync) },
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        vertical = Dimensions.buttonPaddingVertical,
+                        horizontal = Dimensions.buttonPaddingHorizontal
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                     Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
                     Text("Sync from Health Connect")
                 }
@@ -152,8 +174,7 @@ private fun HeartRateContent(
                 item {
                     SourceFilterChips(
                         selectedFilter = uiState.sourceFilter,
-                        onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) }
-                    )
+                        onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
                 }
 
                 // Summary Cards
@@ -168,7 +189,7 @@ private fun HeartRateContent(
                     item {
                         Text(
                             text = "Readings by Hour",
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.headlineMedium
                         )
                     }
 
@@ -192,11 +213,18 @@ private fun HeartRateContent(
             ) {
                 Text(
                     text = "Error: ${uiState.message}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-                Button(onClick = { onIntent(HeartRateIntent.OnRefresh) }) {
+                Button(
+                    onClick = { onIntent(HeartRateIntent.OnRefresh) },
+                    shape = RoundedCornerShape(Dimensions.buttonRadius),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
                     Text("Retry")
                 }
             }
@@ -206,8 +234,7 @@ private fun HeartRateContent(
 
 @Composable
 private fun SourceFilterChips(
-    selectedFilter: HeartRateSourceFilter,
-    onFilterChanged: (HeartRateSourceFilter) -> Unit
+    selectedFilter: HeartRateSourceFilter, onFilterChanged: (HeartRateSourceFilter) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -216,17 +243,38 @@ private fun SourceFilterChips(
         FilterChip(
             selected = selectedFilter == HeartRateSourceFilter.ALL,
             onClick = { onFilterChanged(HeartRateSourceFilter.ALL) },
-            label = { Text("All") }
+            label = { Text("All") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius)
         )
         FilterChip(
             selected = selectedFilter == HeartRateSourceFilter.MY_HEALTH,
             onClick = { onFilterChanged(HeartRateSourceFilter.MY_HEALTH) },
-            label = { Text("MyHealth") }
+            label = { Text("MyHealth") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius)
         )
         FilterChip(
             selected = selectedFilter == HeartRateSourceFilter.HEALTH_CONNECT,
             onClick = { onFilterChanged(HeartRateSourceFilter.HEALTH_CONNECT) },
-            label = { Text("Health Connect") }
+            label = { Text("Health Connect") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius)
         )
     }
 }
@@ -244,47 +292,43 @@ private fun HeartRateSummaryCards(summary: HeartRateSummary) {
             modifier = Modifier.weight(1f)
         )
         SummaryCard(
-            title = "Max",
-            value = "${summary.maxBpm}",
-            unit = "BPM",
-            modifier = Modifier.weight(1f)
+            title = "Max", value = "${summary.maxBpm}", unit = "BPM", modifier = Modifier.weight(1f)
         )
         SummaryCard(
-            title = "Min",
-            value = "${summary.minBpm}",
-            unit = "BPM",
-            modifier = Modifier.weight(1f)
+            title = "Min", value = "${summary.minBpm}", unit = "BPM", modifier = Modifier.weight(1f)
         )
     }
 }
 
 @Composable
 private fun SummaryCard(
-    title: String,
-    value: String,
-    unit: String,
-    modifier: Modifier = Modifier
+    title: String, value: String, unit: String, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier = modifier
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingMedium),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = unit,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
@@ -302,12 +346,21 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
     val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -315,15 +368,14 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
                 Text(
                     text = LocalDateTime.ofInstant(
                         Instant.ofEpochMilli(reading.timestamp), ZoneId.systemDefault()
-                    ).format(timeFormatter),
-                    style = MaterialTheme.typography.bodyMedium
+                    ).format(timeFormatter), style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
                     text = when (reading.source) {
                         HeartRateSource.MY_HEALTH -> "MyHealth"
                         HeartRateSource.HEALTH_CONNECT -> "Health Connect"
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -331,13 +383,13 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(end = 4.dp)
                 )
                 Text(
                     text = "${reading.bpm} BPM",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -355,11 +407,20 @@ private fun HourlyReadingSummary(hour: Int, readings: List<HeartRateReading>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }) {
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius))
+            .clickable { isExpanded = !isExpanded },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge)
+                .padding(Dimensions.cardPadding)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -368,26 +429,26 @@ private fun HourlyReadingSummary(hour: Int, readings: List<HeartRateReading>) {
             ) {
                 Text(
                     text = "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.headlineMedium
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(end = 4.dp)
                     )
                     Text(
                         text = "$avgBpm BPM",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
             Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
             Text(
                 text = "Readings: $count | Min: $minBpm | Max: $maxBpm",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 

@@ -2,36 +2,61 @@ package com.gomaa.healthy.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Primary = Color(0xFF006C4C)
-val OnPrimary = Color(0xFFFFFFFF)
-val PrimaryContainer = Color(0xFF89F8C7)
-val OnPrimaryContainer = Color(0xFF002114)
+// Uber-inspired color palette - Black & White design system
 
-val Secondary = Color(0xFF4F6353)
-val OnSecondary = Color(0xFFFFFFFF)
-val SecondaryContainer = Color(0xFFD1E8D4)
-val OnSecondaryContainer = Color(0xFF0C1F12)
+// Primary colors
+val UberBlack = Color(0xFF000000)
+val PureWhite = Color(0xFFFFFFFF)
 
-val Tertiary = Color(0xFF3A656E)
-val OnTertiary = Color(0xFFFFFFFF)
-val TertiaryContainer = Color(0xFFBEEAF6)
-val OnTertiaryContainer = Color(0xFF001F26)
+// Secondary colors
+val BodyGray = Color(0xFF4b4b4b)
+val ChipGray = Color(0xFFefefef)
+val MutedGray = Color(0xFFafafaf)
+
+// Hover states
+val HoverGray = Color(0xFFe2e2e2)
+val HoverLight = Color(0xFFf3f3f3)
+
+// Shadows
+val ShadowLight = Color(0x1F000000) // rgba(0,0,0,0.12)
+val ShadowMedium = Color(0x29000000) // rgba(0,0,0,0.16)
+val ShadowPressed = Color(0x14000000) // rgba(0,0,0,0.08)
+
+// Border color
+val BorderBlack = Color(0xFF000000)
+
+// Material 3 Color Scheme - Updated to Uber palette
+val Primary = UberBlack
+val OnPrimary = PureWhite
+val PrimaryContainer = ChipGray
+val OnPrimaryContainer = UberBlack
+
+val Secondary = BodyGray
+val OnSecondary = PureWhite
+val SecondaryContainer = ChipGray
+val OnSecondaryContainer = UberBlack
+
+val Tertiary = MutedGray
+val OnTertiary = PureWhite
+val TertiaryContainer = ChipGray
+val OnTertiaryContainer = UberBlack
 
 val Error = Color(0xFFBA1A1A)
 val OnError = Color(0xFFFFFFFF)
 val ErrorContainer = Color(0xFFFFDAD6)
 val OnErrorContainer = Color(0xFF410002)
 
-val Background = Color(0xFFFBFDF9)
-val OnBackground = Color(0xFF191C19)
-val Surface = Color(0xFFFBFDF9)
-val OnSurface = Color(0xFF191C19)
-val SurfaceVariant = Color(0xFFDBE5DB)
-val OnSurfaceVariant = Color(0xFF414942)
+val Background = PureWhite
+val OnBackground = UberBlack
+val Surface = PureWhite
+val OnSurface = UberBlack
+val SurfaceVariant = ChipGray
+val OnSurfaceVariant = BodyGray
 
-val Outline = Color(0xFF717971)
-val OutlineVariant = Color(0xFFC1C9BE)
+val Outline = BorderBlack
+val OutlineVariant = ChipGray
 
+// Heart rate zone colors (kept from original)
 val HeartRateZoneLow = Color(0xFF4CAF50)
 val HeartRateZoneMedium = Color(0xFFFFEB3B)
 val HeartRateZoneHigh = Color(0xFFFF9800)

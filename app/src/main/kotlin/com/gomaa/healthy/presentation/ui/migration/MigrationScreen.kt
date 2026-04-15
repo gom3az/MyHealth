@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -27,6 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,8 +50,7 @@ import kotlinx.coroutines.flow.first
 
 @Composable
 fun MigrationScreen(
-    onComplete: () -> Unit,
-    viewModel: MigrationViewModel = hiltViewModel()
+    onComplete: () -> Unit, viewModel: MigrationViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -76,8 +80,7 @@ fun MigrationScreen(
             onDismiss = {
                 showHealthKitDialog = false
                 viewModel.processIntent(MigrationIntent.SkipMigration)
-            }
-        )
+            })
     }
 
     LaunchedEffect(Unit) {
@@ -91,14 +94,17 @@ fun MigrationScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Welcome to MyHealth") }
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Text(
+                    "Welcome to MyHealth", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -112,8 +118,7 @@ fun MigrationScreen(
                     is MigrationUiState.Idle -> {
                         IdleContent(
                             onStartMigration = { showHealthKitDialog = true },
-                            onSkip = { viewModel.processIntent(MigrationIntent.SkipMigration) }
-                        )
+                            onSkip = { viewModel.processIntent(MigrationIntent.SkipMigration) })
                     }
 
                     is MigrationUiState.InProgress -> {
@@ -121,8 +126,7 @@ fun MigrationScreen(
                             stepsImported = currentState.stepsImported,
                             exerciseImported = currentState.exerciseImported,
                             heartRateImported = currentState.heartRateImported,
-                            onCancel = { viewModel.processIntent(MigrationIntent.CancelMigration) }
-                        )
+                            onCancel = { viewModel.processIntent(MigrationIntent.CancelMigration) })
                     }
 
                     is MigrationUiState.Success -> {
@@ -138,8 +142,7 @@ fun MigrationScreen(
                         ErrorContent(
                             errorMessage = currentState.message,
                             onRetry = { viewModel.processIntent(MigrationIntent.StartMigration) },
-                            onSkip = { viewModel.processIntent(MigrationIntent.SkipMigration) }
-                        )
+                            onSkip = { viewModel.processIntent(MigrationIntent.SkipMigration) })
                     }
                 }
             }
@@ -149,26 +152,30 @@ fun MigrationScreen(
 
 @Composable
 private fun IdleContent(
-    onStartMigration: () -> Unit,
-    onSkip: () -> Unit
+    onStartMigration: () -> Unit, onSkip: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "📥",
                 style = MaterialTheme.typography.displayMedium,
-                modifier = Modifier.semantics { }
-            )
+                modifier = Modifier.semantics { })
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
@@ -191,7 +198,12 @@ private fun IdleContent(
 
             Button(
                 onClick = onStartMigration,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text("Import Now")
             }
@@ -200,7 +212,8 @@ private fun IdleContent(
 
             OutlinedButton(
                 onClick = onSkip,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius)
             ) {
                 Text("Skip for Now")
             }
@@ -210,45 +223,48 @@ private fun IdleContent(
 
 @Composable
 private fun InProgressContent(
-    stepsImported: Int,
-    exerciseImported: Int,
-    heartRateImported: Int,
-    onCancel: () -> Unit
+    stepsImported: Int, exerciseImported: Int, heartRateImported: Int, onCancel: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
 
             Text(
-                text = "Importing Data...",
-                style = MaterialTheme.typography.headlineSmall
+                text = "Importing Data...", style = MaterialTheme.typography.headlineSmall
             )
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
             LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ImportStat(label = "Steps", count = stepsImported)
                 ImportStat(label = "Exercise", count = exerciseImported)
@@ -259,7 +275,8 @@ private fun InProgressContent(
 
             OutlinedButton(
                 onClick = onCancel,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius)
             ) {
                 Text("Cancel")
             }
@@ -271,8 +288,7 @@ private fun InProgressContent(
 private fun ImportStat(label: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.titleLarge
+            text = count.toString(), style = MaterialTheme.typography.titleLarge
         )
         Text(
             text = label,
@@ -284,34 +300,35 @@ private fun ImportStat(label: String, count: Int) {
 
 @Composable
 private fun SuccessContent(
-    stepsImported: Int,
-    exerciseImported: Int,
-    heartRateImported: Int,
-    onDone: () -> Unit
+    stepsImported: Int, exerciseImported: Int, heartRateImported: Int, onDone: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "✅",
                 style = MaterialTheme.typography.displayMedium,
-                modifier = Modifier.semantics { }
-            )
+                modifier = Modifier.semantics { })
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
             Text(
-                text = "Import Complete",
-                style = MaterialTheme.typography.headlineSmall
+                text = "Import Complete", style = MaterialTheme.typography.headlineSmall
             )
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
@@ -326,8 +343,7 @@ private fun SuccessContent(
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ImportStat(label = "Steps", count = stepsImported)
                 ImportStat(label = "Exercise", count = exerciseImported)
@@ -338,7 +354,12 @@ private fun SuccessContent(
 
             Button(
                 onClick = onDone,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text("Continue")
             }
@@ -348,27 +369,30 @@ private fun SuccessContent(
 
 @Composable
 private fun ErrorContent(
-    errorMessage: String,
-    onRetry: () -> Unit,
-    onSkip: () -> Unit
+    errorMessage: String, onRetry: () -> Unit, onSkip: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "⚠️",
                 style = MaterialTheme.typography.displayMedium,
-                modifier = Modifier.semantics { }
-            )
+                modifier = Modifier.semantics { })
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
@@ -391,7 +415,12 @@ private fun ErrorContent(
 
             Button(
                 onClick = onRetry,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text("Retry")
             }
@@ -400,7 +429,8 @@ private fun ErrorContent(
 
             OutlinedButton(
                 onClick = onSkip,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius)
             ) {
                 Text("Skip for Now")
             }
@@ -422,22 +452,27 @@ private fun HealthKitConnectionDialog(
     onDismiss: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.spacingLarge),
+                .padding(Dimensions.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "📱",
                 style = MaterialTheme.typography.displayMedium,
-                modifier = Modifier.semantics { }
-            )
+                modifier = Modifier.semantics { })
 
             Spacer(modifier = Modifier.height(Dimensions.spacingMedium))
 
@@ -465,14 +500,12 @@ private fun HealthKitConnectionDialog(
                     .padding(vertical = Dimensions.spacing)
             ) {
                 Checkbox(
-                    checked = connectHealthConnect,
-                    onCheckedChange = onHealthConnectChanged
+                    checked = connectHealthConnect, onCheckedChange = onHealthConnectChanged
                 )
                 Spacer(modifier = Modifier.width(Dimensions.spacing))
                 Column {
                     Text(
-                        text = "Health Connect",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Health Connect", style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = "Sync from Google Health Connect",
@@ -490,14 +523,12 @@ private fun HealthKitConnectionDialog(
                     .padding(vertical = Dimensions.spacing)
             ) {
                 Checkbox(
-                    checked = connectHealthKit,
-                    onCheckedChange = onHealthKitChanged
+                    checked = connectHealthKit, onCheckedChange = onHealthKitChanged
                 )
                 Spacer(modifier = Modifier.width(Dimensions.spacing))
                 Column {
                     Text(
-                        text = "Huawei Health Kit",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Huawei Health Kit", style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = "Sync from Huawei devices and Health app",
@@ -513,6 +544,11 @@ private fun HealthKitConnectionDialog(
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 enabled = connectHealthKit || connectHealthConnect
             ) {
                 Text("Continue")
@@ -522,7 +558,8 @@ private fun HealthKitConnectionDialog(
 
             OutlinedButton(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Dimensions.buttonRadius)
             ) {
                 Text("Skip All")
             }

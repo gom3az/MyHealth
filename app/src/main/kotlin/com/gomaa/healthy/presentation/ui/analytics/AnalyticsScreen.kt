@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -18,12 +20,16 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
@@ -59,7 +65,13 @@ fun AnalyticsScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Analytics") },
+            title = {
+                Text(
+                    text = "Analytics", style = MaterialTheme.typography.displaySmall
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                titleContentColor = MaterialTheme.colorScheme.onBackground
+            )
         )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         AnalyticsContent(
@@ -87,12 +99,22 @@ private fun AnalyticsContent(
         if (uiState.sessions.isEmpty()) {
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = RoundedCornerShape(Dimensions.cardRadius),
+                            spotColor = MaterialTheme.colorScheme.outline
+                        )
+                        .clip(RoundedCornerShape(Dimensions.cardRadius)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(Dimensions.cardRadius)
                 ) {
                     Text(
                         text = "No sessions recorded yet",
-                        modifier = Modifier.padding(Dimensions.spacingLarge),
-                        style = MaterialTheme.typography.bodyLarge
+                        modifier = Modifier.padding(Dimensions.cardPadding),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -113,13 +135,24 @@ private fun SessionCard(
     session: ExerciseSession, onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(), onClick = onClick
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(Dimensions.cardRadius),
+                spotColor = MaterialTheme.colorScheme.outline
+            )
+            .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
         Column(
-            modifier = Modifier.padding(Dimensions.spacingLarge)
+            modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = formatDate(session.startTime), style = MaterialTheme.typography.titleMedium
+                text = formatDate(session.startTime),
+                style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
 
@@ -141,11 +174,12 @@ private fun SessionCard(
 private fun StatColumn(label: String, value: String) {
     Column {
         Text(
-            text = value, style = MaterialTheme.typography.titleSmall
+            text = value,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
