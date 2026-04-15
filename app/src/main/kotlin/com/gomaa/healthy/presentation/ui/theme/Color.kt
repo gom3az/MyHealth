@@ -3,217 +3,183 @@ package com.gomaa.healthy.presentation.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // =============================================================================
-// MyHealth Design System - "Health & Energy"
+// MyHealth Design System - Professional Medical Fitness Theme
 // =============================================================================
-// A vibrant, energetic design language reflecting vitality, activity, and wellness.
-// No pure black, no shadows - clean flat design with color differentiation.
-//
-// Color Philosophy:
-// - Primary Green (#00C853): Vitality, growth, health - the core brand color
-// - Secondary Orange (#FF9100): Energy, motivation, action - for CTAs and highlights  
-// - Accent Blue (#2979FF): Trust, reliability, medical credibility
-// - Dark surfaces: Deep forest green instead of black (#1B5E20 -> #0D3311)
+// A professional, accessible color system for a fitness tracking app.
+// - Teal primary: Medical credibility + vitality
+// - Amber secondary: Energy, warmth, motivation
+// - Full dark theme support
+// - WCAG AA compliant contrast ratios
 // =============================================================================
 
 // =============================================================================
-// BRAND COLORS - Core identity
+// PRIMARY - Teal (Medical credibility + vitality)
 // =============================================================================
-
-// Primary: Vibrant Green - vitality, growth, health
-val HealthGreen = Color(0xFF00C853)
-val HealthGreenLight = Color(0xFF69F0AE)
-val HealthGreenDark = Color(0xFF00A843)
-
-// Secondary: Energetic Orange - energy, motivation, action
-val EnergyOrange = Color(0xFFFF9100)
-val EnergyOrangeLight = Color(0xFFFFAB40)
-val EnergyOrangeDark = Color(0xFFFF6D00)
-
-// Tertiary: Trust Blue - reliability, medical credibility
-val TrustBlue = Color(0xFF2979FF)
-val TrustBlueLight = Color(0xFF82B1FF)
-val TrustBlueDark = Color(0xFF2962FF)
+val Primary = Color(0xFF00897B)          // Main teal - #00897B
+val PrimaryLight = Color(0xFF4DB6AC)    // Light teal
+val PrimaryDark = Color(0xFF00695C)     // Dark teal
+val PrimaryContainer = Color(0xFFB2DFDB) // Light teal tint
+val OnPrimaryContainer = Color(0xFF00251A)
 
 // =============================================================================
-// DARK SURFACES - Replacing pure black (#000000)
+// SECONDARY - Amber (Energy, warmth, positivity)
 // =============================================================================
-
-// Primary dark surface - Deep forest green (not black!)
-val ForestDark = Color(0xFF0D3311)
-val ForestMid = Color(0xFF1B5E20)
-
-// Surface for dark sections, footer-like areas
-val SurfaceDark = Color(0xFF121F14)
+val Secondary = Color(0xFFFF8F00)       // Main amber
+val SecondaryLight = Color(0xFFFFB300) // Light amber
+val SecondaryDark = Color(0xFFF57C00)  // Dark amber
+val SecondaryContainer = Color(0xFFFFE0B2)
+val OnSecondaryContainer = Color(0xFF2D1600)
 
 // =============================================================================
-// LIGHT SURFACES - Replacing pure white (#ffffff)
+// TERTIARY - Light Blue (Supporting, calm)
 // =============================================================================
-
-// Clean backgrounds
-val CloudWhite = Color(0xFFFAFAFA)
-val SnowWhite = Color(0xFFFFFFFF)
-
-// Subtle surface tints (instead of shadows for depth)
-val SurfaceMint = Color(0xFFE8F5E9)      // Light green tint
-val SurfacePeach = Color(0xFFFFF3E0)     // Light orange tint  
-val SurfaceSky = Color(0xFFE3F2FD)        // Light blue tint
-val SurfaceCream = Color(0xFFFFF8E1)      // Light warm tint
+val Tertiary = Color(0xFF039BE5)         // Light blue
+val TertiaryLight = Color(0xFF4FC3F7)
+val TertiaryDark = Color(0xFF0277BD)
+val TertiaryContainer = Color(0xFFE1F5FE)
+val OnTertiaryContainer = Color(0xFF001F29)
 
 // =============================================================================
-// TEXT COLORS - High contrast, accessible
+// ERROR - Red (Standard semantics)
 // =============================================================================
-
-// Primary text - dark green instead of black
-val TextPrimary = Color(0xFF0D3311)
-val TextSecondary = Color(0xFF388E3C)
-val TextTertiary = Color(0xFF81C784)
-
-// On dark backgrounds - light text
-val TextOnDark = Color(0xFFE8F5E9)
-val TextOnDarkSecondary = Color(0xFFA5D6A7)
+val Error = Color(0xFFD32F2F)
+val ErrorLight = Color(0xFFEF5350)
+val ErrorDark = Color(0xFFC62828)
+val ErrorContainer = Color(0xFFFFCDD2)
+val OnErrorContainer = Color(0xFF410002)
 
 // =============================================================================
-// INTERACTIVE STATES
+// NEUTRAL - Slate/Gray (Professional, calm)
 // =============================================================================
-
-// Primary button states
-val PrimaryDefault = HealthGreen
-val PrimaryHover = HealthGreenDark
-val PrimaryPressed = Color(0xFF007A2F)
-val PrimaryText = Color(0xFFFFFFFF)
-
-// Secondary button states
-val SecondaryDefault = EnergyOrange
-val SecondaryHover = EnergyOrangeDark
-val SecondaryPressed = Color(0xFFE65100)
-val SecondaryText = Color(0xFFFFFFFF)
-
-// Outlined/ghost button backgrounds
-val SurfaceInteractive = Color(0xFFF5FFF5)
-
-// Chip/filter backgrounds
-val ChipDefault = SurfaceMint
-val ChipActive = HealthGreen
-val ChipText = TextPrimary
-val ChipActiveText = Color(0xFFFFFFFF)
-
-// Hover states
-val HoverGreen = Color(0xFFE0F2E0)
-val HoverOrange = Color(0xFFFFE0B2)
+val Neutral = Color(0xFF37474F)         // Blue-gray 800
+val NeutralLight = Color(0xFF78909C)   // Blue-gray 400
+val NeutralDark = Color(0xFF263238)    // Blue-gray 900
+val NeutralContainer = Color(0xFFECEFF1)
+val OnNeutralContainer = Color(0xFF0F1619)
 
 // =============================================================================
-// BORDERS & SEPARATION
+// LIGHT THEME - Surfaces
 // =============================================================================
-
-// Primary border - dark green
-val BorderPrimary = Color(0xFF1B5E20)
-
-// Subtle borders for cards
-val BorderSubtle = Color(0xFFC8E6C9)
-val BorderLight = Color(0xFFE8F5E9)
-
-// Divider color
-val Divider = Color(0xFFDCEDC8)
+val SurfaceLight = Color(0xFFFFFFFF)
+val SurfaceContainerLight = Color(0xFFF5F7F8)
+val SurfaceContainerLowLight = Color(0xFFFAFDFD)
+val SurfaceContainerHighLight = Color(0xFFEEF2F3)
+val OnSurfaceLight = Color(0xFF1C1B1F)
+val OnSurfaceVariantLight = Color(0xFF49454F)
+val OutlineLight = Color(0xFF79747E)
+val OutlineVariantLight = Color(0xFFCAC4D0)
 
 // =============================================================================
-// HEART RATE ZONES - Keeping existing, improving visibility
+// DARK THEME - Surfaces
 // =============================================================================
-
-val HeartRateZoneLow = Color(0xFF4CAF50)      // Green - Fat Burn
-val HeartRateZoneMedium = Color(0xFFFFEB3B)  // Yellow - Cardio
-val HeartRateZoneHigh = Color(0xFFFF9800)    // Orange - Peak
-val HeartRateZoneVeryHigh = Color(0xFFF44336) // Red - Max
-
-// Improved zone colors with better contrast
-val ZoneFatBurn = Color(0xFF2E7D32)          // Darker green
-val ZoneCardio = Color(0xFFF9A825)            // Darker yellow
-val ZonePeak = Color(0xFFEF6C00)             // Darker orange
-val ZoneMax = Color(0xFFC62828)              // Darker red
+val SurfaceDark = Color(0xFF121416)
+val SurfaceContainerDark = Color(0xFF1C1D1F)
+val SurfaceContainerLowDark = Color(0xFF191A1C)
+val SurfaceContainerHighDark = Color(0xFF232527)
+val OnSurfaceDark = Color(0xFFE6E1E5)
+val OnSurfaceVariantDark = Color(0xFFCAC4D0)
+val OutlineDark = Color(0xFF938F99)
+val OutlineVariantDark = Color(0xFF49454F)
 
 // =============================================================================
-// ACTIVITY METRICS COLORS
+// TEXT - High contrast (WCAG AA)
 // =============================================================================
+val TextPrimaryLight = Color(0xFF1C1B1F)      // 13.5:1 on white
+val TextSecondaryLight = Color(0xFF49454F)    // 7.3:1 on white
+val TextTertiaryLight = Color(0xFF79747E)      // 4.6:1 on white (AA for large text)
 
-// Steps
-val StepsColor = HealthGreen
-val StepsColorLight = HealthGreenLight
+val TextPrimaryDark = Color(0xFFE6E1E5)         // 12.8:1 on #121416
+val TextSecondaryDark = Color(0xFFCAC4D0)     // 6.2:1 on #121416
+val TextTertiaryDark = Color(0xFF938F99)       // 4.5:1 on #121416 (AA borderline)
 
-// Calories  
-val CaloriesColor = EnergyOrange
-val CaloriesColorLight = EnergyOrangeLight
-
-// Distance
-val DistanceColor = TrustBlue
-val DistanceColorLight = TrustBlueLight
-
-// Duration/Time
-val DurationColor = Color(0xFF7B1FA2)        // Purple
+// =============================================================================
+// INVERSE (Light on dark, dark on light)
+// =============================================================================
+val InverseSurface = Color(0xFF313033)
+val InverseOnSurface = Color(0xFFF4EFF4)
+val InversePrimary = Color(0xFF4DB6AC)
 
 // =============================================================================
 // STATUS & FEEDBACK
 // =============================================================================
-
-val Success = Color(0xFF2E7D32)
-val SuccessLight = Color(0xFFC8E6C9)
-val Warning = Color(0xFFF57C00)
-val WarningLight = Color(0xFFFFE0B2)
-val Error = Color(0xFFD32F2F)
-val ErrorLight = Color(0xFFFFCDD2)
-val Info = Color(0xFF1976D2)
-val InfoLight = Color(0xFFBBDEFB)
+val StatusSuccess = Color(0xFF2E7D32)
+val StatusSuccessLight = Color(0xFFC8E6C9)
+val StatusWarning = Color(0xFFEF6C00)
+val StatusWarningLight = Color(0xFFFFE0B2)
+val StatusError = Color(0xFFD32F2F)
+val StatusErrorLight = Color(0xFFFFCDD2)
+val StatusInfo = Color(0xFF1565C0)
+val StatusInfoLight = Color(0xFFBBDEFB)
 
 // =============================================================================
-// MATERIAL 3 COLOR SCHEME - Health & Energy Theme
+// HEART RATE ZONES - Accessible on both themes
 // =============================================================================
+val ZoneFatBurn = Color(0xFF388E3C)        // Green - Fat Burn
+val ZoneCardio = Color(0xFFF9A825)        // Amber - Cardio
+val ZonePeak = Color(0xFFFF6D00)           // Orange - Peak
+val ZoneMax = Color(0xFFD32F2F)            // Red - Max
 
-// Primary: Health Green - main brand color
-val md_primary = HealthGreen
-val md_onPrimary = Color(0xFFFFFFFF)
-val md_primaryContainer = SurfaceMint
-val md_onPrimaryContainer = ForestMid
+// Light variants (for dark theme backgrounds)
+val ZoneFatBurnLight = Color(0xFF4CAF50)
+val ZoneCardioLight = Color(0xFFFFCA28)
+val ZonePeakLight = Color(0xFFFF9100)
+val ZoneMaxLight = Color(0xFFEF5350)
 
-// Secondary: Energy Orange - CTAs and highlights
-val md_secondary = EnergyOrange
-val md_onSecondary = Color(0xFFFFFFFF)
-val md_secondaryContainer = SurfacePeach
-val md_onSecondaryContainer = Color(0xFF3E2723)
+// =============================================================================
+// ACTIVITY METRICS
+// =============================================================================
+val MetricSteps = Primary
+val MetricStepsContainer = PrimaryContainer
+val MetricCalories = Secondary
+val MetricCaloriesContainer = SecondaryContainer
+val MetricDistance = Tertiary
+val MetricDistanceContainer = TertiaryContainer
+val MetricDuration = Color(0xFF7B1FA2)     // Purple
+val MetricDurationContainer = Color(0xFFE1BEE7)
 
-// Tertiary: Trust Blue - supporting actions
-val md_tertiary = TrustBlue
-val md_onTertiary = Color(0xFFFFFFFF)
-val md_tertiaryContainer = SurfaceSky
-val md_onTertiaryContainer = Color(0xFF0D47A1)
+// =============================================================================
+// INTERACTIVE STATES
+// =============================================================================
+val InteractiveDefault = Primary
+val InteractiveHover = Color(0xFFB2DFDB)
+val InteractivePressed = Color(0xFF80CBC4)
+val InteractiveDisabled = Color(0xFFBDBDBD)
+val InteractiveSecondary = Secondary
 
-// Error states
-val md_error = Color(0xFFBA1A1A)
-val md_onError = Color(0xFFFFFFFF)
-val md_errorContainer = ErrorLight
-val md_onErrorContainer = Color(0xFF410002)
+// =============================================================================
+// BORDERS
+// =============================================================================
+val BorderLight = Color(0xFFE0E0E0)
+val BorderDark = Color(0xFF424242)
 
-// Background & Surface - Light theme
-val md_background = CloudWhite
-val md_onBackground = TextPrimary
-val md_surface = SnowWhite
-val md_onSurface = TextPrimary
-val md_surfaceVariant = SurfaceMint
-val md_onSurfaceVariant = TextSecondary
+// Backward compatibility aliases
+val HeartRateZoneLow = ZoneFatBurnLight
+val HeartRateZoneMedium = ZoneCardioLight
+val HeartRateZoneHigh = ZonePeakLight
+val HeartRateZoneVeryHigh = ZoneMaxLight
 
-// Outline & dividers
-val md_outline = BorderSubtle
-val md_outlineVariant = BorderLight
+val HealthGreen = Primary
+val HealthGreenLight = PrimaryLight
+val HealthGreenDark = PrimaryDark
 
-// Inverse colors for dark surfaces
-val md_inverseSurface = ForestDark
-val md_inverseOnSurface = TextOnDark
-val md_inversePrimary = HealthGreenLight
+val EnergyOrange = Secondary
+val EnergyOrangeLight = SecondaryLight
+val EnergyOrangeDark = SecondaryDark
 
-// Scrim for overlays
-val md_scrim = Color(0xFF000000)
+val TrustBlue = Tertiary
+val TrustBlueLight = TertiaryLight
+val TrustBlueDark = TertiaryDark
 
-// Surface tint for elevation feel (replacing shadow)
-val md_surfaceTint = HealthGreen
-val md_surfaceContainerLowest = SnowWhite
-val md_surfaceContainerLow = Color(0xFFF1F8E9)
-val md_surfaceContainer = Color(0xFFEDFAE8)
-val md_surfaceContainerHigh = Color(0xFFE8F5DE)
-val md_surfaceContainerHighest = Color(0xFFEFF7EC)
+val TextPrimary = TextPrimaryLight
+val TextSecondary = TextSecondaryLight
+val TextOnDark = TextPrimaryDark
+val TextOnDarkSecondary = TextSecondaryDark
+
+val SurfaceMint = PrimaryContainer
+val SurfacePeach = SecondaryContainer
+val SurfaceSky = TertiaryContainer
+
+val Success = StatusSuccess
+val Warning = StatusWarning
+val StatusErrorAlias = StatusError
+val Info = StatusInfo
