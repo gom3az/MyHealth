@@ -2,40 +2,40 @@ package com.gomaa.healthy.presentation.ui.heartrate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
 import com.gomaa.healthy.data.repository.HealthConnectResult
-import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.usecase.GetAvailableSourcesUseCase
 import com.gomaa.healthy.domain.usecase.GetHeartRateSummaryUseCase
 import com.gomaa.healthy.domain.usecase.GetRecentHeartRateReadingsUseCase
+import com.gomaa.healthy.domain.usecase.HeartRateUiItem
 import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 import javax.inject.Inject
-
-typealias HourlyReadings = Map<Int, List<HeartRateReading>>
 
 sealed class HeartRateUiState {
     data object Loading : HeartRateUiState()
     data class Loaded(
-        val todaySummary: HeartRateSummary?,
-        val recentReadings: List<HeartRateReading>,
-        val hourlyReadings: HourlyReadings,
-        val sourceFilter: String? = null,  // null = ALL
+        val overallSummary: HeartRateSummary?,
+        val sourceFilter: String? = null,
         val availableFilters: List<SourceFilterOption> = emptyList(),
-        val isSyncing: Boolean = false
+        val isSyncing: Boolean = false,
     ) : HeartRateUiState()
 
     data object Empty : HeartRateUiState()
@@ -47,6 +47,7 @@ sealed class HeartRateIntent {
     data object OnRefresh : HeartRateIntent()
     data object OnSync : HeartRateIntent()
     data class OnSourceFilterChanged(val filter: String?) : HeartRateIntent()
+    data class OnHourGroupToggle(val hour: Int) : HeartRateIntent()
 }
 
 sealed class HeartRateEffect {
@@ -62,82 +63,80 @@ class HeartRateViewModel @Inject constructor(
     private val healthConnectRepository: HealthConnectRepositoryInterface
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<HeartRateUiState>(HeartRateUiState.Loading)
-    val uiState: StateFlow<HeartRateUiState> = _uiState.asStateFlow()
+    private val _internalState = MutableStateFlow(InternalState())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pagingData: Flow<PagingData<HeartRateUiItem>> = _internalState
+        .map { it.selectedSource }
+        .distinctUntilChanged()
+        .flatMapLatest { source ->
+            getRecentHeartRateReadingsUseCase(source = source?.let { parseSource(it) })
+        }
+        .cachedIn(viewModelScope) // Caches the raw data from the DB
+
+    // The rest of your UI state (including expandedHours)
+    val uiState = _internalState.map { it.toUiState() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HeartRateUiState.Loading)
 
     private val _effect = MutableSharedFlow<HeartRateEffect>()
     val effect: SharedFlow<HeartRateEffect> = _effect.asSharedFlow()
 
-    init {
-        processIntent(HeartRateIntent.OnLoadData)
-    }
-
     fun processIntent(intent: HeartRateIntent) {
-        when (intent) {
-            is HeartRateIntent.OnLoadData -> loadData()
-            is HeartRateIntent.OnRefresh -> refreshData()
-            is HeartRateIntent.OnSync -> syncData()
-            is HeartRateIntent.OnSourceFilterChanged -> updateFilter(intent.filter)
+        _internalState.update { current ->
+            when (intent) {
+                is HeartRateIntent.OnLoadData -> {
+                    loadData()
+                    current
+                }
+
+                is HeartRateIntent.OnRefresh -> {
+                    loadData()
+                    current
+                }
+
+                is HeartRateIntent.OnSync -> {
+                    syncData()
+                    current
+                }
+
+                is HeartRateIntent.OnSourceFilterChanged -> {
+                    current.copy(selectedSource = intent.filter)
+                }
+
+                is HeartRateIntent.OnHourGroupToggle -> {
+                    val newExpandedHours = if (current.expandedHours.contains(intent.hour)) {
+                        current.expandedHours - intent.hour
+                    } else {
+                        current.expandedHours + intent.hour
+                    }
+                    current.copy(expandedHours = newExpandedHours)
+                }
+            }
         }
     }
 
-    private fun loadData(filter: String? = null) {
+    private fun loadData() {
         viewModelScope.launch {
-            _uiState.value = HeartRateUiState.Loading
+            _internalState.update { it.copy(loadingState = LoadingState.Loading) }
             try {
-                val startOfDay =
-                    LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val endOfDay =
-                    LocalDate.now().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant()
-                        .toEpochMilli()
-
-                // Get available sources for filter chips
+                val summary = getHeartRateSummaryUseCase()
                 val availableFilters = getAvailableSourcesUseCase()
 
-                // Convert filter string to HeartRateSource enum
-                val source = filter?.let { sourceString ->
-                    when (sourceString.lowercase()) {
-                        "myhealth" -> HeartRateSource.MY_HEALTH
-                        "health_connect" -> HeartRateSource.HEALTH_CONNECT
-                        "wearable_huawei_cloud" -> HeartRateSource.WEARABLE_HUAWEI_CLOUD
-                        else -> null // Unknown source - no data available
+                if (summary != null || availableFilters.isNotEmpty()) {
+                    _internalState.update {
+                        it.copy(
+                            loadingState = LoadingState.Loaded,
+                            overallSummary = summary,
+                            availableFilters = availableFilters
+                        )
                     }
-                }
-
-                // For unknown sources, don't show any readings
-                val unknownSource = filter != null && source == null
-
-                // Hide summary when filter is selected (only show for ALL)
-                val summary = if (filter == null) {
-                    getHeartRateSummaryUseCase(startOfDay, endOfDay, source)
                 } else {
-                    null
-                }
-
-                val recentReadings = if (unknownSource) {
-                    emptyList()
-                } else {
-                    getRecentHeartRateReadingsUseCase(
-                        limit = 20,
-                        source = source,
-                        startTime = startOfDay,
-                        endTime = endOfDay
-                    )
-                }
-
-                if (recentReadings.isNotEmpty() || summary != null) {
-                    _uiState.value = HeartRateUiState.Loaded(
-                        todaySummary = summary,
-                        recentReadings = recentReadings,
-                        hourlyReadings = groupReadingsByHour(recentReadings),
-                        sourceFilter = filter,
-                        availableFilters = availableFilters
-                    )
-                } else {
-                    _uiState.value = HeartRateUiState.Empty
+                    _internalState.update { it.copy(loadingState = LoadingState.Empty) }
                 }
             } catch (e: Exception) {
-                _uiState.value = HeartRateUiState.Error(e.message ?: "Unknown error")
+                _internalState.update {
+                    it.copy(loadingState = LoadingState.Error(e.message ?: "Unknown error"))
+                }
                 _effect.emit(
                     HeartRateEffect.ShowError(
                         e.message ?: "Failed to load heart rate data"
@@ -147,20 +146,16 @@ class HeartRateViewModel @Inject constructor(
         }
     }
 
-    // HC-063: Implement sync button to call syncHeartRates()
     private fun syncData() {
         viewModelScope.launch {
-            val currentState = _uiState.value
-            if (currentState is HeartRateUiState.Loaded) {
-                val currentFilter = currentState.sourceFilter
-                _uiState.value = currentState.copy(isSyncing = true)
+            val currentState = _internalState.value.loadingState
+            if (currentState == LoadingState.Loaded) {
+                _internalState.update { it.copy(isSyncing = true) }
                 try {
-                    // Call Health Connect sync
                     when (val result = healthConnectRepository.syncHeartRates()) {
                         is HealthConnectResult.Success -> {
                             _effect.emit(HeartRateEffect.ShowSuccess("Synced ${result.data} heart rate records"))
                         }
-
                         is HealthConnectResult.Error -> {
                             _effect.emit(
                                 HeartRateEffect.ShowError(
@@ -169,41 +164,53 @@ class HeartRateViewModel @Inject constructor(
                             )
                         }
                     }
-                    // Reload data after sync, preserving current filter
-                    loadData(currentFilter)
+                    loadData()
                 } catch (e: Exception) {
                     _effect.emit(HeartRateEffect.ShowError(e.message ?: "Sync failed"))
                 } finally {
-                    val updatedState = _uiState.value
-                    if (updatedState is HeartRateUiState.Loaded) {
-                        _uiState.value = updatedState.copy(isSyncing = false)
-                    }
+                    _internalState.update { it.copy(isSyncing = false) }
                 }
             }
         }
     }
 
-    private fun updateFilter(filter: String?) {
-        loadData(filter)
+    private fun parseSource(sourceString: String): HeartRateSource? {
+        return when (sourceString.lowercase()) {
+            "myhealth" -> HeartRateSource.MY_HEALTH
+            "health_connect" -> HeartRateSource.HEALTH_CONNECT
+            "wearable_huawei_cloud" -> HeartRateSource.WEARABLE_HUAWEI_CLOUD
+            else -> null
+        }
     }
 
-    private fun refreshData() {
-        val currentFilter = (_uiState.value as? HeartRateUiState.Loaded)?.sourceFilter
-        loadData(currentFilter)
+    private sealed class LoadingState {
+        data object Loading : LoadingState()
+        data object Loaded : LoadingState()
+        data object Empty : LoadingState()
+        data class Error(val message: String) : LoadingState()
     }
 
-    private fun groupReadingsByHour(readings: List<HeartRateReading>): HourlyReadings {
-        return readings
-            .map { reading ->
-                val hour = Instant.ofEpochMilli(reading.timestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .hour
-                hour to reading
-            }
-            .groupBy(
-                keySelector = { (hour, _) -> hour },
-                valueTransform = { (_, reading) -> reading }
+    private data class InternalState(
+        val selectedSource: String? = null,
+        val expandedHours: Set<Int> = emptySet(),
+        val overallSummary: HeartRateSummary? = null,
+        val availableFilters: List<SourceFilterOption> = emptyList(),
+        val isSyncing: Boolean = false,
+        val loadingState: LoadingState = LoadingState.Loading
+    )
+
+    private fun InternalState.toUiState(): HeartRateUiState {
+        return when (val state = loadingState) {
+            is LoadingState.Loading -> HeartRateUiState.Loading
+            is LoadingState.Loaded -> HeartRateUiState.Loaded(
+                overallSummary = overallSummary,
+                sourceFilter = selectedSource,
+                availableFilters = availableFilters,
+                isSyncing = isSyncing,
             )
-            .toSortedMap()
+
+            is LoadingState.Empty -> HeartRateUiState.Empty
+            is LoadingState.Error -> HeartRateUiState.Error(state.message)
+        }
     }
 }

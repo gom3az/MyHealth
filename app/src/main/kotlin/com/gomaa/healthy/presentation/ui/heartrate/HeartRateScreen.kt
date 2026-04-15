@@ -1,10 +1,8 @@
 package com.gomaa.healthy.presentation.ui.heartrate
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,27 +22,32 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.usecase.HeartRateUiItem
 import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
@@ -58,7 +61,11 @@ import java.time.format.DateTimeFormatter
 fun HeartRateScreen(
     viewModel: HeartRateViewModel = hiltViewModel(), onNavigateBack: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.processIntent(HeartRateIntent.OnLoadData)
+    }
 
     Scaffold(topBar = {
         HealthTopAppBarWithBack(
@@ -74,19 +81,24 @@ fun HeartRateScreen(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-            }
-        )
+            })
     }) { paddingValues ->
         HeartRateContent(
             paddingValues = paddingValues,
             uiState = uiState,
-            onIntent = { intent -> viewModel.processIntent(intent) })
+            onIntent = { intent -> viewModel.processIntent(intent) },
+            viewModel = viewModel
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HeartRateContent(
-    paddingValues: PaddingValues, uiState: HeartRateUiState, onIntent: (HeartRateIntent) -> Unit
+    paddingValues: PaddingValues,
+    uiState: HeartRateUiState,
+    onIntent: (HeartRateIntent) -> Unit,
+    viewModel: HeartRateViewModel
 ) {
     when (uiState) {
         is HeartRateUiState.Loading -> {
@@ -150,41 +162,92 @@ private fun HeartRateContent(
         }
 
         is HeartRateUiState.Loaded -> {
-            LazyColumn(
-                contentPadding = paddingValues,
+            val lazyPagingItems = viewModel.pagingData.collectAsLazyPagingItems()
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(paddingValues)
                     .padding(horizontal = Dimensions.contentPadding),
                 verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
             ) {
-                // Source Filter
-                item {
-                    SourceFilterChips(
-                        selectedFilter = uiState.sourceFilter,
-                        availableFilters = uiState.availableFilters,
-                        onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
+                uiState.overallSummary?.let { summary ->
+                    HeartRateSummaryCards(summary = summary)
                 }
 
-                // Summary Cards
-                uiState.todaySummary?.let { summary ->
-                    item {
-                        HeartRateSummaryCards(summary = summary)
-                    }
-                }
+                Text(
+                    text = "Readings by Hour", style = MaterialTheme.typography.headlineMedium
+                )
 
-                // Recent Readings - HC-064: Show all readings by source, not just latest
-                if (uiState.hourlyReadings.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Readings by Hour",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                    }
+                SourceFilterChips(
+                    selectedFilter = uiState.sourceFilter,
+                    availableFilters = uiState.availableFilters,
+                    onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
 
-                    uiState.hourlyReadings.forEach { (hour, readings) ->
-                        item {
-                            HourlyReadingSummary(hour = hour, readings = readings)
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                ) {
+                    items(
+                        count = lazyPagingItems.itemCount, key = { index ->
+                            when (val item = lazyPagingItems.peek(index)) {
+                                is HeartRateUiItem.HourHeader -> "header_${item.hour}_$index"
+                                is HeartRateUiItem.Reading -> "reading_${item.heartRateReading.id}_$index"
+                                null -> "placeholder_$index"
+                            }
+                        }) { index ->
+                        val item = lazyPagingItems[index] ?: return@items
+
+                        when (item) {
+                            is HeartRateUiItem.HourHeader -> {
+                                HourHeaderCard(
+                                    hour = item.hour,
+                                    avgBpm = item.avgBpm,
+                                    count = item.count,
+                                    onToggle = { onIntent(HeartRateIntent.OnHourGroupToggle(item.hour)) },
+                                    modifier = Modifier.padding(bottom = Dimensions.verticalSpacing)
+                                )
+                            }
+
+                            is HeartRateUiItem.Reading -> {
+
+                                HeartRateReadingItem(
+                                    reading = item.heartRateReading,
+                                    modifier = Modifier.padding(bottom = Dimensions.verticalSpacing)
+                                )
+
+                            }
                         }
+                    }
+                    item {
+                        val appendState = lazyPagingItems.loadState.append
+                        when {
+                            appendState is LoadState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LoadingIndicator()
+                                }
+                            }
+
+                            appendState is LoadState.Error -> {
+                                ErrorItem(
+                                    message = appendState.error.message ?: "Error",
+                                    retry = { lazyPagingItems.retry() })
+                            }
+
+                            appendState.endOfPaginationReached && lazyPagingItems.itemCount > 0 -> {
+                                Text("End of readings")
+                            }
+                        }
+                    }
+                }
+
+                // --- INITIAL REFRESH ---
+                val refreshState = lazyPagingItems.loadState.refresh
+                if (refreshState is LoadState.Loading && lazyPagingItems.itemCount == 0) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
                 }
             }
@@ -319,11 +382,11 @@ private fun SummaryCard(
 
 // HC-067: Use remember for DateTimeFormatter to avoid recreation on every composition
 @Composable
-private fun HeartRateReadingItem(reading: HeartRateReading) {
+private fun HeartRateReadingItem(reading: HeartRateReading, modifier: Modifier) {
     val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -370,68 +433,73 @@ private fun HeartRateReadingItem(reading: HeartRateReading) {
 }
 
 @Composable
-private fun HourlyReadingSummary(hour: Int, readings: List<HeartRateReading>) {
-    var isExpanded by remember { mutableStateOf(false) }
-    val avgBpm = readings.map { it.bpm }.average().toInt()
-    val minBpm = readings.minOf { it.bpm }
-    val maxBpm = readings.maxOf { it.bpm }
-    val count = readings.size
-
+private fun HourHeaderCard(
+    hour: Int,
+    avgBpm: Int,
+    count: Int,
+    onToggle: () -> Unit,
+    modifier: Modifier
+) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius))
-            .clickable { isExpanded = !isExpanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            .clickable { onToggle() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.cardPadding)
+                .padding(Dimensions.cardPadding),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    Text(
-                        text = "$avgBpm BPM",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
             Text(
-                text = "Readings: $count | Min: $minBpm | Max: $maxBpm",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-
-            AnimatedVisibility(
-                visible = isExpanded, enter = expandVertically(), exit = shrinkVertically()
-            ) {
-                Column(
-                    modifier = Modifier.padding(top = Dimensions.spacingMedium)
-                ) {
-                    readings.forEach { reading ->
-                        HeartRateReadingItem(reading = reading)
-                        Spacer(modifier = Modifier.height(Dimensions.spacingSmall))
-                    }
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+                Text(
+                    text = "$avgBpm BPM",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
+        }
+        Text(
+            text = "$count readings",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            modifier = Modifier.padding(
+                start = Dimensions.cardPadding, bottom = Dimensions.cardPadding
+            )
+        )
+    }
+}
+
+@Composable
+private fun ErrorItem(message: String, retry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error
+        )
+        TextButton(onClick = retry) {
+            Text("Retry")
         }
     }
 }

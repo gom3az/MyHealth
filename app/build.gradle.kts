@@ -59,6 +59,7 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     ksp(libs.room.compiler)
     implementation(libs.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
@@ -82,6 +83,9 @@ dependencies {
     implementation(libs.security.crypto)
     // Health Connect
     implementation(libs.health.connect.client)
+    // Paging3
+    implementation(libs.paging.runtime.ktx)
+    implementation(libs.paging.compose)
     // WorkManager for background sync
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
