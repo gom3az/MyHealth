@@ -11,7 +11,7 @@ import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.usecase.GetAvailableSourcesUseCase
 import com.gomaa.healthy.domain.usecase.GetHeartRateSummaryUseCase
 import com.gomaa.healthy.domain.usecase.GetRecentHeartRateReadingsUseCase
-import com.gomaa.healthy.domain.usecase.HeartRateUiItem
+import com.gomaa.healthy.domain.usecase.HourHeader
 import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,7 +47,6 @@ sealed class HeartRateIntent {
     data object OnRefresh : HeartRateIntent()
     data object OnSync : HeartRateIntent()
     data class OnSourceFilterChanged(val filter: String?) : HeartRateIntent()
-    data class OnHourGroupToggle(val hour: Int) : HeartRateIntent()
 }
 
 sealed class HeartRateEffect {
@@ -66,7 +65,7 @@ class HeartRateViewModel @Inject constructor(
     private val _internalState = MutableStateFlow(InternalState())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val pagingData: Flow<PagingData<HeartRateUiItem>> = _internalState
+    val pagingData: Flow<PagingData<HourHeader>> = _internalState
         .map { it.selectedSource }
         .distinctUntilChanged()
         .flatMapLatest { source ->
@@ -101,15 +100,6 @@ class HeartRateViewModel @Inject constructor(
 
                 is HeartRateIntent.OnSourceFilterChanged -> {
                     current.copy(selectedSource = intent.filter)
-                }
-
-                is HeartRateIntent.OnHourGroupToggle -> {
-                    val newExpandedHours = if (current.expandedHours.contains(intent.hour)) {
-                        current.expandedHours - intent.hour
-                    } else {
-                        current.expandedHours + intent.hour
-                    }
-                    current.copy(expandedHours = newExpandedHours)
                 }
             }
         }
@@ -192,7 +182,6 @@ class HeartRateViewModel @Inject constructor(
 
     private data class InternalState(
         val selectedSource: String? = null,
-        val expandedHours: Set<Int> = emptySet(),
         val overallSummary: HeartRateSummary? = null,
         val availableFilters: List<SourceFilterOption> = emptyList(),
         val isSyncing: Boolean = false,

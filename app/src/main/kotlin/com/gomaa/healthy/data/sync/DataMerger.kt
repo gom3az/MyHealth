@@ -2,7 +2,7 @@ package com.gomaa.healthy.data.sync
 
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
+import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,8 +13,8 @@ interface DataMerger {
     ): List<DailyStepsEntity>
 
     fun mergeHeartRates(
-        hcData: List<HeartRateEntity>, localData: List<HeartRateEntity>
-    ): List<HeartRateEntity>
+        hcData: List<HeartRateBucketEntity>, localData: List<HeartRateBucketEntity>
+    ): List<HeartRateBucketEntity>
 
     fun mergeExerciseSessions(
         hcData: List<ExerciseSessionEntity>, localData: List<ExerciseSessionEntity>
@@ -67,8 +67,8 @@ class DataMergerImpl @Inject constructor() : DataMerger {
     }
 
     override fun mergeHeartRates(
-        hcData: List<HeartRateEntity>, localData: List<HeartRateEntity>
-    ): List<HeartRateEntity> {
+        hcData: List<HeartRateBucketEntity>, localData: List<HeartRateBucketEntity>
+    ): List<HeartRateBucketEntity> {
         if (hcData.isEmpty()) return localData
         if (localData.isEmpty()) return hcData
 
@@ -76,34 +76,34 @@ class DataMergerImpl @Inject constructor() : DataMerger {
             return (timestamp / HEART_RATE_BIN_SIZE_MS) * HEART_RATE_BIN_SIZE_MS
         }
 
-        val merged = mutableMapOf<Long, HeartRateEntity>()
+        val merged = mutableMapOf<Long, HeartRateBucketEntity>()
 
         hcData.forEach { hr ->
-            val bin = roundToBin(hr.timestamp)
+            val bin = roundToBin(hr.dayTimestamp)
             val existing = merged[bin]
             if (existing == null) {
-                merged[bin] = hr.copy(timestamp = bin)
+                merged[bin] = hr.copy(dayTimestamp = bin)
             } else {
                 val existingPrecision = DataOriginConstants.getPrecision(
-                    existing.dataOrigin, existing.source
+                    existing.source, existing.source
                 ).priority
                 val newPrecision = DataOriginConstants.getPrecision(
-                    hr.dataOrigin, hr.source
+                    hr.source, hr.source
                 ).priority
 
                 val winner = when {
                     newPrecision > existingPrecision -> hr
                     existingPrecision > newPrecision -> existing
                     else -> {
-                        if (hr.bpm >= existing.bpm) hr else existing
+                        if (hr.avgBpm >= existing.avgBpm) hr else existing
                     }
                 }
-                merged[bin] = winner.copy(timestamp = bin)
+                merged[bin] = winner.copy(dayTimestamp = bin)
             }
         }
 
         localData.forEach { local ->
-            val bin = roundToBin(local.timestamp)
+            val bin = roundToBin(local.dayTimestamp)
             val existing = merged[bin]
 
             val shouldReplace = when {
@@ -112,25 +112,25 @@ class DataMergerImpl @Inject constructor() : DataMerger {
                 existing.source == SOURCE_MY_HEALTH -> false
                 else -> {
                     val existingPrecision = DataOriginConstants.getPrecision(
-                        existing.dataOrigin, existing.source
+                        existing.source, existing.source
                     ).priority
                     val localPrecision =
-                        DataOriginConstants.getPrecision(local.dataOrigin, local.source).priority
+                        DataOriginConstants.getPrecision(local.source, local.source).priority
 
                     when {
                         localPrecision > existingPrecision -> true
                         existingPrecision > localPrecision -> false
-                        else -> local.bpm >= existing.bpm
+                        else -> local.avgBpm >= existing.avgBpm
                     }
                 }
             }
 
             if (shouldReplace) {
-                merged[bin] = local.copy(timestamp = bin)
+                merged[bin] = local.copy(dayTimestamp = bin)
             }
         }
 
-        return merged.values.toList().sortedBy { it.timestamp }
+        return merged.values.toList().sortedBy { it.dayTimestamp }
     }
 
     override fun mergeExerciseSessions(

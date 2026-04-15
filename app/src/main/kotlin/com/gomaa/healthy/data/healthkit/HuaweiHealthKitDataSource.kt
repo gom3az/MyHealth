@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
+import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_HUAWEI_CLOUD
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -461,15 +461,20 @@ object HealthKitEntityMapper {
     /**
      * Converts HealthKitHeartRateData to HeartRateEntity for Room staging.
      */
-    fun heartRateToEntity(data: HealthKitHeartRateData): HeartRateEntity {
-        return HeartRateEntity(
-            timestamp = data.timestamp,
+    fun heartRateToEntity(data: HealthKitHeartRateData): HeartRateBucketEntity {
+        //todo fix later
+        return HeartRateBucketEntity(
+            dayTimestamp = data.timestamp,
             source = SOURCE_WEARABLE_HUAWEI_CLOUD,
             sessionId = null,
-            bpm = data.bpm,
-            healthConnectRecordId = null,
+            avgBpm = data.bpm,
+            minBpm = data.bpm,
+            maxBpm = data.bpm,
+            healthConnectRecordId = "",
             syncedToHc = 0,
-            dataOrigin = "com.huawei.health"
+            bucketId = UUID.randomUUID().toString(),
+            count = 1,
+            samplesJson = ""
         )
     }
 

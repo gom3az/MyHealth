@@ -1,12 +1,13 @@
 package com.gomaa.healthy.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.work.WorkManager
 import com.gomaa.healthy.data.local.HealthDatabase
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.GoalDao
-import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.repository.GoalRepositoryImpl
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
@@ -39,8 +40,15 @@ object ApplicationModule {
     ): WorkManager {
         return WorkManager.getInstance(context)
     }
-}
 
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(
+        @ApplicationContext context: Context
+    ): SharedPreferences {
+        return context.getSharedPreferences("health_prefs", Context.MODE_PRIVATE)
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -60,12 +68,6 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideHeartRateDao(database: HealthDatabase): HeartRateDao {
-        return database.heartRateDao()
-    }
-
-    @Provides
-    @Singleton
     fun provideDailyStepsDao(database: HealthDatabase): DailyStepsDao {
         return database.dailyStepsDao()
     }
@@ -74,6 +76,12 @@ object DatabaseModule {
     @Singleton
     fun provideGoalDao(database: HealthDatabase): GoalDao {
         return database.goalDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideHeartRateBucketDao(database: HealthDatabase): HeartRateBucketDao {
+        return database.heartRateBucketDao()
     }
 }
 
@@ -84,7 +92,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideSessionRepository(
-        sessionDao: ExerciseSessionDao, heartRateDao: HeartRateDao
+        sessionDao: ExerciseSessionDao, heartRateDao: HeartRateBucketDao
     ): SessionRepository {
         return SessionRepositoryImpl(sessionDao, heartRateDao)
     }
@@ -108,7 +116,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideHeartRateRepository(
-        heartRateDao: HeartRateDao
+        heartRateDao: HeartRateBucketDao
     ): HeartRateRepository {
         return HeartRateRepositoryImpl(heartRateDao)
     }

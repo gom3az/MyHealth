@@ -2,6 +2,7 @@ package com.gomaa.healthy.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
@@ -47,15 +48,20 @@ data class ExerciseSessionEntity(
     val dataOrigin: String? = null // Package name from Health Connect
 )
 
-// HC-058: Add composite primary key on (timestamp, source) for deduplication
-@Entity(tableName = "heart_rates", primaryKeys = ["timestamp", "source"])
-data class HeartRateEntity(
-    // Using composite key instead of auto-generated ID
-    val timestamp: Long,
-    val source: String,
-    val sessionId: String? = null, // Nullable - can be null for Health Connect readings
-    val bpm: Int,
-    val healthConnectRecordId: String? = null, // For deduplication with HC records
+
+@Entity(
+    tableName = "heart_rate_buckets", indices = [Index(value = ["source", "dayTimestamp"])]
+)
+data class HeartRateBucketEntity(
+    @PrimaryKey val bucketId: String,        // "2026-04-15-14" (YYYY-MM-DD-HH)
+    val source: String,                       // "wearable_huawei_cloud"
+    val dayTimestamp: Long,                   // Midnight of day (millis, for fast range queries)
+    val minBpm: Int,
+    val avgBpm: Int,
+    val maxBpm: Int,
+    val count: Int,
+    val samplesJson: String,                   // [{"t":1713192000,"v":72},...]
     @ColumnInfo(name = "synced_to_hc") val syncedToHc: Int = 0, // 0 = not synced, 1 = synced to Health Connect
-    val dataOrigin: String? = null // Package name from Health Connect
+    val healthConnectRecordId: String,
+    val sessionId: String? = null, // Nullable - can be null for Health Connect readings
 )

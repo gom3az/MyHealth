@@ -7,7 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.toDomain
-import com.gomaa.healthy.data.mapper.toDomainReading
+import com.gomaa.healthy.data.mapper.toDomainReadings
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectResult
 import dagger.assisted.Assisted
@@ -229,10 +229,10 @@ class HealthConnectSyncWorker @AssistedInject constructor(
                     "uploadLocalChangesToHC: Uploading ${localHeartRates.size} heart rate readings"
                 )
                 val heartRateResult = healthConnectRepository.writeHeartRates(
-                    localHeartRates.map { it.toDomainReading() })
+                    localHeartRates.flatMap { it.toDomainReadings() })
                 if (heartRateResult is HealthConnectResult.Success && heartRateResult.data > 0) {
                     // Mark only successfully synced records
-                    val syncedTimestamps = localHeartRates.map { it.timestamp }
+                    val syncedTimestamps = localHeartRates.map { it.dayTimestamp }
                     healthConnectRepository.markHeartRatesAsSynced(
                         syncedTimestamps, SOURCE_MY_HEALTH
                     )

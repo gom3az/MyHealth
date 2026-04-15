@@ -11,20 +11,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
-sealed class HeartRateUiItem {
-    data class HourHeader(
-        val hour: Int, val avgBpm: Int, val count: Int
-    ) : HeartRateUiItem()
+data class HourHeader(
+    val hour: Int, val date: String, val minBpm: Int, val avgBpm: Int, val maxBpm: Int
+)
 
-    data class Reading(
-        val heartRateReading: HeartRateReading
-    ) : HeartRateUiItem()
-}
-
-fun HeartRateReading.getHour(): Int {
-    return Instant.ofEpochMilli(this.timestamp).atZone(ZoneId.systemDefault()).hour
+fun HeartRateReading.getDateHour(): Pair<String, Int> {
+    val instant = Instant.ofEpochMilli(this.timestamp)
+    val zone = ZoneId.systemDefault()
+    val localDateTime = instant.atZone(zone)
+    val dateFormatter = DateTimeFormatter.ofPattern("MMM d")
+    val date = localDateTime.format(dateFormatter)
+    val hour = localDateTime.hour
+    return Pair(date, hour)
 }
 
 class GetRecentHeartRateReadingsUseCase @Inject constructor(
@@ -32,7 +33,7 @@ class GetRecentHeartRateReadingsUseCase @Inject constructor(
 ) {
     operator fun invoke(
         source: HeartRateSource? = null
-    ): Flow<PagingData<HeartRateUiItem>> {
+    ): Flow<PagingData<HourHeader>> {
         val rawFlow = if (source != null) {
             heartRateRepository.getHeartRatesBySourcePaged(source)
         } else {
@@ -40,20 +41,22 @@ class GetRecentHeartRateReadingsUseCase @Inject constructor(
         }
 
         return rawFlow.map { pagingData ->
-            pagingData.map { HeartRateUiItem.Reading(it) }.insertSeparators { before, after ->
-                val beforeReading = before?.heartRateReading
-                val afterReading = after?.heartRateReading
+            val uiItemFlow: PagingData<HourHeader> = pagingData.map { reading ->
+                val (date, hour) = reading.getDateHour()
+                HourHeader(
+                    hour = hour,
+                    date = date,
+                    minBpm = reading.bpm,
+                    avgBpm = reading.bpm,
+                    maxBpm = reading.bpm,
+                )
+            }
 
+            uiItemFlow.insertSeparators { beforeHeader, afterHeader ->
                 when {
-                    afterReading == null -> null
-                    beforeReading == null -> {
-                        HeartRateUiItem.HourHeader(afterReading.getHour(), afterReading.bpm, 1)
-                    }
-
-                    beforeReading.getHour() != afterReading.getHour() -> {
-                        HeartRateUiItem.HourHeader(afterReading.getHour(), afterReading.bpm, 1)
-                    }
-
+                    afterHeader == null -> null // End of list
+                    beforeHeader == null -> null // Keep the first item
+                    beforeHeader.date == afterHeader.date && beforeHeader.hour == afterHeader.hour -> null
                     else -> null
                 }
             }
@@ -94,8 +97,13 @@ class GetAvailableSourcesUseCase @Inject constructor(
     }
 
     private fun String.toTitleCase(): String {
-        return split("_").joinToString(" ") { word ->
+        return when (this) {
+            "health_connect" -> "Health Connect"
+            "net.gomaa.healthy" -> "My Health"
+            "wearable_huawei_cloud" -> "Huawei"
+            else -> split("_").joinToString(" ") { word ->
                 word.replaceFirstChar { it.uppercaseChar() }
             }
+        }
     }
 }

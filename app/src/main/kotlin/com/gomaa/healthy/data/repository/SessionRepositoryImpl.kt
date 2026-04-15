@@ -1,7 +1,7 @@
 package com.gomaa.healthy.data.repository
 
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toEntity
 import com.gomaa.healthy.domain.model.ExerciseSession
@@ -10,8 +10,7 @@ import com.gomaa.healthy.domain.repository.SessionRepository
 import javax.inject.Inject
 
 class SessionRepositoryImpl @Inject constructor(
-    private val sessionDao: ExerciseSessionDao,
-    private val heartRateDao: HeartRateDao
+    private val sessionDao: ExerciseSessionDao, private val heartRateDao: HeartRateBucketDao
 ) : SessionRepository {
 
     override suspend fun saveSession(session: ExerciseSession) {

@@ -1,6 +1,5 @@
 package com.gomaa.healthy.presentation.ui.heartrate
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +34,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,17 +42,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
-import com.gomaa.healthy.domain.usecase.HeartRateUiItem
+import com.gomaa.healthy.domain.usecase.HourHeader
 import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,33 +182,20 @@ private fun HeartRateContent(
                     items(
                         count = lazyPagingItems.itemCount, key = { index ->
                             when (val item = lazyPagingItems.peek(index)) {
-                                is HeartRateUiItem.HourHeader -> "header_${item.hour}_$index"
-                                is HeartRateUiItem.Reading -> "reading_${item.heartRateReading.id}_$index"
+                                is HourHeader -> "header_${item.date}_${item.hour}_$index"
                                 null -> "placeholder_$index"
                             }
                         }) { index ->
                         val item = lazyPagingItems[index] ?: return@items
 
-                        when (item) {
-                            is HeartRateUiItem.HourHeader -> {
-                                HourHeaderCard(
-                                    hour = item.hour,
-                                    avgBpm = item.avgBpm,
-                                    count = item.count,
-                                    onToggle = { onIntent(HeartRateIntent.OnHourGroupToggle(item.hour)) },
-                                    modifier = Modifier.padding(bottom = Dimensions.verticalSpacing)
-                                )
-                            }
-
-                            is HeartRateUiItem.Reading -> {
-
-                                HeartRateReadingItem(
-                                    reading = item.heartRateReading,
-                                    modifier = Modifier.padding(bottom = Dimensions.verticalSpacing)
-                                )
-
-                            }
-                        }
+                        HourHeaderCard(
+                            hour = item.hour,
+                            date = item.date,
+                            minBpm = item.minBpm,
+                            avgBpm = item.avgBpm,
+                            maxBpm = item.maxBpm,
+                            modifier = Modifier.padding(bottom = Dimensions.verticalSpacing)
+                        )
                     }
                     item {
                         val appendState = lazyPagingItems.loadState.append
@@ -380,109 +359,80 @@ private fun SummaryCard(
     }
 }
 
-// HC-067: Use remember for DateTimeFormatter to avoid recreation on every composition
 @Composable
-private fun HeartRateReadingItem(reading: HeartRateReading, modifier: Modifier) {
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
-
+private fun HourHeaderCard(
+    hour: Int, date: String, minBpm: Int, avgBpm: Int, maxBpm: Int, modifier: Modifier
+) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(Dimensions.cardRadius)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimensions.cardPadding),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(Dimensions.cardPadding)
         ) {
-            Column {
+            // Date and time header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(reading.timestamp), ZoneId.systemDefault()
-                    ).format(timeFormatter), style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = when (reading.source) {
-                        HeartRateSource.MY_HEALTH -> "MyHealth"
-                        HeartRateSource.HEALTH_CONNECT -> "Health Connect"
-                        HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "Huawei"
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-                Text(
-                    text = "${reading.bpm} BPM",
+                    text = "$date, ${formatHour(hour)}",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text(
+                        text = "$avgBpm BPM",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            // Min/Avg/Max stats row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(label = "Min", value = "$minBpm")
+                StatItem(label = "Avg", value = "$avgBpm")
+                StatItem(label = "Max", value = "$maxBpm")
             }
         }
     }
 }
 
 @Composable
-private fun HourHeaderCard(
-    hour: Int,
-    avgBpm: Int,
-    count: Int,
-    onToggle: () -> Unit,
-    modifier: Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimensions.cardRadius))
-            .clickable { onToggle() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimensions.cardPadding),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-                Text(
-                    text = "$avgBpm BPM",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
+private fun StatItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "$count readings",
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Text(
+            text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-            modifier = Modifier.padding(
-                start = Dimensions.cardPadding, bottom = Dimensions.cardPadding
-            )
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
         )
     }
+}
+
+private fun formatHour(hour: Int): String {
+    return "${if (hour == 0) 12 else if (hour > 12) hour - 12 else hour}:00 ${if (hour >= 12) "PM" else "AM"}"
 }
 
 @Composable

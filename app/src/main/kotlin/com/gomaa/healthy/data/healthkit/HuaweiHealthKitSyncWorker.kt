@@ -14,7 +14,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.preferences.SyncPreferencesManager
 import com.gomaa.healthy.data.repository.HealthConnectRepository
@@ -54,7 +54,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
     private val healthKitDataSource: HuaweiHealthKitDataSource,
     private val authManager: HuaweiHealthKitAuthManager,
     private val dailyStepsDao: DailyStepsDao,
-    private val heartRateDao: HeartRateDao,
+    private val heartRateDao: HeartRateBucketDao,
     private val exerciseSessionDao: ExerciseSessionDao,
     private val dataMerger: DataMerger,
     private val healthConnectRepository: HealthConnectRepository,
@@ -222,9 +222,9 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 // Step 5: Write merged data to Health Connect
                 val domainHeartRates = mergedHeartRates.map { entity ->
                     HeartRateReading(
-                        id = entity.timestamp,
-                        bpm = entity.bpm,
-                        timestamp = entity.timestamp,
+                        id = entity.bucketId,
+                        bpm = entity.avgBpm,
+                        timestamp = entity.dayTimestamp,
                         source = HeartRateSource.HEALTH_CONNECT
                     )
                 }

@@ -14,10 +14,10 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
-import com.gomaa.healthy.data.local.dao.HeartRateDao
+import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
+import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
@@ -89,7 +89,7 @@ interface HealthConnectRepositoryInterface {
     suspend fun markStepsAsSynced(dates: List<Long>, source: String)
     suspend fun getUnsyncedLocalSessions(source: String): List<ExerciseSessionEntity>
     suspend fun markSessionsAsSynced(ids: List<String>)
-    suspend fun getUnsyncedLocalHeartRates(source: String): List<HeartRateEntity>
+    suspend fun getUnsyncedLocalHeartRates(source: String): List<HeartRateBucketEntity>
     suspend fun markHeartRatesAsSynced(timestamps: List<Long>, source: String)
 }
 
@@ -99,7 +99,7 @@ data class SyncResult(val newRecordsCount: Int, val latestRecordTime: Long?)
 class HealthConnectRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val dailyStepsDao: DailyStepsDao,
-    private val heartRateDao: HeartRateDao,
+    private val heartRateBucketDao: HeartRateBucketDao,
     private val exerciseSessionDao: ExerciseSessionDao,
     private val dataMerger: DataMerger
 ) : HealthConnectRepositoryInterface {
@@ -423,8 +423,9 @@ class HealthConnectRepository @Inject constructor(
         var pageToken: String? = null
         var minRecordTime: Long? = null
 
-        val allHcEntities = mutableListOf<HeartRateEntity>()
-        val existingRecordIds = heartRateDao.getAllRecordIdsBySource(SOURCE_HEALTH_CONNECT).toSet()
+        val allHcEntities = mutableListOf<HeartRateBucketEntity>()
+        val existingRecordIds =
+            heartRateBucketDao.getAllRecordIdsBySource(SOURCE_HEALTH_CONNECT).toSet()
 
         do {
             if (!currentCoroutineContext().isActive) {
@@ -442,7 +443,7 @@ class HealthConnectRepository @Inject constructor(
 
             val entities = records.flatMap { record ->
                 val recordId = UUID.randomUUID().toString()
-                mapHeartRateRecordToEntity(record, recordId, SOURCE_HEALTH_CONNECT)
+                mapHeartRateRecordToEntity(record, recordId)
             }.filter { it.healthConnectRecordId !in existingRecordIds }
 
             allHcEntities.addAll(entities)
@@ -465,14 +466,14 @@ class HealthConnectRepository @Inject constructor(
         if (allHcEntities.isNotEmpty()) {
             val queryStartTime = minRecordTime ?: startTime.toEpochMilli()
             val queryEndTime = latestRecordTime ?: System.currentTimeMillis()
-            val localMyHealthHeartRates = heartRateDao.getBySourceAndDateRange(
+            val localMyHealthHeartRates = heartRateBucketDao.getBySourceAndDateRange(
                 SOURCE_MY_HEALTH, queryStartTime, queryEndTime
             )
             val mergedHeartRates =
                 dataMerger.mergeHeartRates(allHcEntities, localMyHealthHeartRates)
 
             if (mergedHeartRates.isNotEmpty()) {
-                heartRateDao.insertAll(mergedHeartRates)
+                heartRateBucketDao.insertAll(mergedHeartRates)
                 totalNewRecords = mergedHeartRates.size
             }
         }
@@ -527,7 +528,7 @@ class HealthConnectRepository @Inject constructor(
 
     override suspend fun getHeartRateCount(): Int {
         // Get all readings, not just latest
-        val allReadings = heartRateDao.getAllBySource(SOURCE_HEALTH_CONNECT)
+        val allReadings = heartRateBucketDao.getAllBySource(SOURCE_HEALTH_CONNECT)
         return allReadings.size
     }
 
@@ -761,11 +762,11 @@ class HealthConnectRepository @Inject constructor(
         exerciseSessionDao.markAsSynced(ids)
     }
 
-    override suspend fun getUnsyncedLocalHeartRates(source: String): List<HeartRateEntity> {
-        return heartRateDao.getBySourceNotSynced(source)
+    override suspend fun getUnsyncedLocalHeartRates(source: String): List<HeartRateBucketEntity> {
+        return heartRateBucketDao.getBySourceNotSynced(source)
     }
 
     override suspend fun markHeartRatesAsSynced(timestamps: List<Long>, source: String) {
-        heartRateDao.markAsSynced(timestamps, source)
+        heartRateBucketDao.markAsSynced(timestamps, source)
     }
 }

@@ -46,7 +46,7 @@ enum class HeartRateSource {
 }
 
 data class HeartRateReading(
-    val id: Long, val bpm: Int, val timestamp: Long, val source: HeartRateSource
+    val id: String, val bpm: Int, val timestamp: Long, val source: HeartRateSource
 )
 
 data class HeartRateSummary(

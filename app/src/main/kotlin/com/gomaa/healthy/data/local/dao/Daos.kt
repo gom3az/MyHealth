@@ -8,8 +8,7 @@ import androidx.room.Query
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
-import kotlinx.coroutines.flow.Flow
+import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 
 @Dao
 interface DailyStepsDao {
@@ -55,11 +54,6 @@ interface DailyStepsDao {
 
     @Query("SELECT * FROM daily_steps WHERE source = :source")
     suspend fun getBySource(source: String): List<DailyStepsEntity>
-
-    @Query("SELECT * FROM daily_steps WHERE source = :source AND date BETWEEN :startDate AND :endDate")
-    suspend fun getBySourceAndDateRange(
-        source: String, startDate: Long, endDate: Long
-    ): List<DailyStepsEntity>
 
     @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date = :date AND source = :source")
     suspend fun markAsSynced(date: Long, source: String)
@@ -140,71 +134,63 @@ interface ExerciseSessionDao {
 }
 
 @Dao
-interface HeartRateDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAll(heartRates: List<HeartRateEntity>)
+interface HeartRateBucketDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(bucket: HeartRateBucketEntity)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(heartRate: HeartRateEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(buckets: List<HeartRateBucketEntity>)
 
-    @Query("SELECT * FROM heart_rates WHERE sessionId = :sessionId ORDER BY timestamp ASC")
-    suspend fun getForSession(sessionId: String): List<HeartRateEntity>
+    @Query("SELECT * FROM heart_rate_buckets ORDER BY dayTimestamp DESC LIMIT 1")
+    suspend fun getLatest(): HeartRateBucketEntity?
 
-    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
-    fun getBySource(source: String): Flow<List<HeartRateEntity>>
-
-    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
-    suspend fun getAllBySource(source: String): List<HeartRateEntity>
-
-    @Query("SELECT * FROM heart_rates WHERE source = :source AND timestamp >= :startTime AND timestamp <= :endTime ORDER BY timestamp DESC")
-    suspend fun getBySourceAndDateRange(
-        source: String, startTime: Long, endTime: Long
-    ): List<HeartRateEntity>
-
-    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLatest(): HeartRateEntity?
-
-    @Query("SELECT healthConnectRecordId FROM heart_rates WHERE source = :source AND healthConnectRecordId IS NOT NULL")
-    suspend fun getAllRecordIdsBySource(source: String): List<String>
-
-    @Query("DELETE FROM heart_rates WHERE sessionId = :sessionId")
-    suspend fun deleteForSession(sessionId: String)
-
-    @Query("DELETE FROM heart_rates")
-    suspend fun deleteAll()
-
-    @Query("DELETE FROM heart_rates WHERE source = :source")
-    suspend fun deleteBySource(source: String)
-
-    @Query("SELECT * FROM heart_rates WHERE source = :source AND synced_to_hc = 0")
-    suspend fun getBySourceNotSynced(source: String): List<HeartRateEntity>
-
-    @Query("UPDATE heart_rates SET synced_to_hc = 1 WHERE timestamp = :timestamp AND source = :source")
-    suspend fun markAsSynced(timestamp: Long, source: String)
-
-    @Query("UPDATE heart_rates SET synced_to_hc = 1 WHERE timestamp IN (:timestamps) AND source = :source")
-    suspend fun markAsSynced(timestamps: List<Long>, source: String)
-
-    @Query("SELECT DISTINCT source FROM heart_rates ORDER BY source")
+    @Query("SELECT DISTINCT source FROM heart_rate_buckets ORDER BY source")
     suspend fun getDistinctSources(): List<String>
 
-    // Paging3 support for infinite scroll
-    @Query("SELECT * FROM heart_rates ORDER BY timestamp DESC")
-    fun getHeartRateReadingsPaged(): PagingSource<Int, HeartRateEntity>
+    @Query("SELECT * FROM heart_rate_buckets WHERE bucketId = :bucketId")
+    suspend fun getByBucketId(bucketId: String): HeartRateBucketEntity?
 
-    @Query("SELECT * FROM heart_rates WHERE source = :source ORDER BY timestamp DESC")
-    fun getHeartRateReadingsBySourcePaged(source: String): PagingSource<Int, HeartRateEntity>
+    // Paging3 support for infinite scroll
+    @Query("SELECT * FROM heart_rate_buckets ORDER BY dayTimestamp DESC")
+    fun getHeartRateReadingsPaged(): PagingSource<Int, HeartRateBucketEntity>
+
+    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source ORDER BY dayTimestamp DESC")
+    fun getHeartRateReadingsBySourcePaged(source: String): PagingSource<Int, HeartRateBucketEntity>
 
     // All-time summary queries (date-agnostic - no date range)
-    @Query("SELECT AVG(bpm) FROM heart_rates")
+    @Query("SELECT AVG(avgBpm) FROM heart_rate_buckets")
     suspend fun getOverallAverageBpm(): Double?
 
-    @Query("SELECT MAX(bpm) FROM heart_rates")
+    @Query("SELECT MAX(maxBpm) FROM heart_rate_buckets")
     suspend fun getOverallMaxBpm(): Int?
 
-    @Query("SELECT MIN(bpm) FROM heart_rates")
+    @Query("SELECT MIN(minBpm) FROM heart_rate_buckets")
     suspend fun getOverallMinBpm(): Int?
 
-    @Query("SELECT COUNT(*) FROM heart_rates")
+    @Query("SELECT COUNT(*) FROM heart_rate_buckets")
     suspend fun getOverallCount(): Int
+
+    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source AND synced_to_hc = 0")
+    suspend fun getBySourceNotSynced(source: String): List<HeartRateBucketEntity>
+
+    @Query("UPDATE heart_rate_buckets SET synced_to_hc = 1 WHERE dayTimestamp IN (:timestamps) AND source = :source")
+    suspend fun markAsSynced(timestamps: List<Long>, source: String)
+
+    @Query("SELECT healthConnectRecordId FROM heart_rate_buckets WHERE source = :source AND healthConnectRecordId IS NOT NULL")
+    suspend fun getAllRecordIdsBySource(source: String): List<String>
+
+    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source AND dayTimestamp >= :startTime AND dayTimestamp <= :endTime ORDER BY dayTimestamp DESC")
+    suspend fun getBySourceAndDateRange(
+        source: String, startTime: Long, endTime: Long
+    ): List<HeartRateBucketEntity>
+
+    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source ORDER BY dayTimestamp DESC")
+    suspend fun getAllBySource(source: String): List<HeartRateBucketEntity>
+
+    @Query("SELECT * FROM heart_rate_buckets WHERE sessionId = :sessionId ORDER BY dayTimestamp ASC")
+    suspend fun getForSession(sessionId: String): List<HeartRateBucketEntity>
+
+    @Query("DELETE FROM heart_rate_buckets WHERE sessionId = :sessionId")
+    suspend fun deleteForSession(sessionId: String)
+
 }

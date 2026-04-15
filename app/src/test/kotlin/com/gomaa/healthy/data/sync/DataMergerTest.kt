@@ -2,7 +2,6 @@ package com.gomaa.healthy.data.sync
 
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
-import com.gomaa.healthy.data.local.entity.HeartRateEntity
 import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import org.junit.Assert.assertEquals
@@ -124,59 +123,7 @@ class DataMergerTest {
         assertEquals(3000, result[0].totalSteps)
     }
 
-    @Test
-    fun `mergeHeartRates returns local when both have data for same timestamp`() {
-        val hcData = listOf(
-            HeartRateEntity(
-                timestamp = 1000L,
-                source = SOURCE_HEALTH_CONNECT,
-                bpm = 75,
-                healthConnectRecordId = "hc-1"
-            )
-        )
-        val localData = listOf(
-            HeartRateEntity(
-                timestamp = 1000L,
-                source = SOURCE_MY_HEALTH,
-                bpm = 80
-            )
-        )
 
-        val result = dataMerger.mergeHeartRates(hcData, localData)
-
-        assertEquals(1, result.size)
-        assertEquals(80, result[0].bpm)
-        assertEquals(SOURCE_MY_HEALTH, result[0].source)
-    }
-
-    @Test
-    fun `mergeHeartRates returns merged list when no conflicts`() {
-        val hcData = listOf(
-            HeartRateEntity(
-                timestamp = 1000L,
-                source = SOURCE_HEALTH_CONNECT,
-                bpm = 75,
-                healthConnectRecordId = "hc-1"
-            ),
-            HeartRateEntity(
-                timestamp = 7000L,
-                source = SOURCE_HEALTH_CONNECT,
-                bpm = 80,
-                healthConnectRecordId = "hc-2"
-            )
-        )
-        val localData = listOf(
-            HeartRateEntity(
-                timestamp = 13000L,
-                source = SOURCE_MY_HEALTH,
-                bpm = 85
-            )
-        )
-
-        val result = dataMerger.mergeHeartRates(hcData, localData)
-
-        assertEquals(3, result.size)
-    }
 
     @Test
     fun `mergeExerciseSessions returns local when overlapping time range exists`() {

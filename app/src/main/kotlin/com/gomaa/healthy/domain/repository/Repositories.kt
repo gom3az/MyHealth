@@ -47,4 +47,12 @@ interface HeartRateRepository {
 
     // All-time summary (date-agnostic)
     suspend fun getOverallSummary(): HeartRateSummary?
+
+    // Bucket operations for performance optimization
+    suspend fun upsertHeartRateWithBucket(
+        timestamp: Long,
+        source: String,
+        bpm: Int,
+        sessionId: String? = null
+    )
 }
