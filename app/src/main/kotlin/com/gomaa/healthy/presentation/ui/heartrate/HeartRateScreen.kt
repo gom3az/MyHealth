@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -32,8 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +46,7 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -62,20 +60,11 @@ fun HeartRateScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Heart Rate", style = MaterialTheme.typography.displaySmall
-                )
-            }, navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            }, actions = {
+        HealthTopAppBarWithBack(
+            title = "Heart Rate",
+            onBack = onNavigateBack,
+            titleStyle = MaterialTheme.typography.displaySmall,
+            actions = {
                 IconButton(
                     onClick = { viewModel.processIntent(HeartRateIntent.OnSync) }) {
                     Icon(
@@ -84,9 +73,7 @@ fun HeartRateScreen(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
+            }
         )
     }) { paddingValues ->
         HeartRateContent(

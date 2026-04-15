@@ -28,8 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
 import kotlinx.coroutines.flow.first
 
 @Composable
@@ -94,14 +93,9 @@ fun MigrationScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    "Welcome to MyHealth", style = MaterialTheme.typography.displaySmall
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
+        HealthTopAppBar(
+            title = "Welcome to MyHealth",
+            titleStyle = MaterialTheme.typography.displaySmall
         )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         LazyColumn(

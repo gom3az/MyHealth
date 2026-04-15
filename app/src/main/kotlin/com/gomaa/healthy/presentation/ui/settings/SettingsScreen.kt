@@ -26,8 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,6 +52,7 @@ import com.gomaa.healthy.presentation.ui.settings.sections.HealthKitSection
 import com.gomaa.healthy.presentation.ui.settings.sections.SyncPreferencesSection
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -189,15 +188,7 @@ fun SettingsContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Settings", style = MaterialTheme.typography.headlineLarge
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
-        )
+        HealthTopAppBar(title = "Settings")
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         LazyColumn(
             contentPadding = innerPadding,

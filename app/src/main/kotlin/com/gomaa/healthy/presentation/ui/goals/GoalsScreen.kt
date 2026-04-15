@@ -28,8 +28,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +47,7 @@ import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.presentation.ui.PreviewData
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,14 +82,9 @@ fun GoalsScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Goals", style = MaterialTheme.typography.displaySmall
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
+        HealthTopAppBar(
+            title = "Goals",
+            titleStyle = MaterialTheme.typography.displaySmall
         )
     }, floatingActionButton = {
         FloatingActionButton(
@@ -141,14 +135,9 @@ private fun GoalsContent(
     onHideCreateDialog: () -> Unit
 ) {
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Goals", style = MaterialTheme.typography.displaySmall
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
+        HealthTopAppBar(
+            title = "Goals",
+            titleStyle = MaterialTheme.typography.displaySmall
         )
     }, floatingActionButton = {
         FloatingActionButton(

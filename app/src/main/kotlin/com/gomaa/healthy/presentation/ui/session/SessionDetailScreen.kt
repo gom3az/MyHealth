@@ -16,8 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -44,11 +43,9 @@ fun SessionDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Session Details", style = MaterialTheme.typography.displaySmall) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
+            HealthTopAppBar(
+                title = "Session Details",
+                titleStyle = MaterialTheme.typography.displaySmall
             )
         }) { paddingValues ->
         when {

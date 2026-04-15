@@ -31,8 +31,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
+import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneHigh
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneLow
 import com.gomaa.healthy.presentation.ui.theme.HeartRateZoneMedium
@@ -80,14 +79,9 @@ fun DashboardScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Active Pulse", style = MaterialTheme.typography.displaySmall
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
+        HealthTopAppBar(
+            title = "Active Pulse",
+            titleStyle = MaterialTheme.typography.displaySmall
         )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         DashboardContent(
