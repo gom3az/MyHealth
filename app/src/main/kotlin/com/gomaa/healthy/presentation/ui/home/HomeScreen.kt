@@ -15,11 +15,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,6 +31,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -237,8 +239,8 @@ private fun StepsFilterChips(
             ),
             shape = RoundedCornerShape(Dimensions.chipRadius),
             modifier = Modifier.padding(
-                horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
-                vertical = Dimensions.chipPaddingVertical - 14.dp
+                horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
+                vertical = Dimensions.chipPaddingVertical - 10.dp
             )
         )
         FilterChip(
@@ -251,14 +253,17 @@ private fun StepsFilterChips(
                     contentDescription = null,
                     modifier = Modifier.height(18.dp)
                 )
-            }, colors = FilterChipDefaults.filterChipColors(
+            },
+            colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 labelColor = MaterialTheme.colorScheme.onSurface
-            ), shape = RoundedCornerShape(Dimensions.chipRadius), modifier = Modifier.padding(
-                horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
-                vertical = Dimensions.chipPaddingVertical - 14.dp
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius),
+            modifier = Modifier.padding(
+                horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
+                vertical = Dimensions.chipPaddingVertical - 10.dp
             )
         )
         if (healthConnectAvailable) {
@@ -281,35 +286,10 @@ private fun StepsFilterChips(
                 ),
                 shape = RoundedCornerShape(Dimensions.chipRadius),
                 modifier = Modifier.padding(
-                    horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
-                    vertical = Dimensions.chipPaddingVertical - 14.dp
+                    horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
+                    vertical = Dimensions.chipPaddingVertical - 10.dp
                 )
             )
-            if (healthConnectAvailable) {
-                FilterChip(
-                    selected = selectedFilter == StepSourceFilter.HEALTH_CONNECT,
-                    onClick = { onFilterChanged(StepSourceFilter.HEALTH_CONNECT) },
-                    label = { Text("Health Connect") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = null,
-                            modifier = Modifier.height(18.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    shape = RoundedCornerShape(Dimensions.chipRadius),
-                    modifier = Modifier.padding(
-                        horizontal = Dimensions.chipPaddingHorizontal - 14.dp,
-                        vertical = Dimensions.chipPaddingVertical - 14.dp
-                    )
-                )
-            }
         }
     }
 }
@@ -328,7 +308,8 @@ private fun StepsProgressCard(
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
+        shape = RoundedCornerShape(Dimensions.cardRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -349,7 +330,8 @@ private fun StepsProgressCard(
                         shape = RoundedCornerShape(Dimensions.chipRadius)
                     ) {
                         Text(
-                            text = "Combined", style = MaterialTheme.typography.labelMedium,
+                            text = "Combined",
+                            style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(
                                 horizontal = Dimensions.spacing, vertical = 4.dp
                             )
@@ -416,7 +398,8 @@ private fun HeartRateCard(
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
+        shape = RoundedCornerShape(Dimensions.cardRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -433,7 +416,8 @@ private fun HeartRateCard(
                 )
                 Icon(
                     imageVector = Icons.Default.Favorite,
-                    contentDescription = null, tint = MaterialTheme.colorScheme.onSurface
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -463,7 +447,8 @@ private fun HeartRateCard(
                 }
             } else {
                 Text(
-                    text = "No heart rate data yet", style = MaterialTheme.typography.bodyLarge,
+                    text = "No heart rate data yet",
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -484,7 +469,8 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
+        shape = RoundedCornerShape(Dimensions.cardRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -507,17 +493,15 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             ) {
                 val (icon, text, color) = when (uiState.connectionState) {
                     ConnectionState.Connected -> Triple(
-                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.onSurface
+                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.primary
                     )
 
                     ConnectionState.Connecting -> Triple(
-                        Icons.Default.Refresh,
-                        "Connecting...",
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        Icons.Default.Sync, "Connecting...", MaterialTheme.colorScheme.tertiary
                     )
 
                     ConnectionState.Disconnected -> Triple(
-                        Icons.Default.Refresh,
+                        Icons.Default.CloudOff,
                         "Disconnected",
                         MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -535,7 +519,8 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
             }
             uiState.connectedDeviceBrand?.let { brand ->
                 Text(
-                    text = "Device: $brand", style = MaterialTheme.typography.labelLarge,
+                    text = "Device: $brand",
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -552,7 +537,8 @@ private fun ProviderSelectionCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
+        shape = RoundedCornerShape(Dimensions.cardRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier.padding(Dimensions.cardPadding)
@@ -603,7 +589,8 @@ private fun ActionButtonRow(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
-                ), contentPadding = PaddingValues(
+                ),
+                contentPadding = PaddingValues(
                     vertical = Dimensions.buttonPaddingVertical,
                     horizontal = Dimensions.buttonPaddingHorizontal
                 )
@@ -626,14 +613,10 @@ private fun ActionButtonRow(
                 Text("Start Run")
             }
         }
-        Button(
+        OutlinedButton(
             onClick = onChangeProvider,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(Dimensions.buttonRadius),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 vertical = Dimensions.buttonPaddingVertical,
                 horizontal = Dimensions.buttonPaddingHorizontal
@@ -651,7 +634,8 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius)
+        shape = RoundedCornerShape(Dimensions.cardRadius),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier.padding(Dimensions.cardPadding)
@@ -661,7 +645,8 @@ private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.Exe
             )
             if (sessions.isEmpty()) {
                 Text(
-                    text = "No sessions yet", style = MaterialTheme.typography.bodyLarge,
+                    text = "No sessions yet",
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -704,30 +689,31 @@ private fun ProviderSelectionDialog(
             text = "Select Healthcare Provider", style = MaterialTheme.typography.headlineLarge
         )
     }, text = {
-            if (otherProviders.isEmpty()) {
-                Text("No other providers available for switching")
-            } else {
-                Column {
-                    Text(
-                        text = "Choose a new provider", style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-                    otherProviders.forEach { provider ->
-                        TextButton(
-                            onClick = { onProviderSelected(provider) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(provider, color = MaterialTheme.colorScheme.onSurface)
-                        }
+        if (otherProviders.isEmpty()) {
+            Text("No other providers available for switching")
+        } else {
+            Column {
+                Text(
+                    text = "Choose a new provider",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
+                otherProviders.forEach { provider ->
+                    TextButton(
+                        onClick = { onProviderSelected(provider) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(provider, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
+        }
     }, confirmButton = {}, dismissButton = {
         TextButton(onClick = onDismiss) {
             Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
-            }
-        })
+        }
+    })
 }
 
 @Composable
@@ -752,13 +738,13 @@ private fun SwitchProviderConfirmationDialog(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-                Text("Confirm")
-            }
+            Text("Confirm")
+        }
     }, dismissButton = {
         TextButton(onClick = onDismiss) {
             Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
-            }
-        })
+        }
+    })
 }
 
 // ========== Compose Previews ==========

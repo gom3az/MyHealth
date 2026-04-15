@@ -19,16 +19,16 @@ object Dimensions {
     val spacingExtraLarge = 24.dp
     val spacing32 = 32.dp
 
-    // Common padding
+    // Common padding - reduced from Design.md
     val contentPadding = 16.dp
-    val buttonPaddingHorizontal = 12.dp
-    val buttonPaddingVertical = 10.dp
-    val chipPaddingHorizontal = 16.dp
-    val chipPaddingVertical = 14.dp
-    val cardPadding = 24.dp
+    val buttonPaddingHorizontal = 10.dp
+    val buttonPaddingVertical = 8.dp
+    val chipPaddingHorizontal = 12.dp
+    val chipPaddingVertical = 10.dp
+    val cardPadding = 16.dp
 
     // Border radius
-    val cardRadius = 8.dp
+    val cardRadius = 12.dp
     val buttonRadius = 999.dp
     val chipRadius = 999.dp
     val fabRadius = 999.dp
@@ -41,7 +41,7 @@ object Dimensions {
 
     // Shape definitions
     val ButtonShape = RoundedCornerShape(999.dp)
-    val CardShape = RoundedCornerShape(8.dp)
+    val CardShape = RoundedCornerShape(12.dp)
     val ChipShape = RoundedCornerShape(999.dp)
     val FabShape = RoundedCornerShape(999.dp)
 }
