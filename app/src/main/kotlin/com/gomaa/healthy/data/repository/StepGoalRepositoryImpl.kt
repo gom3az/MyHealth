@@ -10,7 +10,7 @@ import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toEntity
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.FitnessGoal
-import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.repository.GoalRepository
 import com.gomaa.healthy.domain.repository.StepRepository
 import kotlinx.coroutines.flow.Flow
@@ -44,7 +44,7 @@ class StepRepositoryImpl @Inject constructor(
             pagingSourceFactory = { dailyStepsDao.getPaginatedDailySteps() }).flow.map { it.map { entity -> entity.toDomain() } }
     }
 
-    override suspend fun getPaginatedBySourceDailySteps(source: HeartRateSource): Flow<PagingData<DailySteps>> {
+    override suspend fun getPaginatedBySourceDailySteps(source: ReadingSource): Flow<PagingData<DailySteps>> {
         val sourceString = source.dbString
         return Pager(
             config = PagingConfig(
@@ -54,6 +54,12 @@ class StepRepositoryImpl @Inject constructor(
             ),
             pagingSourceFactory = { dailyStepsDao.getPaginatedDailyStepsBySource(sourceString) }).flow.map { it.map { entity -> entity.toDomain() } }
     }
+
+    override suspend fun getAvailableSources(): List<ReadingSource> {
+        val sources = dailyStepsDao.getDistinctSources()
+        return sources.mapNotNull { ReadingSource.fromDbString(it) }
+    }
+
 }
 
 class GoalRepositoryImpl @Inject constructor(

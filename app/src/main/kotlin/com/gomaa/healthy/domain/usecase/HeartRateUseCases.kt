@@ -2,8 +2,9 @@ package com.gomaa.healthy.domain.usecase
 
 import androidx.paging.PagingData
 import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.model.ReadingSource
+import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.repository.HeartRateRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -20,7 +21,7 @@ class GetRecentHeartRateReadingsUseCase @Inject constructor(
     private val heartRateRepository: HeartRateRepository
 ) {
     operator fun invoke(
-        source: HeartRateSource? = null
+        source: ReadingSource? = null
     ): Flow<PagingData<HourHeader>> {
         if (source != null) {
             return heartRateRepository.getAggregatedBucketsBySourcePaged(source)
@@ -44,8 +45,6 @@ class GetHeartRateSummaryUseCase @Inject constructor(
         return heartRateRepository.getOverallSummary()
     }
 }
-
-class SourceFilterOption(val id: String, val displayName: String)
 
 class GetAvailableSourcesUseCase @Inject constructor(
     private val heartRateRepository: HeartRateRepository

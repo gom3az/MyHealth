@@ -6,8 +6,10 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gomaa.healthy.data.worker.HealthConnectSyncScheduler
 import com.gomaa.healthy.domain.model.DailySteps
-import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.domain.model.ReadingSource
+import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.GetPaginatedBySourceDailyStepsUseCase
+import com.gomaa.healthy.domain.usecase.GetStepsAvailableFiltersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,7 @@ sealed interface DailyStepsState {
     data class Loaded(
         val sourceFilter: String? = null,
         val isSyncing: Boolean = false,
+        val availableFilters: List<SourceFilterOption> = emptyList(),
     ) : DailyStepsState
 
     data object Empty : DailyStepsState
@@ -52,22 +55,26 @@ private data class DailyStepsFilter(
 @HiltViewModel
 class DailyStepsViewModel @Inject constructor(
     private val getPaginatedBySourceDailyStepsUseCase: GetPaginatedBySourceDailyStepsUseCase,
+    private val getStepsAvailableFiltersUseCase: GetStepsAvailableFiltersUseCase,
     private val healthConnectSyncScheduler: HealthConnectSyncScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DailyStepsState>(DailyStepsState.Loading)
     val uiState: StateFlow<DailyStepsState> = _uiState.asStateFlow()
 
+    private val _effect = MutableSharedFlow<DailyStepsEffect>()
+    val effect: SharedFlow<DailyStepsEffect> = _effect.asSharedFlow()
+
     private val _filter = MutableStateFlow(DailyStepsFilter())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagingData: Flow<PagingData<DailySteps>> =
-        _filter.map { it.sourceFilter }.flatMapLatest { source ->
-            getPaginatedBySourceDailyStepsUseCase(source?.let { HeartRateSource.fromDbString(it) })
-        }.cachedIn(viewModelScope)
-
-    private val _effect = MutableSharedFlow<DailyStepsEffect>()
-    val effect: SharedFlow<DailyStepsEffect> = _effect.asSharedFlow()
+        _filter.map { it.sourceFilter } // Convert filter to a Flow
+            .flatMapLatest { source ->
+                getPaginatedBySourceDailyStepsUseCase(source?.let {
+                    ReadingSource.fromDbString(it) // Convert String to ReadingSource
+                })
+            }.cachedIn(viewModelScope)
 
     fun handleIntent(intent: DailyStepsIntent) {
         when (intent) {
@@ -94,8 +101,12 @@ class DailyStepsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = DailyStepsState.Loading
             try {
+                val availableFilters = getStepsAvailableFiltersUseCase()
+
                 _uiState.value = DailyStepsState.Loaded(
-                    sourceFilter = _filter.value.sourceFilter, isSyncing = false
+                    sourceFilter = _filter.value.sourceFilter,
+                    availableFilters = availableFilters,
+                    isSyncing = false
                 )
             } catch (e: Exception) {
                 _uiState.value = DailyStepsState.Error(e.message ?: "Unknown error")

@@ -14,7 +14,7 @@ import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateRecord
-import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.model.StepSource
 import org.json.JSONArray
 import org.json.JSONObject
@@ -137,7 +137,7 @@ fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
                 bucketId,
                 avgBpm,
                 dayTimestamp,
-                HeartRateSource.fromDbString(source) ?: HeartRateSource.HEALTH_CONNECT
+                ReadingSource.fromDbString(source) ?: ReadingSource.HEALTH_CONNECT
             )
         )
         val jsonArray = JSONArray(samplesJson)
@@ -149,7 +149,7 @@ fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
                 id = "${bucketId}_$index",
                 bpm = bpm,
                 timestamp = timestampSeconds * 1000, // Convert seconds back to millis
-                source = HeartRateSource.fromDbString(source) ?: HeartRateSource.HEALTH_CONNECT
+                source = ReadingSource.fromDbString(source) ?: ReadingSource.HEALTH_CONNECT
             )
         }
     } catch (_: Exception) {

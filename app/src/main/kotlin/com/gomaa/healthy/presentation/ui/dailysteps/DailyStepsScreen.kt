@@ -21,6 +21,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,10 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 
-// Design system colors for steps
 private val StepsPrimary = Color(0xFF00C853)
 private val StepsPrimaryLight = Color(0xFF69F0AE)
 
@@ -206,7 +208,6 @@ private fun DailyStepsLoadedContent(
     pagingItems: androidx.paging.compose.LazyPagingItems<com.gomaa.healthy.domain.model.DailySteps>
 ) {
     if (pagingItems.itemCount == 0) {
-        // Empty state
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -250,7 +251,6 @@ private fun DailyStepsLoadedContent(
             }
         }
     } else {
-        // Loaded state with data
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -262,15 +262,12 @@ private fun DailyStepsLoadedContent(
                 text = "Steps by Day", style = MaterialTheme.typography.headlineMedium
             )
 
-            // Source filter chips - no available filters for steps currently
-            // SourceFilterChips can be enabled when source filtering is needed
-            // SourceFilterChips(
-            //     selectedFilter = uiState.sourceFilter,
-            //     availableFilters = emptyList(),
-            //     onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) }
-            // )
+            SourceFilterChips(
+                selectedFilter = uiState.sourceFilter,
+                availableFilters = uiState.availableFilters,
+                onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) }
+            )
 
-            // Syncing indicator
             if (uiState.isSyncing) {
                 Box(
                     modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
@@ -298,6 +295,48 @@ private fun DailyStepsLoadedContent(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SourceFilterChips(
+    selectedFilter: String?,
+    availableFilters: List<SourceFilterOption>,
+    onFilterChanged: (String?) -> Unit
+) {
+    if (availableFilters.isEmpty()) return
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
+    ) {
+        FilterChip(
+            selected = selectedFilter == null,
+            onClick = { onFilterChanged(null) },
+            label = { Text("All") },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(Dimensions.chipRadius)
+        )
+
+        availableFilters.forEach { filter ->
+            FilterChip(
+                selected = selectedFilter == filter.id,
+                onClick = { onFilterChanged(filter.id) },
+                label = { Text(filter.displayName) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(Dimensions.chipRadius)
+            )
         }
     }
 }
@@ -348,7 +387,6 @@ private fun DailyStepsCard(
                     )
                 }
             }
-            // Progress indicator
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Box(
                 modifier = Modifier
@@ -369,7 +407,6 @@ private fun DailyStepsCard(
                         .clip(RoundedCornerShape(4.dp))
                 )
             }
-            // Source and goal info
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

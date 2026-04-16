@@ -8,8 +8,8 @@ import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.toDomainReadings
 import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.repository.HeartRateRepository
 import com.gomaa.healthy.domain.usecase.HourHeader
 import kotlinx.coroutines.flow.Flow
@@ -29,9 +29,9 @@ class HeartRateRepositoryImpl @Inject constructor(
         return heartRateBucketDao.getLatest()?.toDomainReadings()?.lastOrNull()
     }
 
-    override suspend fun getAvailableSources(): List<HeartRateSource> {
+    override suspend fun getAvailableSources(): List<ReadingSource> {
         val sources = heartRateBucketDao.getDistinctSources()
-        return sources.mapNotNull { HeartRateSource.fromDbString(it) }
+        return sources.mapNotNull { ReadingSource.fromDbString(it) }
     }
 
     override suspend fun getOverallSummary(): HeartRateSummary? {
@@ -64,7 +64,7 @@ class HeartRateRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>> {
+    override fun getAggregatedBucketsBySourcePaged(source: ReadingSource): Flow<PagingData<HourHeader>> {
         val sourceString = source.dbString
         return Pager(
             config = PagingConfig(

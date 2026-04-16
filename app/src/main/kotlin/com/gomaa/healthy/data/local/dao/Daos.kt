@@ -43,6 +43,9 @@ interface DailyStepsDao {
 
     @Query("SELECT * FROM daily_steps ORDER BY date DESC")
     fun getPaginatedDailySteps(): PagingSource<Int, DailyStepsEntity>
+
+    @Query("SELECT DISTINCT source FROM daily_steps ORDER BY source")
+    suspend fun getDistinctSources(): List<String>
 }
 
 @Dao

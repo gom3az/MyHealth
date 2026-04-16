@@ -6,13 +6,13 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
 import com.gomaa.healthy.data.repository.HealthConnectResult
-import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.model.ReadingSource
+import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.GetAvailableSourcesUseCase
 import com.gomaa.healthy.domain.usecase.GetHeartRateSummaryUseCase
 import com.gomaa.healthy.domain.usecase.GetRecentHeartRateReadingsUseCase
 import com.gomaa.healthy.domain.usecase.HourHeader
-import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -164,8 +164,8 @@ class HeartRateViewModel @Inject constructor(
         }
     }
 
-    private fun parseSource(sourceString: String): HeartRateSource? {
-        return HeartRateSource.fromDbString(sourceString)
+    private fun parseSource(sourceString: String): ReadingSource? {
+        return ReadingSource.fromDbString(sourceString)
     }
 
     private sealed class LoadingState {

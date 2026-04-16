@@ -5,8 +5,8 @@ import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.usecase.HourHeader
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -15,7 +15,8 @@ interface StepRepository {
     suspend fun getDailySteps(date: LocalDate): DailySteps?
     suspend fun getHealthConnectTotalSteps(date: LocalDate): Int
     suspend fun getPaginatedDailySteps(): Flow<PagingData<DailySteps>>
-    suspend fun getPaginatedBySourceDailySteps(source: HeartRateSource): Flow<PagingData<DailySteps>>
+    suspend fun getPaginatedBySourceDailySteps(source: ReadingSource): Flow<PagingData<DailySteps>>
+    suspend fun getAvailableSources(): List<ReadingSource>
 }
 
 interface GoalRepository {
@@ -36,10 +37,10 @@ interface SessionRepository {
 
 interface HeartRateRepository {
     suspend fun getLatestHeartRate(): HeartRateReading?
-    suspend fun getAvailableSources(): List<HeartRateSource>
+    suspend fun getAvailableSources(): List<ReadingSource>
 
     fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>>
-    fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>>
+    fun getAggregatedBucketsBySourcePaged(source: ReadingSource): Flow<PagingData<HourHeader>>
 
     // All-time summary (date-agnostic)
     suspend fun getOverallSummary(): HeartRateSummary?

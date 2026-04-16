@@ -22,7 +22,7 @@ import com.gomaa.healthy.data.sync.DataMerger
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.logging.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -230,7 +230,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                         id = entity.bucketId,
                         bpm = entity.avgBpm,
                         timestamp = entity.dayTimestamp,
-                        source = HeartRateSource.WEARABLE_HUAWEI_CLOUD
+                        source = ReadingSource.WEARABLE_HUAWEI_CLOUD
                     )
                 }
 

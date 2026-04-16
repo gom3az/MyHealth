@@ -43,8 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.HourHeader
-import com.gomaa.healthy.domain.usecase.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 
