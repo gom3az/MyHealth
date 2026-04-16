@@ -139,6 +139,14 @@ fun HeartRateBucketEntity.toDomain(): DomainHeartRateRecord {
 // HC-058: Expand bucket samplesJson to individual domain readings
 fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
     return try {
+        if (samplesJson.isBlank()) return listOf(
+            HeartRateReading(
+                bucketId,
+                avgBpm,
+                dayTimestamp,
+                HeartRateSource.fromDbString(source) ?: HeartRateSource.HEALTH_CONNECT
+            )
+        )
         val jsonArray = JSONArray(samplesJson)
         (0 until jsonArray.length()).map { index ->
             val sample = jsonArray.getJSONObject(index)
@@ -148,8 +156,7 @@ fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
                 id = "${bucketId}_$index",
                 bpm = bpm,
                 timestamp = timestampSeconds * 1000, // Convert seconds back to millis
-                source = if (source.startsWith("wearable_huawei")) HeartRateSource.WEARABLE_HUAWEI_CLOUD
-                else HeartRateSource.HEALTH_CONNECT
+                source = HeartRateSource.fromDbString(source) ?: HeartRateSource.HEALTH_CONNECT
             )
         }
     } catch (e: Exception) {

@@ -225,7 +225,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                         id = entity.bucketId,
                         bpm = entity.avgBpm,
                         timestamp = entity.dayTimestamp,
-                        source = HeartRateSource.HEALTH_CONNECT
+                        source = HeartRateSource.WEARABLE_HUAWEI_CLOUD
                     )
                 }
 

@@ -6,9 +6,6 @@ import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.repository.HeartRateRepository
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class HourHeader(
@@ -30,16 +27,6 @@ class GetRecentHeartRateReadingsUseCase @Inject constructor(
         }
         return heartRateRepository.getAggregatedBucketsPaged()
     }
-}
-
-fun HeartRateReading.getDateHour(): Pair<String, Int> {
-    val instant = Instant.ofEpochMilli(this.timestamp)
-    val zone = ZoneId.systemDefault()
-    val localDateTime = instant.atZone(zone)
-    val dateFormatter = DateTimeFormatter.ofPattern("MMM d")
-    val date = localDateTime.format(dateFormatter)
-    val hour = localDateTime.hour
-    return Pair(date, hour)
 }
 
 class GetLatestHeartRateUseCase @Inject constructor(
