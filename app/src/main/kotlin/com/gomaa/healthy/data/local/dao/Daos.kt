@@ -20,45 +20,20 @@ interface DailyStepsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(dailyStepsList: List<DailyStepsEntity>)
 
-    @Query("SELECT * FROM daily_steps WHERE date = :date")
-    suspend fun getByDate(date: Long): DailyStepsEntity?
-
-    @Query("SELECT * FROM daily_steps WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
-    suspend fun getByDateRange(startDate: Long, endDate: Long): List<DailyStepsEntity>
-
     @Query("SELECT * FROM daily_steps WHERE date = :date AND source = :source")
     suspend fun getByDateAndSource(date: Long, source: String): DailyStepsEntity?
 
     @Query("SELECT * FROM daily_steps ORDER BY date DESC")
     suspend fun getAll(): List<DailyStepsEntity>
 
-    @Query("SELECT * FROM daily_steps WHERE date = :date ORDER BY source")
-    suspend fun getByDateAllSources(date: Long): List<DailyStepsEntity>
-
-    @Query("SELECT * FROM daily_steps ORDER BY date DESC LIMIT :limit")
-    suspend fun getRecent(limit: Int): List<DailyStepsEntity>
-
     @Query("DELETE FROM daily_steps")
     suspend fun deleteAll()
-
-    @Query("DELETE FROM daily_steps WHERE source = :source")
-    suspend fun deleteBySource(source: String)
-
-    // Source-of-truth refactor: Track sync status
-    @Query("SELECT * FROM daily_steps WHERE date = :date AND source = :source AND synced_to_hc = 0")
-    suspend fun getByDateAndSourceNotSynced(date: Long, source: String): DailyStepsEntity?
 
     @Query("SELECT * FROM daily_steps WHERE source = :source AND synced_to_hc = 0")
     suspend fun getBySourceNotSynced(source: String): List<DailyStepsEntity>
 
     @Query("SELECT * FROM daily_steps WHERE source = :source AND date IN (:dates)")
     suspend fun getBySourceAndDates(source: String, dates: Set<Long>): List<DailyStepsEntity>
-
-    @Query("SELECT * FROM daily_steps WHERE source = :source")
-    suspend fun getBySource(source: String): List<DailyStepsEntity>
-
-    @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date = :date AND source = :source")
-    suspend fun markAsSynced(date: Long, source: String)
 
     @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date IN (:dates) AND source = :source")
     suspend fun markAsSynced(dates: List<Long>, source: String)

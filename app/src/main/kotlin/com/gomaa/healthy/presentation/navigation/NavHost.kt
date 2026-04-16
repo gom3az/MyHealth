@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.gomaa.healthy.presentation.ui.analytics.AnalyticsScreen
+import com.gomaa.healthy.presentation.ui.dailysteps.DailyStepsScreen
 import com.gomaa.healthy.presentation.ui.dashboard.DashboardScreen
 import com.gomaa.healthy.presentation.ui.goals.GoalsScreen
 import com.gomaa.healthy.presentation.ui.heartrate.HeartRateScreen
@@ -39,12 +40,11 @@ sealed class Screen(val route: String, val title: String, val icon: String) {
     object SessionDetail : Screen("session/{sessionId}", "Session", "🏃") {
         fun createRoute(sessionId: String) = "session/$sessionId"
     }
-
     object HeartRate : Screen("heart_rate", "Heart Rate", "❤️")
     object Migration : Screen("migration", "Import", "📥")
+    object DailySteps : Screen("daily_steps", "Daily Steps", "📥")
 }
 
-const val HEART_RATE_ROUTE = "heart_rate"
 
 val bottomNavItems = listOf(
     Screen.Home, Screen.Dashboard, Screen.Analytics, Screen.Settings,
@@ -71,14 +71,14 @@ fun AppNavHost(
             composable(Screen.Home.route) {
                 HomeScreen(onNavigateToDashboard = {
                     navController.navigate(Screen.Dashboard.route)
-                }, onNavigateToGoals = {
-                    navController.navigate(Screen.Goals.route)
+                }, onNavigateToSteps = {
+                    navController.navigate(Screen.DailySteps.route)
                 }, onNavigateToHeartRate = {
-                    navController.navigate(HEART_RATE_ROUTE)
+                    navController.navigate(Screen.HeartRate.route)
                 })
             }
 
-            composable(HEART_RATE_ROUTE) {
+            composable(Screen.HeartRate.route) {
                 HeartRateScreen(onNavigateBack = {
                     navController.popBackStack()
                 })
@@ -118,6 +118,12 @@ fun AppNavHost(
             ) { backStackEntry ->
                 val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
                 SessionDetailScreen(sessionId = sessionId)
+            }
+
+            composable(route = Screen.DailySteps.route) {
+                DailyStepsScreen(onNavigateBack = {
+                    navController.popBackStack()
+                })
             }
         }
     }

@@ -15,28 +15,10 @@ class StepRepositoryImpl @Inject constructor(
     private val dailyStepsDao: DailyStepsDao
 ) : StepRepository {
 
-    override suspend fun saveDailySteps(dailySteps: DailySteps) {
-        dailyStepsDao.insert(dailySteps.toEntity())
-    }
 
     override suspend fun getDailySteps(date: LocalDate): DailySteps? {
         // Get myhealth steps (source defaults to "myhealth")
         return dailyStepsDao.getByDateAndSource(date.toEpochDay(), "myhealth")?.toDomain()
-    }
-
-    override suspend fun getDailyStepsRange(
-        startDate: LocalDate,
-        endDate: LocalDate
-    ): List<DailySteps> {
-        return dailyStepsDao.getByDateRange(startDate.toEpochDay(), endDate.toEpochDay())
-            .filter { it.source == "myhealth" }
-            .map { it.toDomain() }
-    }
-
-    override suspend fun getRecentDays(days: Int): List<DailySteps> {
-        return dailyStepsDao.getRecent(days)
-            .filter { it.source == "myhealth" }
-            .map { it.toDomain() }
     }
 
     override suspend fun getHealthConnectTotalSteps(date: LocalDate): Int {

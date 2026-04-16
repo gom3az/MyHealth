@@ -45,9 +45,7 @@ class GetHeartRateSummaryUseCase @Inject constructor(
     }
 }
 
-class SourceFilterOption(
-    val id: String, val displayName: String
-)
+class SourceFilterOption(val id: String, val displayName: String)
 
 class GetAvailableSourcesUseCase @Inject constructor(
     private val heartRateRepository: HeartRateRepository

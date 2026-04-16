@@ -61,7 +61,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToDashboard: () -> Unit = {},
-    onNavigateToGoals: () -> Unit = {},
+    onNavigateToSteps: () -> Unit = {},
     onNavigateToHeartRate: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -125,7 +125,7 @@ fun HomeScreen(
             onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
             onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
             onNavigateToDashboard = onNavigateToDashboard,
-            onNavigateToGoals = onNavigateToGoals,
+            onNavigateToSteps = onNavigateToSteps,
             onNavigateToHeartRate = onNavigateToHeartRate,
             onFilterChanged = { viewModel.processIntent(HomeIntent.OnFilterChanged(it)) },
             onChangeProvider = { showProviderSelectionDialog = true })
@@ -140,7 +140,7 @@ private fun HomeContent(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onNavigateToDashboard: () -> Unit,
-    onNavigateToGoals: () -> Unit,
+    onNavigateToSteps: () -> Unit,
     onNavigateToHeartRate: () -> Unit,
     onFilterChanged: (StepSourceFilter) -> Unit,
     onChangeProvider: () -> Unit = {}
@@ -164,7 +164,7 @@ private fun HomeContent(
             StepsProgressCard(
                 steps = getFilteredSteps(uiState),
                 goalProgress = uiState.stepGoalProgress,
-                onClick = onNavigateToGoals,
+                onClick = onNavigateToSteps,
                 combinedSteps = uiState.combinedSteps,
                 selectedFilter = uiState.stepSourceFilter
             )
@@ -756,7 +756,7 @@ private fun HomeScreenLoadedPreview() {
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
-            onNavigateToGoals = {},
+            onNavigateToSteps = {},
             onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
@@ -775,7 +775,7 @@ private fun HomeScreenDisconnectedPreview() {
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
-            onNavigateToGoals = {},
+            onNavigateToSteps = {},
             onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
@@ -794,7 +794,7 @@ private fun HomeScreenEmptyPreview() {
             onConnect = {},
             onDisconnect = {},
             onNavigateToDashboard = {},
-            onNavigateToGoals = {},
+            onNavigateToSteps = {},
             onNavigateToHeartRate = {},
             onFilterChanged = {})
     }
