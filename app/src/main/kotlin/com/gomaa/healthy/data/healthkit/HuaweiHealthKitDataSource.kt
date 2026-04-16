@@ -9,8 +9,10 @@ import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_HUAWEI_CLOUD
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -462,20 +464,34 @@ object HealthKitEntityMapper {
      * Converts HealthKitHeartRateData to HeartRateEntity for Room staging.
      */
     fun heartRateToEntity(data: HealthKitHeartRateData): HeartRateBucketEntity {
-        //todo fix later
+        val bucketId = generateBucketId(data.timestamp)
+        val dayTimestamp = generateDayTimestamp(data.timestamp)
+        val samplesJson = createSamplesJson(data.timestamp, data.bpm)
+
         return HeartRateBucketEntity(
-            dayTimestamp = data.timestamp,
-            source = SOURCE_WEARABLE_HUAWEI_CLOUD,
-            sessionId = null,
-            avgBpm = data.bpm,
-            minBpm = data.bpm,
-            maxBpm = data.bpm,
-            healthConnectRecordId = "",
-            syncedToHc = 0,
-            bucketId = UUID.randomUUID().toString(),
-            count = 1,
-            samplesJson = ""
+            bucketId = bucketId,
+            source = SOURCE_WEARABLE_HUAWEI_CLOUD, dayTimestamp = dayTimestamp,
+            minBpm = data.bpm, avgBpm = data.bpm,
+            maxBpm = data.bpm, count = 1, samplesJson = samplesJson,
+            syncedToHc = 0, healthConnectRecordId = "", sessionId = null
         )
+    }
+
+    private fun generateBucketId(timestamp: Long): String {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH")
+        return instant.atZone(ZoneId.systemDefault()).format(formatter)
+    }
+
+    private fun generateDayTimestamp(timestamp: Long): Long {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+        return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    private fun createSamplesJson(timestamp: Long, bpm: Int): String {
+        val sample = JSONObject().put("t", timestamp / 1000).put("v", bpm)
+        return org.json.JSONArray(listOf(sample)).toString()
     }
 
     /**

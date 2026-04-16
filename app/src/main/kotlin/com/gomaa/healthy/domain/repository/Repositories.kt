@@ -5,9 +5,9 @@ import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.HeartRateReading
-import com.gomaa.healthy.domain.model.HeartRateRecord
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
+import com.gomaa.healthy.domain.usecase.HourHeader
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -33,17 +33,14 @@ interface SessionRepository {
     suspend fun getSession(id: String): ExerciseSession?
     suspend fun getAllSessions(): List<ExerciseSession>
     suspend fun deleteSession(id: String)
-    suspend fun addHeartRates(sessionId: String, heartRates: List<HeartRateRecord>)
-    suspend fun getHeartRatesForSession(sessionId: String): List<HeartRateRecord>
 }
 
 interface HeartRateRepository {
     suspend fun getLatestHeartRate(): HeartRateReading?
     suspend fun getAvailableSources(): List<String>
 
-    // Paging3 support for infinite scroll
-    fun getHeartRatesPaged(): Flow<PagingData<HeartRateReading>>
-    fun getHeartRatesBySourcePaged(source: HeartRateSource): Flow<PagingData<HeartRateReading>>
+    fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>>
+    fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>>
 
     // All-time summary (date-agnostic)
     suspend fun getOverallSummary(): HeartRateSummary?

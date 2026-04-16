@@ -3,7 +3,6 @@ package com.gomaa.healthy.data.repository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.filter
 import androidx.paging.map
 import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
@@ -13,6 +12,7 @@ import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.repository.HeartRateRepository
+import com.gomaa.healthy.domain.usecase.HourHeader
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -34,39 +34,6 @@ class HeartRateRepositoryImpl @Inject constructor(
         return heartRateBucketDao.getDistinctSources()
     }
 
-    override fun getHeartRatesPaged(): Flow<PagingData<HeartRateReading>> {
-        return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false,
-                prefetchDistance = 5
-            ), pagingSourceFactory = { heartRateBucketDao.getHeartRateReadingsPaged() }
-        ).flow.map { pagingData ->
-            pagingData
-                .filter { it.toDomainReadings().isNotEmpty() }
-                .map { it.toDomainReadings().last() }
-        }
-    }
-
-    override fun getHeartRatesBySourcePaged(source: HeartRateSource): Flow<PagingData<HeartRateReading>> {
-        val sourceString = sourceToString(source)
-        return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false,
-                prefetchDistance = 5
-            ), pagingSourceFactory = {
-                heartRateBucketDao.getHeartRateReadingsBySourcePaged(
-                    sourceString
-                )
-            }
-        ).flow.map { pagingData ->
-            pagingData
-                .filter { it.toDomainReadings().isNotEmpty() }
-                .map { it.toDomainReadings().last() }
-        }
-    }
-
     override suspend fun getOverallSummary(): HeartRateSummary? {
         val avg = heartRateBucketDao.getOverallAverageBpm() ?: return null
         val max = heartRateBucketDao.getOverallMaxBpm() ?: return null
@@ -75,10 +42,66 @@ class HeartRateRepositoryImpl @Inject constructor(
         return HeartRateSummary(avg.toInt(), max, min, count)
     }
 
-    /**
-     * Upserts a heart rate reading to both the legacy table and the bucket table.
-     * This ensures real-time data is available while preparing for bucket-based storage.
-     */
+    override fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ), pagingSourceFactory = { heartRateBucketDao.getAggregatedBucketsPaged() }
+        ).flow.map { pagingData ->
+            pagingData.map { bucket ->
+                val hour = bucket.bucketId.takeLast(2).toIntOrNull() ?: 0
+                val date = formatBucketIdToDate(bucket.bucketId)
+                HourHeader(
+                    hour = hour,
+                    date = date,
+                    minBpm = bucket.minBpm,
+                    avgBpm = bucket.avgBpm,
+                    maxBpm = bucket.maxBpm,
+                )
+            }
+        }
+    }
+
+    override fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>> {
+        val sourceString = sourceToString(source)
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ), pagingSourceFactory = {
+                heartRateBucketDao.getAggregatedBucketsBySourcePaged(sourceString)
+            }
+        ).flow.map { pagingData ->
+            pagingData.map { bucket ->
+                val hour = bucket.bucketId.takeLast(2).toIntOrNull() ?: 0
+                val date = formatBucketIdToDate(bucket.bucketId)
+                HourHeader(
+                    hour = hour,
+                    date = date,
+                    minBpm = bucket.minBpm,
+                    avgBpm = bucket.avgBpm,
+                    maxBpm = bucket.maxBpm,
+                )
+            }
+        }
+    }
+
+    private fun formatBucketIdToDate(bucketId: String): String {
+        return try {
+            val parts = bucketId.split("-")
+            if (parts.size >= 3) {
+                "${parts[1]}/${parts[2]}"
+            } else {
+                bucketId
+            }
+        } catch (e: Exception) {
+            bucketId
+        }
+    }
+
     override suspend fun upsertHeartRateWithBucket(
         timestamp: Long, source: String, bpm: Int, sessionId: String?
     ) {
@@ -88,13 +111,10 @@ class HeartRateRepositoryImpl @Inject constructor(
         val existingBucket = heartRateBucketDao.getByBucketId(bucketId)
 
         if (existingBucket != null) {
-            // Merge with existing bucket - recalculate min/avg/max
             val newCount = existingBucket.count + 1
             val newMin = minOf(existingBucket.minBpm, bpm)
             val newMax = maxOf(existingBucket.maxBpm, bpm)
             val newAvg = ((existingBucket.avgBpm * existingBucket.count) + bpm) / newCount
-
-            // Add sample to samplesJson
             val samplesJson = addSampleToJson(existingBucket.samplesJson, timestamp, bpm)
 
             val updatedBucket = existingBucket.copy(
@@ -106,7 +126,6 @@ class HeartRateRepositoryImpl @Inject constructor(
             )
             heartRateBucketDao.insert(updatedBucket)
         } else {
-            // Create new bucket with single sample
             val samplesJson = createSamplesJson(timestamp, bpm)
             val bucket = HeartRateBucketEntity(
                 bucketId = bucketId,
@@ -151,13 +170,10 @@ class HeartRateRepositoryImpl @Inject constructor(
         }
     }
 
-    // Methods with source filter for filtering summary calculations
     private fun sourceToString(source: HeartRateSource): String {
         return when (source) {
-            HeartRateSource.MY_HEALTH -> "myhealth"
             HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
             HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "wearable_huawei_cloud"
         }
     }
-
 }

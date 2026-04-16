@@ -201,8 +201,8 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 // Convert cloud data to entities
                 val cloudEntities = heartRates.map { HealthKitEntityMapper.heartRateToEntity(it) }
 
-                // Step 1: Insert cloud data to staging
-                heartRateDao.insertAll(cloudEntities)
+                // Step 1: Upsert cloud data to merge with existing buckets
+                heartRateDao.upsertBuckets(cloudEntities)
                 Log.d(
                     TAG, "fetchHeartRateData: Stored ${cloudEntities.size} heart rates to staging"
                 )
@@ -216,7 +216,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 val mergedHeartRates = dataMerger.mergeHeartRates(cloudEntities, existingLocalData)
 
                 // Step 4: Update merged data in Room
-                heartRateDao.insertAll(mergedHeartRates)
+                heartRateDao.upsertBuckets(mergedHeartRates)
                 Log.d(TAG, "fetchHeartRateData: Merged ${mergedHeartRates.size} heart rate records")
 
                 // Step 5: Write merged data to Health Connect

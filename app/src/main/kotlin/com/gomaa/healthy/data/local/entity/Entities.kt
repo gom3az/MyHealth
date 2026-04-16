@@ -48,7 +48,6 @@ data class ExerciseSessionEntity(
     val dataOrigin: String? = null // Package name from Health Connect
 )
 
-
 @Entity(
     tableName = "heart_rate_buckets", indices = [Index(value = ["source", "dayTimestamp"])]
 )
@@ -64,4 +63,14 @@ data class HeartRateBucketEntity(
     @ColumnInfo(name = "synced_to_hc") val syncedToHc: Int = 0, // 0 = not synced, 1 = synced to Health Connect
     val healthConnectRecordId: String,
     val sessionId: String? = null, // Nullable - can be null for Health Connect readings
+)
+
+data class AggregatedHeartRateBucket(
+    val bucketId: String,
+    val source: String,
+    val dayTimestamp: Long,
+    val minBpm: Int,
+    val avgBpm: Int,
+    val maxBpm: Int,
+    val count: Int
 )

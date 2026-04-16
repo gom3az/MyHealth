@@ -2,6 +2,7 @@ package com.gomaa.healthy.data.sync
 
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
+import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import org.junit.Assert.assertEquals
@@ -123,7 +124,86 @@ class DataMergerTest {
         assertEquals(3000, result[0].totalSteps)
     }
 
+    @Test
+    fun `mergeHeartRates returns local when both have data for same bucketId`() {
+        val hcData = listOf(
+            HeartRateBucketEntity(
+                bucketId = "2026-04-15-14",
+                source = SOURCE_HEALTH_CONNECT,
+                dayTimestamp = 1704067200000,
+                minBpm = 70,
+                avgBpm = 75,
+                maxBpm = 80,
+                count = 10,
+                samplesJson = "[]",
+                healthConnectRecordId = "hc-1"
+            )
+        )
+        val localData = listOf(
+            HeartRateBucketEntity(
+                bucketId = "2026-04-15-14",
+                source = SOURCE_MY_HEALTH,
+                dayTimestamp = 1704067200000,
+                minBpm = 75,
+                avgBpm = 80,
+                maxBpm = 85,
+                count = 5,
+                samplesJson = "[]",
+                healthConnectRecordId = ""
+            )
+        )
 
+        val result = dataMerger.mergeHeartRates(hcData, localData)
+
+        assertEquals(1, result.size)
+        assertEquals(80, result[0].avgBpm)
+        assertEquals(SOURCE_MY_HEALTH, result[0].source)
+    }
+
+    @Test
+    fun `mergeHeartRates returns merged list when no conflicts`() {
+        val hcData = listOf(
+            HeartRateBucketEntity(
+                bucketId = "2026-04-15-14",
+                source = SOURCE_HEALTH_CONNECT,
+                dayTimestamp = 1704067200000,
+                minBpm = 70,
+                avgBpm = 75,
+                maxBpm = 80,
+                count = 10,
+                samplesJson = "[]",
+                healthConnectRecordId = "hc-1"
+            ),
+            HeartRateBucketEntity(
+                bucketId = "2026-04-15-15",
+                source = SOURCE_HEALTH_CONNECT,
+                dayTimestamp = 1704067200000,
+                minBpm = 75,
+                avgBpm = 80,
+                maxBpm = 85,
+                count = 8,
+                samplesJson = "[]",
+                healthConnectRecordId = "hc-2"
+            )
+        )
+        val localData = listOf(
+            HeartRateBucketEntity(
+                bucketId = "2026-04-15-16",
+                source = SOURCE_MY_HEALTH,
+                dayTimestamp = 1704067200000,
+                minBpm = 80,
+                avgBpm = 85,
+                maxBpm = 90,
+                count = 5,
+                samplesJson = "[]",
+                healthConnectRecordId = ""
+            )
+        )
+
+        val result = dataMerger.mergeHeartRates(hcData, localData)
+
+        assertEquals(3, result.size)
+    }
 
     @Test
     fun `mergeExerciseSessions returns local when overlapping time range exists`() {

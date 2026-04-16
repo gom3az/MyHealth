@@ -13,6 +13,7 @@ import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalPeriod
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.model.HeartRateReading
+import com.gomaa.healthy.domain.model.HeartRateRecord
 import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.model.StepSource
 import org.json.JSONArray
@@ -147,9 +148,8 @@ fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
                 id = "${bucketId}_$index",
                 bpm = bpm,
                 timestamp = timestampSeconds * 1000, // Convert seconds back to millis
-                source = if (source == "health_connect") HeartRateSource.HEALTH_CONNECT
-                else if (source.startsWith("wearable_huawei")) HeartRateSource.WEARABLE_HUAWEI_CLOUD
-                else HeartRateSource.MY_HEALTH
+                source = if (source.startsWith("wearable_huawei")) HeartRateSource.WEARABLE_HUAWEI_CLOUD
+                else HeartRateSource.HEALTH_CONNECT
             )
         }
     } catch (e: Exception) {
@@ -291,4 +291,7 @@ fun mapStepsRecordToEntity(record: StepsRecord, date: Long): DailyStepsEntity {
         source = SOURCE_HEALTH_CONNECT,
         dataOrigin = dataOrigin
     )
+}
+fun HeartRateReading.toHeartRateRecord(): HeartRateRecord {
+    return HeartRateRecord(timestamp = timestamp, bpm = bpm)
 }

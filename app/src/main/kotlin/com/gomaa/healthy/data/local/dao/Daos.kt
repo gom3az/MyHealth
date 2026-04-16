@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import com.gomaa.healthy.data.local.entity.AggregatedHeartRateBucket
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
@@ -141,21 +143,14 @@ interface HeartRateBucketDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(buckets: List<HeartRateBucketEntity>)
 
-    @Query("SELECT * FROM heart_rate_buckets ORDER BY dayTimestamp DESC LIMIT 1")
+    @Query("SELECT * FROM heart_rate_buckets ORDER BY bucketId DESC LIMIT 1")
     suspend fun getLatest(): HeartRateBucketEntity?
 
-    @Query("SELECT DISTINCT source FROM heart_rate_buckets ORDER BY source")
+    @Query("SELECT DISTINCT source FROM heart_rate_buckets WHERE bucketId LIKE '____-__-__-__' ORDER BY source")
     suspend fun getDistinctSources(): List<String>
 
     @Query("SELECT * FROM heart_rate_buckets WHERE bucketId = :bucketId")
     suspend fun getByBucketId(bucketId: String): HeartRateBucketEntity?
-
-    // Paging3 support for infinite scroll
-    @Query("SELECT * FROM heart_rate_buckets ORDER BY dayTimestamp DESC")
-    fun getHeartRateReadingsPaged(): PagingSource<Int, HeartRateBucketEntity>
-
-    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source ORDER BY dayTimestamp DESC")
-    fun getHeartRateReadingsBySourcePaged(source: String): PagingSource<Int, HeartRateBucketEntity>
 
     // All-time summary queries (date-agnostic - no date range)
     @Query("SELECT AVG(avgBpm) FROM heart_rate_buckets")
@@ -184,13 +179,63 @@ interface HeartRateBucketDao {
         source: String, startTime: Long, endTime: Long
     ): List<HeartRateBucketEntity>
 
-    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source ORDER BY dayTimestamp DESC")
+    @Query("SELECT * FROM heart_rate_buckets WHERE source = :source ORDER BY bucketId DESC")
     suspend fun getAllBySource(source: String): List<HeartRateBucketEntity>
 
-    @Query("SELECT * FROM heart_rate_buckets WHERE sessionId = :sessionId ORDER BY dayTimestamp ASC")
+    @Query("SELECT * FROM heart_rate_buckets WHERE sessionId = :sessionId ORDER BY bucketId ASC")
     suspend fun getForSession(sessionId: String): List<HeartRateBucketEntity>
 
     @Query("DELETE FROM heart_rate_buckets WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String)
 
+    @Query(
+        """
+        SELECT bucketId, source, dayTimestamp, minBpm, avgBpm, maxBpm, count
+        FROM heart_rate_buckets
+        WHERE bucketId LIKE '____-__-__-__'
+        ORDER BY bucketId DESC
+    """
+    )
+    fun getAggregatedBucketsPaged(): PagingSource<Int, AggregatedHeartRateBucket>
+
+    @Query(
+        """
+        SELECT bucketId, source, dayTimestamp, minBpm, avgBpm, maxBpm, count
+        FROM heart_rate_buckets
+        WHERE source = :source AND bucketId LIKE '____-__-__-__'
+        ORDER BY bucketId DESC
+    """
+    )
+    fun getAggregatedBucketsBySourcePaged(source: String): PagingSource<Int, AggregatedHeartRateBucket>
+
+    @Transaction
+    @Query("SELECT 1")
+    suspend fun upsertBuckets(buckets: List<HeartRateBucketEntity>): Unit {
+        for (bucket in buckets) {
+            val existing = getByBucketId(bucket.bucketId)
+            if (existing != null) {
+                val mergedCount = existing.count + bucket.count
+                val mergedMinBpm = minOf(existing.minBpm, bucket.minBpm)
+                val mergedMaxBpm = maxOf(existing.maxBpm, bucket.maxBpm)
+                val mergedAvgBpm = if (mergedCount > 0) {
+                    (existing.avgBpm * existing.count + bucket.avgBpm * bucket.count) / mergedCount
+                } else {
+                    bucket.avgBpm
+                }
+                val mergedSamplesJson =
+                    existing.samplesJson.dropLast(1) + "," + bucket.samplesJson.drop(1)
+                insert(
+                    existing.copy(
+                        minBpm = mergedMinBpm,
+                        maxBpm = mergedMaxBpm,
+                        avgBpm = mergedAvgBpm,
+                        count = mergedCount,
+                        samplesJson = mergedSamplesJson
+                    )
+                )
+            } else {
+                insert(bucket)
+            }
+        }
+    }
 }

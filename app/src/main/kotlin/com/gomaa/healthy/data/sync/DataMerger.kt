@@ -24,10 +24,6 @@ interface DataMerger {
 @Singleton
 class DataMergerImpl @Inject constructor() : DataMerger {
 
-    companion object {
-        private const val HEART_RATE_BIN_SIZE_MS = 5000L
-    }
-
     override fun mergeSteps(
         hcData: List<DailyStepsEntity>, localData: List<DailyStepsEntity>
     ): List<DailyStepsEntity> {
@@ -72,17 +68,13 @@ class DataMergerImpl @Inject constructor() : DataMerger {
         if (hcData.isEmpty()) return localData
         if (localData.isEmpty()) return hcData
 
-        fun roundToBin(timestamp: Long): Long {
-            return (timestamp / HEART_RATE_BIN_SIZE_MS) * HEART_RATE_BIN_SIZE_MS
-        }
-
-        val merged = mutableMapOf<Long, HeartRateBucketEntity>()
+        val merged = mutableMapOf<String, HeartRateBucketEntity>()
 
         hcData.forEach { hr ->
-            val bin = roundToBin(hr.dayTimestamp)
-            val existing = merged[bin]
+            val bucketId = hr.bucketId
+            val existing = merged[bucketId]
             if (existing == null) {
-                merged[bin] = hr.copy(dayTimestamp = bin)
+                merged[bucketId] = hr
             } else {
                 val existingPrecision = DataOriginConstants.getPrecision(
                     existing.source, existing.source
@@ -98,13 +90,13 @@ class DataMergerImpl @Inject constructor() : DataMerger {
                         if (hr.avgBpm >= existing.avgBpm) hr else existing
                     }
                 }
-                merged[bin] = winner.copy(dayTimestamp = bin)
+                merged[bucketId] = winner
             }
         }
 
         localData.forEach { local ->
-            val bin = roundToBin(local.dayTimestamp)
-            val existing = merged[bin]
+            val bucketId = local.bucketId
+            val existing = merged[bucketId]
 
             val shouldReplace = when {
                 existing == null -> true
@@ -126,11 +118,11 @@ class DataMergerImpl @Inject constructor() : DataMerger {
             }
 
             if (shouldReplace) {
-                merged[bin] = local.copy(dayTimestamp = bin)
+                merged[bucketId] = local
             }
         }
 
-        return merged.values.toList().sortedBy { it.dayTimestamp }
+        return merged.values.toList().sortedBy { it.bucketId }.reversed()
     }
 
     override fun mergeExerciseSessions(

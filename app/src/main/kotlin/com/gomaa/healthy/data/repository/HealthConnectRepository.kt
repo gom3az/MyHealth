@@ -473,7 +473,7 @@ class HealthConnectRepository @Inject constructor(
                 dataMerger.mergeHeartRates(allHcEntities, localMyHealthHeartRates)
 
             if (mergedHeartRates.isNotEmpty()) {
-                heartRateBucketDao.insertAll(mergedHeartRates)
+                heartRateBucketDao.upsertBuckets(mergedHeartRates)
                 totalNewRecords = mergedHeartRates.size
             }
         }
