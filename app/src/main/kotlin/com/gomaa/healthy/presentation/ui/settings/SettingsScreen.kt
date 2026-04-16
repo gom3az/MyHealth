@@ -4,7 +4,6 @@ package com.gomaa.healthy.presentation.ui.settings
 
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -46,6 +45,7 @@ import com.gomaa.healthy.data.healthkit.AuthState
 import com.gomaa.healthy.data.preferences.SyncPreferences
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectRepository.Companion.HEALTH_CONNECT_PACKAGE
+import com.gomaa.healthy.logging.LocalAppLogger
 import com.gomaa.healthy.presentation.ui.settings.sections.ExportSection
 import com.gomaa.healthy.presentation.ui.settings.sections.HealthConnectSection
 import com.gomaa.healthy.presentation.ui.settings.sections.HealthKitSection
@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateToGoals: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val logger = LocalAppLogger.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -77,7 +78,7 @@ fun SettingsScreen(
                     try {
                         permissionLauncher.launch(HealthConnectRepository.PERMISSIONS)
                     } catch (e: Exception) {
-                        Log.e("SettingsScreen", "Error: ${e.message}", e)
+                        logger.e("SettingsScreen", "Error: ${e.message}", e)
                         try {
                             val uriString =
                                 "market://details?id=$HEALTH_CONNECT_PACKAGE&url=healthconnect%3A%2F%2Fonboarding"
@@ -89,7 +90,7 @@ fun SettingsScreen(
                                     putExtra("callerId", context.packageName)
                                 })
                         } catch (e2: Exception) {
-                            Log.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
+                            logger.e("SettingsScreen", "Error starting activity: ${e2.message}", e2)
                         }
                     }
                 }
@@ -115,8 +116,28 @@ fun SettingsScreen(
 
     val idleState = state as? SettingsUiState.Idle
 
+    val onShareLogs: () -> Unit = {
+        coroutineScope.launch {
+            try {
+                val logFile = logger.getLogFile()
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context, "${context.packageName}.fileprovider", logFile
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Debug Logs"))
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Failed to share logs: ${e.message}")
+            }
+        }
+    }
+
     SettingsContent(
         onNavigateToGoals = onNavigateToGoals,
+        onShareLogs = onShareLogs,
         healthConnectAvailable = idleState?.healthConnectAvailable ?: false,
         healthConnectConnected = idleState?.healthConnectConnected ?: false,
         healthConnectStepCount = idleState?.healthConnectStepCount ?: 0,
@@ -136,11 +157,7 @@ fun SettingsScreen(
         onDisconnectHealthKit = { viewModel.processIntent(SettingsIntent.DisconnectHealthKit) },
         onSyncHealthKitNow = { viewModel.processIntent(SettingsIntent.SyncHealthKitNow) },
         onHealthKitSyncWindowChanged = {
-            viewModel.processIntent(
-                SettingsIntent.SetHealthKitSyncWindow(
-                    it
-                )
-            )
+            viewModel.processIntent(SettingsIntent.SetHealthKitSyncWindow(it))
         },
         onMasterSyncChanged = { viewModel.processIntent(SettingsIntent.SetMasterSync(it)) },
         onStepsSyncChanged = { viewModel.processIntent(SettingsIntent.SetStepsSync(it)) },
@@ -161,6 +178,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsContent(
     onNavigateToGoals: () -> Unit,
+    onShareLogs: (() -> Unit),
     healthConnectAvailable: Boolean,
     healthConnectConnected: Boolean,
     healthConnectStepCount: Int,
@@ -202,6 +220,17 @@ fun SettingsContent(
                     description = "Set daily step goals and targets",
                     icon = "🎯",
                     onClick = onNavigateToGoals
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(Dimensions.spacingExtraLarge)) }
+
+            item {
+                SettingsItem(
+                    title = "Share Debug Logs",
+                    description = "Export app logs for debugging",
+                    icon = "📋",
+                    onClick = onShareLogs
                 )
             }
 
@@ -284,7 +313,8 @@ private fun SettingsItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = icon, style = MaterialTheme.typography.headlineSmall,
+                text = icon,
+                style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.semantics { })
             Spacer(modifier = Modifier.width(Dimensions.spacingLarge))
             Column {
@@ -292,7 +322,8 @@ private fun SettingsItem(
                     text = title, style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = description, style = MaterialTheme.typography.bodyMedium,
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -306,6 +337,7 @@ private fun SettingsContentPreview() {
     HealthTheme {
         SettingsContent(
             onNavigateToGoals = {},
+            onShareLogs = {},
             healthConnectAvailable = true,
             healthConnectConnected = true,
             healthConnectStepCount = 5420,

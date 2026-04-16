@@ -1,10 +1,10 @@
 package com.gomaa.healthy.data.provider
 
 import android.content.Context
-import android.util.Log
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.DeviceInfo
 import com.gomaa.healthy.domain.model.WearableProvider
+import com.gomaa.healthy.logging.AppLogger
 import com.huawei.wearengine.HiWear
 import com.huawei.wearengine.client.ServiceConnectionListener
 import com.huawei.wearengine.client.WearEngineClient
@@ -15,7 +15,8 @@ import javax.inject.Inject
 class HuaweiWearProvider @Inject constructor(
     @ApplicationContext private val context: Context,
     private val deviceDiscoverer: HuaweiDeviceDiscoverer,
-    private val heartRateMonitor: HuaweiHeartRateMonitor
+    private val heartRateMonitor: HuaweiHeartRateMonitor,
+    private val appLogger: AppLogger
 ) : WearableProvider {
 
     override val brand: String = "Huawei"
@@ -23,11 +24,11 @@ class HuaweiWearProvider @Inject constructor(
 
     private val serviceConnectionListener = object : ServiceConnectionListener {
         override fun onServiceConnect() {
-            Log.i("HuaweiWearProvider", "WearEngine Service Connected!")
+            appLogger.i("HuaweiWearProvider", "WearEngine Service Connected!")
         }
 
         override fun onServiceDisconnect() {
-            Log.i("HuaweiWearProvider", "WearEngine Service Disconnected!")
+            appLogger.i("HuaweiWearProvider", "WearEngine Service Disconnected!")
         }
     }
 

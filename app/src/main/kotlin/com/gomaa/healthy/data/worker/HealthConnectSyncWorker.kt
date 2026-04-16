@@ -1,7 +1,6 @@
 package com.gomaa.healthy.data.worker
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -10,6 +9,7 @@ import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toDomainReadings
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectResult
+import com.gomaa.healthy.logging.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.currentCoroutineContext
@@ -20,7 +20,8 @@ import kotlin.coroutines.cancellation.CancellationException
 class HealthConnectSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
-    private val healthConnectRepository: HealthConnectRepository
+    private val healthConnectRepository: HealthConnectRepository,
+    private val appLogger: AppLogger
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -32,7 +33,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
         return try {
             // Check for cancellation
             if (!currentCoroutineContext().isActive) {
-                Log.d(TAG, "doWork: Worker cancelled")
+                appLogger.d(TAG, "doWork: Worker cancelled")
                 return Result.failure()
             }
 
@@ -44,7 +45,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
 
             // Check master toggle
             if (!masterSyncEnabled) {
-                Log.d(TAG, "doWork: Master sync disabled, skipping sync")
+                appLogger.d(TAG, "doWork: Master sync disabled, skipping sync")
                 return Result.success()
             }
 
@@ -54,7 +55,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
                 isAvailableResult is HealthConnectResult.Success && isAvailableResult.data
 
             if (!isAvailable) {
-                Log.w(TAG, "doWork: Health Connect not available")
+                appLogger.w(TAG, "doWork: Health Connect not available")
                 return Result.failure()
             }
 
@@ -62,7 +63,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
             val hasPerms = hasPermsResult is HealthConnectResult.Success && hasPermsResult.data
 
             if (!hasPerms) {
-                Log.w(TAG, "doWork: Health Connect permissions not granted")
+                appLogger.w(TAG, "doWork: Health Connect permissions not granted")
                 return Result.failure()
             }
 
@@ -76,20 +77,20 @@ class HealthConnectSyncWorker @AssistedInject constructor(
 
             return when (syncResult) {
                 is HealthConnectResult.Success -> {
-                    Log.d(TAG, "doWork: Sync completed successfully")
+                    appLogger.d(TAG, "doWork: Sync completed successfully")
                     Result.success()
                 }
 
                 else -> {
-                    Log.w(TAG, "doWork: Sync failed, requesting retry")
+                    appLogger.w(TAG, "doWork: Sync failed, requesting retry")
                     Result.retry()
                 }
             }
         } catch (_: CancellationException) {
-            Log.d(TAG, "doWork: Worker cancelled")
+            appLogger.d(TAG, "doWork: Worker cancelled")
             Result.failure()
         } catch (e: Exception) {
-            Log.e(TAG, "doWork: Exception during sync", e)
+            appLogger.e(TAG, "doWork: Exception during sync", e)
             if (runAttemptCount < 3) {
                 Result.retry()
             } else {
@@ -132,10 +133,10 @@ class HealthConnectSyncWorker @AssistedInject constructor(
                 HealthConnectResult.Error.Unknown
             }
         } catch (e: CancellationException) {
-            Log.d(TAG, "performBidirectionalSync: Sync cancelled")
+            appLogger.d(TAG, "performBidirectionalSync: Sync cancelled")
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "performBidirectionalSync: Sync failed", e)
+            appLogger.e(TAG, "performBidirectionalSync: Sync failed", e)
             HealthConnectResult.Error.Unknown
         }
     }
@@ -154,22 +155,25 @@ class HealthConnectSyncWorker @AssistedInject constructor(
         if (syncStepsEnabled) {
             val localSteps = healthConnectRepository.getUnsyncedLocalSteps(SOURCE_MY_HEALTH)
             if (localSteps.isNotEmpty()) {
-                Log.d(TAG, "uploadLocalChangesToHC: Uploading ${localSteps.size} steps records")
+                appLogger.d(
+                    TAG,
+                    "uploadLocalChangesToHC: Uploading ${localSteps.size} steps records"
+                )
                 val stepsResult = healthConnectRepository.writeSteps(
                     localSteps.map { it.toDomain() })
                 if (stepsResult is HealthConnectResult.Success) {
                     val dates = localSteps.map { it.date }
                     healthConnectRepository.markStepsAsSynced(dates, SOURCE_MY_HEALTH)
-                    Log.d(TAG, "uploadLocalChangesToHC: Steps marked as synced")
+                    appLogger.d(TAG, "uploadLocalChangesToHC: Steps marked as synced")
                 } else {
-                    Log.w(TAG, "uploadLocalChangesToHC: Steps upload failed")
+                    appLogger.w(TAG, "uploadLocalChangesToHC: Steps upload failed")
                     allUploadsSucceeded = false
                 }
             } else {
-                Log.d(TAG, "uploadLocalChangesToHC: No unsynced steps")
+                appLogger.d(TAG, "uploadLocalChangesToHC: No unsynced steps")
             }
         } else {
-            Log.d(TAG, "uploadLocalChangesToHC: Steps sync disabled")
+            appLogger.d(TAG, "uploadLocalChangesToHC: Steps sync disabled")
         }
 
         // Check for cancellation
@@ -182,7 +186,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
             val localExerciseSessions =
                 healthConnectRepository.getUnsyncedLocalSessions(SOURCE_MY_HEALTH)
             if (localExerciseSessions.isNotEmpty()) {
-                Log.d(
+                appLogger.d(
                     TAG,
                     "uploadLocalChangesToHC: Uploading ${localExerciseSessions.size} exercise sessions"
                 )
@@ -199,19 +203,19 @@ class HealthConnectSyncWorker @AssistedInject constructor(
                 }
                 if (successfulSessionIds.isNotEmpty()) {
                     healthConnectRepository.markSessionsAsSynced(successfulSessionIds)
-                    Log.d(
+                    appLogger.d(
                         TAG,
                         "uploadLocalChangesToHC: ${successfulSessionIds.size} sessions marked as synced"
                     )
                 } else {
-                    Log.w(TAG, "uploadLocalChangesToHC: No sessions uploaded successfully")
+                    appLogger.w(TAG, "uploadLocalChangesToHC: No sessions uploaded successfully")
                     allUploadsSucceeded = false
                 }
             } else {
-                Log.d(TAG, "uploadLocalChangesToHC: No unsynced exercise sessions")
+                appLogger.d(TAG, "uploadLocalChangesToHC: No unsynced exercise sessions")
             }
         } else {
-            Log.d(TAG, "uploadLocalChangesToHC: Exercise sync disabled")
+            appLogger.d(TAG, "uploadLocalChangesToHC: Exercise sync disabled")
         }
 
         // Check for cancellation
@@ -224,7 +228,7 @@ class HealthConnectSyncWorker @AssistedInject constructor(
             val localHeartRates =
                 healthConnectRepository.getUnsyncedLocalHeartRates(SOURCE_MY_HEALTH)
             if (localHeartRates.isNotEmpty()) {
-                Log.d(
+                appLogger.d(
                     TAG,
                     "uploadLocalChangesToHC: Uploading ${localHeartRates.size} heart rate readings"
                 )
@@ -236,16 +240,16 @@ class HealthConnectSyncWorker @AssistedInject constructor(
                     healthConnectRepository.markHeartRatesAsSynced(
                         syncedTimestamps, SOURCE_MY_HEALTH
                     )
-                    Log.d(TAG, "uploadLocalChangesToHC: Heart rates marked as synced")
+                    appLogger.d(TAG, "uploadLocalChangesToHC: Heart rates marked as synced")
                 } else {
-                    Log.w(TAG, "uploadLocalChangesToHC: Heart rate upload failed")
+                    appLogger.w(TAG, "uploadLocalChangesToHC: Heart rate upload failed")
                     allUploadsSucceeded = false
                 }
             } else {
-                Log.d(TAG, "uploadLocalChangesToHC: No unsynced heart rate readings")
+                appLogger.d(TAG, "uploadLocalChangesToHC: No unsynced heart rate readings")
             }
         } else {
-            Log.d(TAG, "uploadLocalChangesToHC: Heart rate sync disabled")
+            appLogger.d(TAG, "uploadLocalChangesToHC: Heart rate sync disabled")
         }
 
         return allUploadsSucceeded
@@ -265,18 +269,18 @@ class HealthConnectSyncWorker @AssistedInject constructor(
 
         // Sync steps from HC (but don't overwrite local)
         if (syncStepsEnabled) {
-            Log.d(TAG, "downloadAndApplyHCChanges: Syncing steps from Health Connect")
+            appLogger.d(TAG, "downloadAndApplyHCChanges: Syncing steps from Health Connect")
             val hcStepsResult = healthConnectRepository.syncSteps()
             if (hcStepsResult is HealthConnectResult.Success) {
-                Log.d(
+                appLogger.d(
                     TAG,
                     "downloadAndApplyHCChanges: Synced ${hcStepsResult.data} steps records from HC"
                 )
             } else {
-                Log.w(TAG, "downloadAndApplyHCChanges: Steps sync failed")
+                appLogger.w(TAG, "downloadAndApplyHCChanges: Steps sync failed")
             }
         } else {
-            Log.d(TAG, "downloadAndApplyHCChanges: Steps sync disabled")
+            appLogger.d(TAG, "downloadAndApplyHCChanges: Steps sync disabled")
         }
 
         // Check for cancellation
@@ -286,18 +290,21 @@ class HealthConnectSyncWorker @AssistedInject constructor(
 
         // Sync exercise sessions from HC (don't overwrite local)
         if (syncExerciseEnabled) {
-            Log.d(TAG, "downloadAndApplyHCChanges: Syncing exercise sessions from Health Connect")
+            appLogger.d(
+                TAG,
+                "downloadAndApplyHCChanges: Syncing exercise sessions from Health Connect"
+            )
             val hcExerciseResult = healthConnectRepository.syncExerciseSessions()
             if (hcExerciseResult is HealthConnectResult.Success) {
-                Log.d(
+                appLogger.d(
                     TAG,
                     "downloadAndApplyHCChanges: Synced ${hcExerciseResult.data} exercise sessions from HC"
                 )
             } else {
-                Log.w(TAG, "downloadAndApplyHCChanges: Exercise sync failed")
+                appLogger.w(TAG, "downloadAndApplyHCChanges: Exercise sync failed")
             }
         } else {
-            Log.d(TAG, "downloadAndApplyHCChanges: Exercise sync disabled")
+            appLogger.d(TAG, "downloadAndApplyHCChanges: Exercise sync disabled")
         }
 
         // Check for cancellation
@@ -307,18 +314,18 @@ class HealthConnectSyncWorker @AssistedInject constructor(
 
         // Sync heart rate from HC (don't overwrite local)
         if (syncHeartRateEnabled) {
-            Log.d(TAG, "downloadAndApplyHCChanges: Syncing heart rate from Health Connect")
+            appLogger.d(TAG, "downloadAndApplyHCChanges: Syncing heart rate from Health Connect")
             val hcHeartRateResult = healthConnectRepository.syncHeartRates()
             if (hcHeartRateResult is HealthConnectResult.Success) {
-                Log.d(
+                appLogger.d(
                     TAG,
                     "downloadAndApplyHCChanges: Synced ${hcHeartRateResult.data} heart rate records from HC"
                 )
             } else {
-                Log.w(TAG, "downloadAndApplyHCChanges: Heart rate sync failed")
+                appLogger.w(TAG, "downloadAndApplyHCChanges: Heart rate sync failed")
             }
         } else {
-            Log.d(TAG, "downloadAndApplyHCChanges: Heart rate sync disabled")
+            appLogger.d(TAG, "downloadAndApplyHCChanges: Heart rate sync disabled")
         }
     }
 }

@@ -1,7 +1,6 @@
 package com.gomaa.healthy.data.healthkit
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -24,6 +23,7 @@ import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
+import com.gomaa.healthy.logging.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -58,7 +58,8 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
     private val exerciseSessionDao: ExerciseSessionDao,
     private val dataMerger: DataMerger,
     private val healthConnectRepository: HealthConnectRepository,
-    private val syncPreferencesManager: SyncPreferencesManager
+    private val syncPreferencesManager: SyncPreferencesManager,
+    private val appLogger: AppLogger
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -66,10 +67,8 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
         const val WORK_NAME = "huawei_healthkit_sync"
         const val SYNC_INTERVAL_MINUTES = 15L
 
-        // Default time range for fetching (last 24 hours)
         private const val DEFAULT_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000L
 
-        // Network constraints
         private val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
     }
@@ -77,11 +76,11 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
             try {
-                Log.i(TAG, "doWork: Starting Health Kit sync")
+                appLogger.i(TAG, "doWork: Starting Health Kit sync")
 
                 // Step 1: Check authentication
                 if (!authManager.isSignedIn()) {
-                    Log.w(TAG, "doWork: Not signed in, skipping sync")
+                    appLogger.w(TAG, "doWork: Not signed in, skipping sync")
                     return@withContext Result.success()  // Don't retry, just skip
                 }
 
@@ -90,7 +89,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 val endTime = System.currentTimeMillis()
                 val startTime = endTime - (syncWindowDays * 24L * 60L * 60L * 1000L)
 
-                Log.d(
+                appLogger.d(
                     TAG, "doWork: Sync window = $syncWindowDays days (from $startTime to $endTime)"
                 )
 
@@ -106,10 +105,10 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 // Step 6: Update last sync timestamps for incremental sync
                 syncPreferencesManager.setLastHealthKitSyncTime(endTime)
 
-                Log.i(TAG, "doWork: Sync completed successfully")
+                appLogger.i(TAG, "doWork: Sync completed successfully")
                 Result.success()
             } catch (e: Exception) {
-                Log.e(TAG, "doWork: Sync failed", e)
+                appLogger.e(TAG, "doWork: Sync failed", e)
 
                 // Retry with exponential backoff on network failure
                 if (runAttemptCount < 3) {
@@ -125,10 +124,10 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
         when (val result = healthKitDataSource.readSteps(startTime, endTime)) {
             is HealthKitResult.Success -> {
                 val stepsList = result.data
-                Log.d(TAG, "fetchStepsData: Retrieved ${stepsList.size} step records")
+                appLogger.d(TAG, "fetchStepsData: Retrieved ${stepsList.size} step records")
 
                 if (stepsList.isEmpty()) {
-                    Log.d(TAG, "fetchStepsData: No data to process")
+                    appLogger.d(TAG, "fetchStepsData: No data to process")
                     return
                 }
 
@@ -137,7 +136,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 // Step 1: Insert cloud data to staging
                 dailyStepsDao.insertAll(cloudEntities)
-                Log.d(TAG, "fetchStepsData: Stored ${cloudEntities.size} steps to staging")
+                appLogger.d(TAG, "fetchStepsData: Stored ${cloudEntities.size} steps to staging")
 
                 // Step 2: Get existing local data for merging
                 val datesToQuery = cloudEntities.map { it.date }.toSet()
@@ -150,7 +149,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 // Step 4: Update merged data in Room
                 dailyStepsDao.insertAll(mergedSteps)
-                Log.d(TAG, "fetchStepsData: Merged ${mergedSteps.size} step records")
+                appLogger.d(TAG, "fetchStepsData: Merged ${mergedSteps.size} step records")
 
                 // Step 5: Write merged data to Health Connect
                 val domainSteps = mergedSteps.map { entity ->
@@ -167,13 +166,13 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 when (val writeResult = healthConnectRepository.writeSteps(domainSteps)) {
                     is HealthConnectResult.Success -> {
-                        Log.d(
+                        appLogger.d(
                             TAG, "fetchStepsData: Wrote ${writeResult.data} steps to Health Connect"
                         )
                     }
 
                     is HealthConnectResult.Error -> {
-                        Log.w(
+                        appLogger.w(
                             TAG,
                             "fetchStepsData: Failed to write to Health Connect: ${writeResult.exception.message}"
                         )
@@ -182,7 +181,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
             }
 
             is HealthKitResult.Error -> {
-                Log.w(TAG, "fetchStepsData: ${result.message}")
+                appLogger.w(TAG, "fetchStepsData: ${result.message}")
             }
         }
     }
@@ -191,10 +190,13 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
         when (val result = healthKitDataSource.readHeartRate(startTime, endTime)) {
             is HealthKitResult.Success -> {
                 val heartRates = result.data
-                Log.d(TAG, "fetchHeartRateData: Retrieved ${heartRates.size} heart rate records")
+                appLogger.d(
+                    TAG,
+                    "fetchHeartRateData: Retrieved ${heartRates.size} heart rate records"
+                )
 
                 if (heartRates.isEmpty()) {
-                    Log.d(TAG, "fetchHeartRateData: No data to process")
+                    appLogger.d(TAG, "fetchHeartRateData: No data to process")
                     return
                 }
 
@@ -203,7 +205,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 // Step 1: Upsert cloud data to merge with existing buckets
                 heartRateDao.upsertBuckets(cloudEntities)
-                Log.d(
+                appLogger.d(
                     TAG, "fetchHeartRateData: Stored ${cloudEntities.size} heart rates to staging"
                 )
 
@@ -217,7 +219,10 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 // Step 4: Update merged data in Room
                 heartRateDao.upsertBuckets(mergedHeartRates)
-                Log.d(TAG, "fetchHeartRateData: Merged ${mergedHeartRates.size} heart rate records")
+                appLogger.d(
+                    TAG,
+                    "fetchHeartRateData: Merged ${mergedHeartRates.size} heart rate records"
+                )
 
                 // Step 5: Write merged data to Health Connect
                 val domainHeartRates = mergedHeartRates.map { entity ->
@@ -231,14 +236,14 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
 
                 when (val writeResult = healthConnectRepository.writeHeartRates(domainHeartRates)) {
                     is HealthConnectResult.Success -> {
-                        Log.d(
+                        appLogger.d(
                             TAG,
                             "fetchHeartRateData: Wrote ${writeResult.data} heart rates to Health Connect"
                         )
                     }
 
                     is HealthConnectResult.Error -> {
-                        Log.w(
+                        appLogger.w(
                             TAG,
                             "fetchHeartRateData: Failed to write to Health Connect: ${writeResult.exception.message}"
                         )
@@ -247,7 +252,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
             }
 
             is HealthKitResult.Error -> {
-                Log.w(TAG, "fetchHeartRateData: ${result.message}")
+                appLogger.w(TAG, "fetchHeartRateData: ${result.message}")
             }
         }
     }
@@ -256,10 +261,10 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
         when (val result = healthKitDataSource.readWorkouts(startTime, endTime)) {
             is HealthKitResult.Success -> {
                 val workouts = result.data
-                Log.d(TAG, "fetchWorkoutData: Retrieved ${workouts.size} workout records")
+                appLogger.d(TAG, "fetchWorkoutData: Retrieved ${workouts.size} workout records")
 
                 if (workouts.isEmpty()) {
-                    Log.d(TAG, "fetchWorkoutData: No data to process")
+                    appLogger.d(TAG, "fetchWorkoutData: No data to process")
                     return
                 }
 
@@ -270,7 +275,10 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 for (entity in cloudEntities) {
                     exerciseSessionDao.insert(entity)
                 }
-                Log.d(TAG, "fetchWorkoutData: Stored ${cloudEntities.size} workouts to staging")
+                appLogger.d(
+                    TAG,
+                    "fetchWorkoutData: Stored ${cloudEntities.size} workouts to staging"
+                )
 
                 // Step 2: Get existing local data for merging
                 val existingLocalData = exerciseSessionDao.getBySourceAndDateRange(
@@ -285,7 +293,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                 for (entity in mergedWorkouts) {
                     exerciseSessionDao.insert(entity)
                 }
-                Log.d(TAG, "fetchWorkoutData: Merged ${mergedWorkouts.size} workout records")
+                appLogger.d(TAG, "fetchWorkoutData: Merged ${mergedWorkouts.size} workout records")
 
                 // Step 5: Write merged data to Health Connect
                 for (entity in mergedWorkouts) {
@@ -304,14 +312,14 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
                     when (val writeResult =
                         healthConnectRepository.writeExerciseSession(domainWorkout)) {
                         is HealthConnectResult.Success -> {
-                            Log.d(
+                            appLogger.d(
                                 TAG,
                                 "fetchWorkoutData: Wrote workout '${entity.title}' to Health Connect"
                             )
                         }
 
                         is HealthConnectResult.Error -> {
-                            Log.w(
+                            appLogger.w(
                                 TAG,
                                 "fetchWorkoutData: Failed to write workout to Health Connect: ${writeResult.exception.message}"
                             )
@@ -321,7 +329,7 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
             }
 
             is HealthKitResult.Error -> {
-                Log.w(TAG, "fetchWorkoutData: ${result.message}")
+                appLogger.w(TAG, "fetchWorkoutData: ${result.message}")
             }
         }
     }
@@ -333,7 +341,8 @@ class HuaweiHealthKitSyncWorker @AssistedInject constructor(
  */
 @Singleton
 class HuaweiHealthKitScheduler @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val appLogger: AppLogger
 ) {
     companion object {
         private const val TAG = "HealthKitScheduler"
@@ -353,28 +362,17 @@ class HuaweiHealthKitScheduler @Inject constructor(
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             HuaweiHealthKitSyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, workRequest
         )
-
-        Log.i(TAG, "schedule: Health Kit sync scheduled every $SYNC_INTERVAL_MINUTES minutes")
     }
 
-    /**
-     * Cancels the periodic sync.
-     */
     fun cancel() {
         WorkManager.getInstance(context).cancelUniqueWork(HuaweiHealthKitSyncWorker.WORK_NAME)
-        Log.i(TAG, "cancel: Health Kit sync cancelled")
     }
 
-    /**
-     * Runs an immediate one-time sync.
-     * Useful for manual refresh from UI.
-     */
     fun runImmediate() {
         val workRequest =
             OneTimeWorkRequestBuilder<HuaweiHealthKitSyncWorker>().setConstraints(constraints)
                 .build()
 
         WorkManager.getInstance(context).enqueue(workRequest)
-        Log.i(TAG, "runImmediate: Immediate sync triggered")
     }
 }

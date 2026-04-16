@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,8 @@ import androidx.navigation.compose.rememberNavController
 import com.gomaa.healthy.data.preferences.AppPreferencesManager
 import com.gomaa.healthy.data.repository.HealthConnectRepository
 import com.gomaa.healthy.data.repository.HealthConnectResult
+import com.gomaa.healthy.logging.AppLogger
+import com.gomaa.healthy.logging.LocalAppLogger
 import com.gomaa.healthy.presentation.navigation.AppNavHost
 import com.gomaa.healthy.presentation.navigation.Screen
 import com.gomaa.healthy.presentation.ui.theme.HealthTheme
@@ -35,6 +38,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var healthConnectRepository: HealthConnectRepository
 
+    @Inject
+    lateinit var appLogger: AppLogger
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -43,47 +49,54 @@ class MainActivity : ComponentActivity() {
             var startDestination by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(Unit) {
-                try {
-                    val prefs = appPreferencesManager.getPreferences()
-
-                    // Check if Health Connect is available and has permissions
-                    val hcAvailable = when (val result = healthConnectRepository.isAvailable()) {
-                        is HealthConnectResult.Success -> result.data
-                        else -> false
-                    }
-
-                    val hasPermissions =
-                        when (val result = healthConnectRepository.hasPermissions()) {
-                            is HealthConnectResult.Success -> result.data
-                            else -> false
-                        }
-
-                    val shouldMigrate =
-                        prefs.showMigrationPrompt && !prefs.hasRunMigration && hcAvailable && hasPermissions
-
-                    startDestination = if (shouldMigrate) {
-                        Screen.Migration.route
-                    } else {
-                        Screen.Home.route
-                    }
-                } catch (_: Exception) {
-                    startDestination = Screen.Home.route
-                }
+                appLogger.d("MainActivity", "onCreate")
             }
 
-            Surface(
-                modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
-            ) {
-                HealthTheme {
-                    if (startDestination != null) {
-                        AppNavHost(
-                            navController = navController, startDestination = startDestination!!
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+            CompositionLocalProvider(LocalAppLogger provides appLogger) {
+                LaunchedEffect(Unit) {
+                    try {
+                        val prefs = appPreferencesManager.getPreferences()
+
+                        val hcAvailable =
+                            when (val result = healthConnectRepository.isAvailable()) {
+                                is HealthConnectResult.Success -> result.data
+                                else -> false
+                            }
+
+                        val hasPermissions =
+                            when (val result = healthConnectRepository.hasPermissions()) {
+                                is HealthConnectResult.Success -> result.data
+                                else -> false
+                            }
+
+                        val shouldMigrate =
+                            prefs.showMigrationPrompt && !prefs.hasRunMigration && hcAvailable && hasPermissions
+
+                        startDestination = if (shouldMigrate) {
+                            Screen.Migration.route
+                        } else {
+                            Screen.Home.route
+                        }
+                    } catch (_: Exception) {
+                        startDestination = Screen.Home.route
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
+                ) {
+                    HealthTheme {
+                        if (startDestination != null) {
+                            AppNavHost(
+                                navController = navController, startDestination = startDestination!!
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

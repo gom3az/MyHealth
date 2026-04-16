@@ -1,9 +1,9 @@
 package com.gomaa.healthy.data.provider
 
 import android.content.Context
-import android.util.Log
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.WearableHeartRateMonitor
+import com.gomaa.healthy.logging.AppLogger
 import com.huawei.wearengine.HiWear
 import com.huawei.wearengine.auth.AuthCallback
 import com.huawei.wearengine.auth.AuthClient
@@ -22,7 +22,8 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 
 class HuaweiHeartRateMonitor @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val appLogger: AppLogger
 ) : WearableHeartRateMonitor {
 
     private val authClient: AuthClient = HiWear.getAuthClient(context)
@@ -74,9 +75,9 @@ class HuaweiHeartRateMonitor @Inject constructor(
         registeredListener?.let { listener ->
             try {
                 monitorClient.unregister(listener)
-                Log.i("HuaweiHeartRateMonitor", "Unregistered heart rate listener")
+                appLogger.i("HuaweiHeartRateMonitor", "Unregistered heart rate listener")
             } catch (e: Exception) {
-                Log.e("HuaweiHeartRateMonitor", "Failed to unregister listener", e)
+                appLogger.e("HuaweiHeartRateMonitor", "Failed to unregister listener", e)
             }
         }
 
@@ -91,12 +92,12 @@ class HuaweiHeartRateMonitor @Inject constructor(
             val permissions = arrayOf(Permission.DEVICE_MANAGER, Permission.SENSOR)
             authClient.requestPermission(object : AuthCallback {
                 override fun onOk(permissions: Array<out Permission>?) {
-                    Log.i("HuaweiHeartRateMonitor", "Permissions granted")
+                    appLogger.i("HuaweiHeartRateMonitor", "Permissions granted")
                     if (continuation.isActive) continuation.resume(true)
                 }
 
                 override fun onCancel() {
-                    Log.i("HuaweiHeartRateMonitor", "Permissions denied")
+                    appLogger.i("HuaweiHeartRateMonitor", "Permissions denied")
                     if (continuation.isActive) continuation.resume(false)
                 }
             }, *permissions)
@@ -107,7 +108,7 @@ class HuaweiHeartRateMonitor @Inject constructor(
             deviceClient.bondedDevices.addOnSuccessListener { deviceList ->
                 continuation.resume(deviceList?.filter { it.isConnected } ?: emptyList())
             }.addOnFailureListener { e ->
-                Log.e("HuaweiHeartRateMonitor", "Failed to get devices", e)
+                appLogger.e("HuaweiHeartRateMonitor", "Failed to get devices", e)
                 continuation.resume(emptyList())
             }
         }
@@ -122,9 +123,9 @@ class HuaweiHeartRateMonitor @Inject constructor(
             if (errorCode == 0 && data != null) {
                 val heartRateValue = data.asInt()
                 _heartRate.value = heartRateValue
-                Log.d("HuaweiHeartRateMonitor", "Heart rate: $heartRateValue")
+                appLogger.d("HuaweiHeartRateMonitor", "Heart rate: $heartRateValue")
             } else {
-                Log.w("HuaweiHeartRateMonitor", "Heart rate error code: $errorCode")
+                appLogger.w("HuaweiHeartRateMonitor", "Heart rate error code: $errorCode")
             }
         }
 
@@ -132,6 +133,9 @@ class HuaweiHeartRateMonitor @Inject constructor(
         registeredListener = listener
 
         monitorClient.register(device, heartRateItem, listener)
-        Log.i("HuaweiHeartRateMonitor", "Registered heart rate listener for device: ${device.name}")
+        appLogger.i(
+            "HuaweiHeartRateMonitor",
+            "Registered heart rate listener for device: ${device.name}"
+        )
     }
 }

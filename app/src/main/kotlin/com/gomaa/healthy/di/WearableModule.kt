@@ -6,6 +6,7 @@ import com.gomaa.healthy.data.provider.HuaweiHeartRateMonitor
 import com.gomaa.healthy.data.provider.HuaweiWearProvider
 import com.gomaa.healthy.data.provider.MockWearableProvider
 import com.gomaa.healthy.domain.model.WearableProvider
+import com.gomaa.healthy.logging.AppLogger
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,9 +32,10 @@ object WearableModule {
     fun provideHuaweiProvider(
         @ApplicationContext context: Context,
         deviceDiscoverer: HuaweiDeviceDiscoverer,
-        heartRateMonitor: HuaweiHeartRateMonitor
+        heartRateMonitor: HuaweiHeartRateMonitor,
+        appLogger: AppLogger
     ): WearableProvider {
-        return HuaweiWearProvider(context, deviceDiscoverer, heartRateMonitor)
+        return HuaweiWearProvider(context, deviceDiscoverer, heartRateMonitor, appLogger)
     }
 
     @Provides

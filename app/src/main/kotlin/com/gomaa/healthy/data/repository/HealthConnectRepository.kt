@@ -2,7 +2,6 @@ package com.gomaa.healthy.data.repository
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.core.content.edit
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -27,6 +26,7 @@ import com.gomaa.healthy.data.sync.DataMerger
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.HeartRateReading
+import com.gomaa.healthy.logging.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -101,7 +101,8 @@ class HealthConnectRepository @Inject constructor(
     private val dailyStepsDao: DailyStepsDao,
     private val heartRateBucketDao: HeartRateBucketDao,
     private val exerciseSessionDao: ExerciseSessionDao,
-    private val dataMerger: DataMerger
+    private val dataMerger: DataMerger,
+    private val appLogger: AppLogger
 ) : HealthConnectRepositoryInterface {
 
     companion object {
@@ -278,7 +279,10 @@ class HealthConnectRepository @Inject constructor(
                     SOURCE_HEALTH_CONNECT, recordId
                 )
                 if (existingByHcId != null) {
-                    Log.d(TAG, "syncExerciseSessions: Skipping duplicate HC recordId=$recordId")
+                    appLogger.d(
+                        TAG,
+                        "syncExerciseSessions: Skipping duplicate HC recordId=$recordId"
+                    )
                     null
                 } else {
                     entity
@@ -542,7 +546,7 @@ class HealthConnectRepository @Inject constructor(
         // Validate data
         val validSteps = dailySteps.filter { it.totalSteps >= 0 }
         if (validSteps.isEmpty()) {
-            Log.w(TAG, "writeSteps: No valid steps records to write")
+            appLogger.w(TAG, "writeSteps: No valid steps records to write")
             return HealthConnectResult.Success(0)
         }
 
@@ -583,22 +587,22 @@ class HealthConnectRepository @Inject constructor(
                     )
                 }
 
-                Log.d(TAG, "writeSteps: Writing ${stepsRecords.size} steps records")
+                appLogger.d(TAG, "writeSteps: Writing ${stepsRecords.size} steps records")
                 // Batch insert to Health Connect
                 healthConnectClient.insertRecords(stepsRecords)
                 val insertedCount = stepsRecords.size
-                Log.d(TAG, "writeSteps: Successfully wrote $insertedCount records")
+                appLogger.d(TAG, "writeSteps: Successfully wrote $insertedCount records")
 
                 HealthConnectResult.Success(insertedCount)
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "writeSteps: Permission denied", e)
+            appLogger.e(TAG, "writeSteps: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
-            Log.e(TAG, "writeSteps: Network error", e)
+            appLogger.e(TAG, "writeSteps: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
-            Log.e(TAG, "writeSteps: Unknown error", e)
+            appLogger.e(TAG, "writeSteps: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }
@@ -612,7 +616,7 @@ class HealthConnectRepository @Inject constructor(
     override suspend fun writeExerciseSession(session: ExerciseSession): HealthConnectResult<Boolean> {
         // Validate data
         if (session.startTime >= session.endTime) {
-            Log.w(
+            appLogger.w(
                 TAG,
                 "writeExerciseSession: Invalid time range - start=${session.startTime}, end=${session.endTime}"
             )
@@ -656,7 +660,7 @@ class HealthConnectRepository @Inject constructor(
                     endZoneOffset = ZoneOffset.of(ZoneOffset.systemDefault().id),
                     exerciseType = exerciseType,
                     title = session.title.takeIf { it.isNotBlank() })
-                Log.d(
+                appLogger.d(
                     TAG,
                     "writeExerciseSession: Writing session '${record.title}' type=$exerciseType"
                 )
@@ -664,13 +668,13 @@ class HealthConnectRepository @Inject constructor(
                 HealthConnectResult.Success(true)
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "writeExerciseSession: Permission denied", e)
+            appLogger.e(TAG, "writeExerciseSession: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
-            Log.e(TAG, "writeExerciseSession: Network error", e)
+            appLogger.e(TAG, "writeExerciseSession: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
-            Log.e(TAG, "writeExerciseSession: Unknown error", e)
+            appLogger.e(TAG, "writeExerciseSession: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }
@@ -685,7 +689,7 @@ class HealthConnectRepository @Inject constructor(
         // Validate data: BPM must be in realistic range (30-220)
         val validHeartRates = heartRates.filter { it.bpm in 30..220 }
         if (validHeartRates.isEmpty()) {
-            Log.w(TAG, "writeHeartRates: No valid heart rate records to write")
+            appLogger.w(TAG, "writeHeartRates: No valid heart rate records to write")
             return HealthConnectResult.Success(0)
         }
 
@@ -725,21 +729,21 @@ class HealthConnectRepository @Inject constructor(
                     )
                 }
 
-                Log.d(TAG, "writeHeartRates: Writing ${records.size} heart rate records")
+                appLogger.d(TAG, "writeHeartRates: Writing ${records.size} heart rate records")
                 healthConnectClient.insertRecords(records)
                 val insertedCount = records.size
-                Log.d(TAG, "writeHeartRates: Successfully wrote $insertedCount records")
+                appLogger.d(TAG, "writeHeartRates: Successfully wrote $insertedCount records")
 
                 HealthConnectResult.Success(insertedCount)
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "writeHeartRates: Permission denied", e)
+            appLogger.e(TAG, "writeHeartRates: Permission denied", e)
             HealthConnectResult.Error.PermissionDenied
         } catch (e: IOException) {
-            Log.e(TAG, "writeHeartRates: Network error", e)
+            appLogger.e(TAG, "writeHeartRates: Network error", e)
             HealthConnectResult.Error.NetworkError
         } catch (e: Exception) {
-            Log.e(TAG, "writeHeartRates: Unknown error", e)
+            appLogger.e(TAG, "writeHeartRates: Unknown error", e)
             HealthConnectResult.Error.Unknown
         }
     }

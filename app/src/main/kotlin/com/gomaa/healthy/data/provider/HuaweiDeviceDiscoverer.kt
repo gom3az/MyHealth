@@ -1,9 +1,9 @@
 package com.gomaa.healthy.data.provider
 
 import android.content.Context
-import android.util.Log
 import com.gomaa.healthy.domain.model.DeviceInfo
 import com.gomaa.healthy.domain.model.WearableDeviceDiscoverer
+import com.gomaa.healthy.logging.AppLogger
 import com.huawei.wearengine.HiWear
 import com.huawei.wearengine.device.Device
 import com.huawei.wearengine.device.DeviceClient
@@ -13,7 +13,8 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 
 class HuaweiDeviceDiscoverer @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val appLogger: AppLogger
 ) : WearableDeviceDiscoverer {
 
     override val brand: String = "Huawei"
@@ -40,10 +41,10 @@ class HuaweiDeviceDiscoverer @Inject constructor(
     private suspend fun getConnectedDevicesList(): List<Device> =
         suspendCancellableCoroutine { continuation ->
             deviceClient.bondedDevices.addOnSuccessListener { deviceList ->
-                Log.i("HuaweiDeviceDiscoverer", "Found ${deviceList?.size ?: 0} devices")
+                appLogger.i("HuaweiDeviceDiscoverer", "Found ${deviceList?.size ?: 0} devices")
                 continuation.resume(deviceList ?: emptyList())
             }.addOnFailureListener { e ->
-                Log.e("HuaweiDeviceDiscoverer", "Failed to get devices", e)
+                appLogger.e("HuaweiDeviceDiscoverer", "Failed to get devices", e)
                 continuation.resume(emptyList())
             }
         }
@@ -52,11 +53,11 @@ class HuaweiDeviceDiscoverer @Inject constructor(
         suspendCancellableCoroutine { continuation ->
             deviceClient.hasAvailableDevices()
                 .addOnSuccessListener { result ->
-                    Log.i("HuaweiDeviceDiscoverer", "hasAvailableDevices: $result")
+                    appLogger.i("HuaweiDeviceDiscoverer", "hasAvailableDevices: $result")
                     continuation.resume(result)
                 }
                 .addOnFailureListener { e ->
-                    Log.e("HuaweiDeviceDiscoverer", "hasAvailableDevices failed", e)
+                    appLogger.e("HuaweiDeviceDiscoverer", "hasAvailableDevices failed", e)
                     continuation.resume(false)
                 }
         }

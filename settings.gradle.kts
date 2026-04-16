@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MyHealth"
 include(":app")
+include(":logging")

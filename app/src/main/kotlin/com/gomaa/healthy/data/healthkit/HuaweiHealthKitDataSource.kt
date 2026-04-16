@@ -1,11 +1,11 @@
 package com.gomaa.healthy.data.healthkit
 
 import android.content.Context
-import android.util.Log
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.SOURCE_WEARABLE_HUAWEI_CLOUD
+import com.gomaa.healthy.logging.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -100,7 +100,8 @@ interface HuaweiHealthKitDataSource {
 @Singleton
 class HuaweiHealthKitDataSourceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val authManager: HuaweiHealthKitAuthManager
+    private val authManager: HuaweiHealthKitAuthManager,
+    private val appLogger: AppLogger
 ) : HuaweiHealthKitDataSource {
 
     companion object {
@@ -127,23 +128,23 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
     ): HealthKitResult<List<HealthKitStepsData>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d(TAG, "readSteps: Fetching steps from $startTime to $endTime")
+                appLogger.d(TAG, "readSteps: Fetching steps from $startTime to $endTime")
 
                 // Check authorization first
                 if (!isAuthorized()) {
-                    Log.w(TAG, "readSteps: Not authorized")
+                    appLogger.w(TAG, "readSteps: Not authorized")
                     return@withContext HealthKitResult.Error.NotAuthorized
                 }
 
                 // Get valid OAuth token
                 val tokenResult = authManager.getValidToken()
                 if (tokenResult is HealthKitAuthResult.Error) {
-                    Log.w(TAG, "readSteps: Token error - ${tokenResult.message}")
+                    appLogger.w(TAG, "readSteps: Token error - ${tokenResult.message}")
                     return@withContext HealthKitResult.Error.TokenExpired
                 }
                 val token = (tokenResult as HealthKitAuthResult.Success).token
 
-                Log.d(TAG, "readSteps: Token obtained, calling Health Kit API")
+                appLogger.d(TAG, "readSteps: Token obtained, calling Health Kit API")
 
                 // TODO: Implement actual Health Kit DataController API call
                 // 
@@ -164,7 +165,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
 
                 // For development: return mock data
                 if (USE_MOCK_DATA) {
-                    Log.d(
+                    appLogger.d(
                         TAG,
                         "readSteps: Using mock data (set USE_MOCK_DATA=false for production)"
                     )
@@ -175,13 +176,13 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 HealthKitResult.Success(emptyList())
 
             } catch (e: SecurityException) {
-                Log.e(TAG, "readSteps: Security exception", e)
+                appLogger.e(TAG, "readSteps: Security exception", e)
                 HealthKitResult.Error.NotAuthorized
             } catch (e: IllegalStateException) {
-                Log.e(TAG, "readSteps: Health Kit not available", e)
+                appLogger.e(TAG, "readSteps: Health Kit not available", e)
                 HealthKitResult.Error.Unavailable
             } catch (e: Exception) {
-                Log.e(TAG, "readSteps: Error", e)
+                appLogger.e(TAG, "readSteps: Error", e)
                 HealthKitResult.Error.NetworkError(e)
             }
         }
@@ -197,20 +198,20 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
     ): HealthKitResult<List<HealthKitHeartRateData>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d(TAG, "readHeartRate: Fetching heart rate from $startTime to $endTime")
+                appLogger.d(TAG, "readHeartRate: Fetching heart rate from $startTime to $endTime")
 
                 if (!isAuthorized()) {
-                    Log.w(TAG, "readHeartRate: Not authorized")
+                    appLogger.w(TAG, "readHeartRate: Not authorized")
                     return@withContext HealthKitResult.Error.NotAuthorized
                 }
 
                 val tokenResult = authManager.getValidToken()
                 if (tokenResult is HealthKitAuthResult.Error) {
-                    Log.w(TAG, "readHeartRate: Token error - ${tokenResult.message}")
+                    appLogger.w(TAG, "readHeartRate: Token error - ${tokenResult.message}")
                     return@withContext HealthKitResult.Error.TokenExpired
                 }
 
-                Log.d(TAG, "readHeartRate: Token obtained, calling Health Kit API")
+                appLogger.d(TAG, "readHeartRate: Token obtained, calling Health Kit API")
 
                 // TODO: Implement actual Health Kit DataController API call
                 //
@@ -224,19 +225,19 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 //     .map { HealthKitHeartRateData(...) }
 
                 if (USE_MOCK_DATA) {
-                    Log.d(TAG, "readHeartRate: Using mock data")
+                    appLogger.d(TAG, "readHeartRate: Using mock data")
                     return@withContext generateMockHeartRateData(startTime, endTime)
                 }
 
                 HealthKitResult.Success(emptyList())
             } catch (e: SecurityException) {
-                Log.e(TAG, "readHeartRate: Security exception", e)
+                appLogger.e(TAG, "readHeartRate: Security exception", e)
                 HealthKitResult.Error.NotAuthorized
             } catch (e: IllegalStateException) {
-                Log.e(TAG, "readHeartRate: Health Kit not available", e)
+                appLogger.e(TAG, "readHeartRate: Health Kit not available", e)
                 HealthKitResult.Error.Unavailable
             } catch (e: Exception) {
-                Log.e(TAG, "readHeartRate: Error", e)
+                appLogger.e(TAG, "readHeartRate: Error", e)
                 HealthKitResult.Error.NetworkError(e)
             }
         }
@@ -252,20 +253,20 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
     ): HealthKitResult<List<HealthKitWorkoutData>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d(TAG, "readWorkouts: Fetching workouts from $startTime to $endTime")
+                appLogger.d(TAG, "readWorkouts: Fetching workouts from $startTime to $endTime")
 
                 if (!isAuthorized()) {
-                    Log.w(TAG, "readWorkouts: Not authorized")
+                    appLogger.w(TAG, "readWorkouts: Not authorized")
                     return@withContext HealthKitResult.Error.NotAuthorized
                 }
 
                 val tokenResult = authManager.getValidToken()
                 if (tokenResult is HealthKitAuthResult.Error) {
-                    Log.w(TAG, "readWorkouts: Token error - ${tokenResult.message}")
+                    appLogger.w(TAG, "readWorkouts: Token error - ${tokenResult.message}")
                     return@withContext HealthKitResult.Error.TokenExpired
                 }
 
-                Log.d(TAG, "readWorkouts: Token obtained, calling Health Kit API")
+                appLogger.d(TAG, "readWorkouts: Token obtained, calling Health Kit API")
 
                 // TODO: Implement actual Health Kit DataController API call
                 //
@@ -279,19 +280,19 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 //     .map { HealthKitWorkoutData(...) }
 
                 if (USE_MOCK_DATA) {
-                    Log.d(TAG, "readWorkouts: Using mock data")
+                    appLogger.d(TAG, "readWorkouts: Using mock data")
                     return@withContext generateMockWorkoutData(startTime, endTime)
                 }
 
                 HealthKitResult.Success(emptyList())
             } catch (e: SecurityException) {
-                Log.e(TAG, "readWorkouts: Security exception", e)
+                appLogger.e(TAG, "readWorkouts: Security exception", e)
                 HealthKitResult.Error.NotAuthorized
             } catch (e: IllegalStateException) {
-                Log.e(TAG, "readWorkouts: Health Kit not available", e)
+                appLogger.e(TAG, "readWorkouts: Health Kit not available", e)
                 HealthKitResult.Error.Unavailable
             } catch (e: Exception) {
-                Log.e(TAG, "readWorkouts: Error", e)
+                appLogger.e(TAG, "readWorkouts: Error", e)
                 HealthKitResult.Error.NetworkError(e)
             }
         }
@@ -336,7 +337,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
             currentDay = dayEnd
         }
 
-        Log.d(TAG, "generateMockStepsData: Generated ${stepsList.size} mock step records")
+        appLogger.d(TAG, "generateMockStepsData: Generated ${stepsList.size} mock step records")
         return HealthKitResult.Success(stepsList)
     }
 
@@ -365,7 +366,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
             currentTime += intervalMillis
         }
 
-        Log.d(
+        appLogger.d(
             TAG,
             "generateMockHeartRateData: Generated ${heartRates.size} mock heart rate records"
         )
@@ -408,7 +409,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
             }
         }
 
-        Log.d(TAG, "generateMockWorkoutData: Generated ${workouts.size} mock workout records")
+        appLogger.d(TAG, "generateMockWorkoutData: Generated ${workouts.size} mock workout records")
         return HealthKitResult.Success(workouts)
     }
 

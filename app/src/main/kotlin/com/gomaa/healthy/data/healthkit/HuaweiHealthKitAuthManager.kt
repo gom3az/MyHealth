@@ -1,7 +1,7 @@
 package com.gomaa.healthy.data.healthkit
 
-import android.util.Log
 import com.gomaa.healthy.di.TokenStorage
+import com.gomaa.healthy.logging.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -59,7 +59,8 @@ enum class AuthState {
  */
 @Singleton
 class HuaweiHealthKitAuthManager @Inject constructor(
-    private val tokenStorage: TokenStorage
+    private val tokenStorage: TokenStorage,
+    private val appLogger: AppLogger
 ) {
     companion object {
         private const val TAG = "HealthKitAuthManager"
@@ -74,7 +75,7 @@ class HuaweiHealthKitAuthManager @Inject constructor(
     suspend fun signIn(): HealthKitAuthResult {
         return withContext(Dispatchers.IO) {
             try {
-                Log.i(TAG, "signIn: Initiating Huawei ID sign-in")
+                appLogger.i(TAG, "signIn: Initiating Huawei ID sign-in")
 
                 // TODO: Implement actual Huawei ID Sign-In
                 // Using Account Kit:
@@ -91,7 +92,7 @@ class HuaweiHealthKitAuthManager @Inject constructor(
                 //     return HealthKitAuthResult.Success(token)
                 // }
 
-                Log.i(TAG, "signIn: Sign-in flow would be launched here")
+                appLogger.i(TAG, "signIn: Sign-in flow would be launched here")
 
                 // For development, mock the token storage
                 tokenStorage.saveTokens(
@@ -106,7 +107,7 @@ class HuaweiHealthKitAuthManager @Inject constructor(
 
                 HealthKitAuthResult.Success("mock_access_token")
             } catch (e: Exception) {
-                Log.e(TAG, "signIn: Error", e)
+                appLogger.e(TAG, "signIn: Error", e)
                 HealthKitAuthResult.Error.NetworkError(e)
             }
         }
@@ -115,12 +116,12 @@ class HuaweiHealthKitAuthManager @Inject constructor(
     suspend fun refreshToken(): HealthKitAuthResult {
         return withContext(Dispatchers.IO) {
             try {
-                Log.i(TAG, "refreshToken: Refreshing OAuth token")
+                appLogger.i(TAG, "refreshToken: Refreshing OAuth token")
 
                 val tokens = tokenStorage.loadTokens()
                 val refreshToken = tokenStorage.getRefreshToken()
                 if (tokens == null || refreshToken.isNullOrEmpty()) {
-                    Log.w(TAG, "refreshToken: No refresh token available")
+                    appLogger.w(TAG, "refreshToken: No refresh token available")
                     return@withContext HealthKitAuthResult.Error.NotSignedIn
                 }
 
@@ -134,10 +135,10 @@ class HuaweiHealthKitAuthManager @Inject constructor(
                     )
                 )
 
-                Log.i(TAG, "refreshToken: Token refreshed successfully")
+                appLogger.i(TAG, "refreshToken: Token refreshed successfully")
                 HealthKitAuthResult.Success(newAccessToken)
             } catch (e: Exception) {
-                Log.e(TAG, "refreshToken: Error", e)
+                appLogger.e(TAG, "refreshToken: Error", e)
                 HealthKitAuthResult.Error.NetworkError(e)
             }
         }
@@ -152,13 +153,13 @@ class HuaweiHealthKitAuthManager @Inject constructor(
                 }
 
                 if (System.currentTimeMillis() >= tokens.tokenExpiry - TOKEN_REFRESH_THRESHOLD_MS) {
-                    Log.i(TAG, "getValidToken: Token expired or expiring soon, refreshing")
+                    appLogger.i(TAG, "getValidToken: Token expired or expiring soon, refreshing")
                     return@withContext refreshToken()
                 }
 
                 HealthKitAuthResult.Success(tokens.accessToken)
             } catch (e: Exception) {
-                Log.e(TAG, "getValidToken: Error", e)
+                appLogger.e(TAG, "getValidToken: Error", e)
                 HealthKitAuthResult.Error.NetworkError(e)
             }
         }
@@ -167,7 +168,7 @@ class HuaweiHealthKitAuthManager @Inject constructor(
     suspend fun signOut(): HealthKitAuthResult {
         return withContext(Dispatchers.IO) {
             try {
-                Log.i(TAG, "signOut: Clearing tokens")
+                appLogger.i(TAG, "signOut: Clearing tokens")
                 tokenStorage.clearTokens()
 
                 // TODO: Revoke token on server
@@ -175,10 +176,10 @@ class HuaweiHealthKitAuthManager @Inject constructor(
                 // val authService = AccountAuth.getService(context, ...)
                 // authService.cancelAuthorization()
 
-                Log.i(TAG, "signOut: Signed out successfully")
+                appLogger.i(TAG, "signOut: Signed out successfully")
                 HealthKitAuthResult.Success("")
             } catch (e: Exception) {
-                Log.e(TAG, "signOut: Error", e)
+                appLogger.e(TAG, "signOut: Error", e)
                 HealthKitAuthResult.Error.NetworkError(e)
             }
         }

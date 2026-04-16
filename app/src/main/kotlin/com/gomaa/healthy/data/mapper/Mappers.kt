@@ -130,13 +130,6 @@ fun ExerciseSession.toEntity(): ExerciseSessionEntity {
     )
 }
 
-fun HeartRateBucketEntity.toDomain(): DomainHeartRateRecord {
-    return DomainHeartRateRecord(
-        timestamp = dayTimestamp, bpm = avgBpm
-    )
-}
-
-// HC-058: Expand bucket samplesJson to individual domain readings
 fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
     return try {
         if (samplesJson.isBlank()) return listOf(
@@ -159,49 +152,9 @@ fun HeartRateBucketEntity.toDomainReadings(): List<HeartRateReading> {
                 source = HeartRateSource.fromDbString(source) ?: HeartRateSource.HEALTH_CONNECT
             )
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         emptyList()
     }
-}
-
-// HC-062: Convert single domain record to bucket entity with single-sample aggregation
-fun DomainHeartRateRecord.toEntity(
-    sessionId: String, source: String = "myhealth"
-): HeartRateBucketEntity {
-    val bucketId = generateBucketId(timestamp)
-    val dayTimestamp = generateDayTimestamp(timestamp)
-    val samplesJson = createSamplesJson(timestamp, bpm)
-
-    return HeartRateBucketEntity(
-        bucketId = bucketId,
-        source = source,
-        dayTimestamp = dayTimestamp,
-        minBpm = bpm,
-        avgBpm = bpm,
-        maxBpm = bpm,
-        count = 1,
-        samplesJson = samplesJson,
-        syncedToHc = 0,
-        healthConnectRecordId = "",
-        sessionId = sessionId
-    )
-}
-
-private fun generateBucketId(timestamp: Long): String {
-    val instant = java.time.Instant.ofEpochMilli(timestamp)
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd-HH")
-    return instant.atZone(java.time.ZoneId.systemDefault()).format(formatter)
-}
-
-private fun generateDayTimestamp(timestamp: Long): Long {
-    val instant = java.time.Instant.ofEpochMilli(timestamp)
-    val localDate = instant.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-    return localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-}
-
-private fun createSamplesJson(timestamp: Long, bpm: Int): String {
-    val sample = org.json.JSONObject().put("t", timestamp / 1000).put("v", bpm)
-    return org.json.JSONArray(listOf(sample)).toString()
 }
 
 // Health Connect source constant (for reference)
