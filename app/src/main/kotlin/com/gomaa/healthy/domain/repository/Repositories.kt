@@ -37,7 +37,7 @@ interface SessionRepository {
 
 interface HeartRateRepository {
     suspend fun getLatestHeartRate(): HeartRateReading?
-    suspend fun getAvailableSources(): List<String>
+    suspend fun getAvailableSources(): List<HeartRateSource>
 
     fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>>
     fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>>

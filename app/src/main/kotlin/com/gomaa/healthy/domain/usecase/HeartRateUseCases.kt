@@ -69,15 +69,8 @@ class GetAvailableSourcesUseCase @Inject constructor(
         val sources = heartRateRepository.getAvailableSources()
         return sources.map { source ->
             SourceFilterOption(
-                id = source, displayName = source.toTitleCase()
+                id = source.dbString, displayName = source.displayName
             )
         }.distinctBy { it.displayName }
-    }
-
-    private fun String.toTitleCase(): String {
-        return when (this) {
-            "wearable_huawei_cloud" -> "Huawei"
-            else -> "Health Connect"
-        }
     }
 }

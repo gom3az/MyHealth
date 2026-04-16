@@ -39,9 +39,19 @@ data class HeartRateRecord(
     val timestamp: Long, val bpm: Int
 )
 
-enum class HeartRateSource {
-    HEALTH_CONNECT,
-    WEARABLE_HUAWEI_CLOUD
+enum class HeartRateSource(
+    val dbString: String,
+    val displayName: String
+) {
+    HEALTH_CONNECT("health_connect", "Health Connect"),
+    WEARABLE_HUAWEI_CLOUD("wearable_huawei_cloud", "Huawei"),
+    WEARABLE_HUAWEI("wearable_huawei", "Huawei Device");
+
+    companion object {
+        fun fromDbString(dbString: String): HeartRateSource? {
+            return entries.find { it.dbString == dbString }
+        }
+    }
 }
 
 data class HeartRateReading(

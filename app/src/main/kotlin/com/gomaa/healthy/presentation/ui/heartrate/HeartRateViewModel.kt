@@ -165,11 +165,7 @@ class HeartRateViewModel @Inject constructor(
     }
 
     private fun parseSource(sourceString: String): HeartRateSource? {
-        return when (sourceString.lowercase()) {
-            "health_connect" -> HeartRateSource.HEALTH_CONNECT
-            "wearable_huawei_cloud" -> HeartRateSource.WEARABLE_HUAWEI_CLOUD
-            else -> null
-        }
+        return HeartRateSource.fromDbString(sourceString)
     }
 
     private sealed class LoadingState {

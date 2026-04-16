@@ -6,7 +6,6 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
-import com.gomaa.healthy.data.mapper.SOURCE_HEALTH_CONNECT
 import com.gomaa.healthy.data.mapper.toDomainReadings
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSource
@@ -30,8 +29,9 @@ class HeartRateRepositoryImpl @Inject constructor(
         return heartRateBucketDao.getLatest()?.toDomainReadings()?.lastOrNull()
     }
 
-    override suspend fun getAvailableSources(): List<String> {
-        return heartRateBucketDao.getDistinctSources()
+    override suspend fun getAvailableSources(): List<HeartRateSource> {
+        val sources = heartRateBucketDao.getDistinctSources()
+        return sources.mapNotNull { HeartRateSource.fromDbString(it) }
     }
 
     override suspend fun getOverallSummary(): HeartRateSummary? {
@@ -65,7 +65,7 @@ class HeartRateRepositoryImpl @Inject constructor(
     }
 
     override fun getAggregatedBucketsBySourcePaged(source: HeartRateSource): Flow<PagingData<HourHeader>> {
-        val sourceString = sourceToString(source)
+        val sourceString = source.dbString
         return Pager(
             config = PagingConfig(
                 pageSize = 20,
@@ -167,13 +167,6 @@ class HeartRateRepositoryImpl @Inject constructor(
             array.toString()
         } catch (e: Exception) {
             createSamplesJson(timestamp, bpm)
-        }
-    }
-
-    private fun sourceToString(source: HeartRateSource): String {
-        return when (source) {
-            HeartRateSource.HEALTH_CONNECT -> SOURCE_HEALTH_CONNECT
-            HeartRateSource.WEARABLE_HUAWEI_CLOUD -> "wearable_huawei_cloud"
         }
     }
 }
