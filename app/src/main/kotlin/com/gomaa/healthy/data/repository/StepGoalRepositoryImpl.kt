@@ -1,13 +1,20 @@
 package com.gomaa.healthy.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.GoalDao
 import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toEntity
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.FitnessGoal
+import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.repository.GoalRepository
 import com.gomaa.healthy.domain.repository.StepRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -25,6 +32,27 @@ class StepRepositoryImpl @Inject constructor(
         // Get health connect steps using the new unified table
         return dailyStepsDao.getByDateAndSource(date.toEpochDay(), "health_connect")?.totalSteps
             ?: 0
+    }
+
+    override suspend fun getPaginatedDailySteps(): Flow<PagingData<DailySteps>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5,
+            ),
+            pagingSourceFactory = { dailyStepsDao.getPaginatedDailySteps() }).flow.map { it.map { entity -> entity.toDomain() } }
+    }
+
+    override suspend fun getPaginatedBySourceDailySteps(source: HeartRateSource): Flow<PagingData<DailySteps>> {
+        val sourceString = source.dbString
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5,
+            ),
+            pagingSourceFactory = { dailyStepsDao.getPaginatedDailyStepsBySource(sourceString) }).flow.map { it.map { entity -> entity.toDomain() } }
     }
 }
 

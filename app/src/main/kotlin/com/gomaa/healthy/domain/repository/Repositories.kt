@@ -14,6 +14,8 @@ import java.time.LocalDate
 interface StepRepository {
     suspend fun getDailySteps(date: LocalDate): DailySteps?
     suspend fun getHealthConnectTotalSteps(date: LocalDate): Int
+    suspend fun getPaginatedDailySteps(): Flow<PagingData<DailySteps>>
+    suspend fun getPaginatedBySourceDailySteps(source: HeartRateSource): Flow<PagingData<DailySteps>>
 }
 
 interface GoalRepository {

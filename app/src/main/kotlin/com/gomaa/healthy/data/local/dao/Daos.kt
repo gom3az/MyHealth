@@ -37,6 +37,12 @@ interface DailyStepsDao {
 
     @Query("UPDATE daily_steps SET synced_to_hc = 1 WHERE date IN (:dates) AND source = :source")
     suspend fun markAsSynced(dates: List<Long>, source: String)
+
+    @Query("SELECT * FROM daily_steps WHERE source = :source ORDER BY date DESC")
+    fun getPaginatedDailyStepsBySource(source: String): PagingSource<Int, DailyStepsEntity>
+
+    @Query("SELECT * FROM daily_steps ORDER BY date DESC")
+    fun getPaginatedDailySteps(): PagingSource<Int, DailyStepsEntity>
 }
 
 @Dao

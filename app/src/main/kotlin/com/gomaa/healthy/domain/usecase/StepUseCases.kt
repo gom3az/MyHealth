@@ -1,8 +1,11 @@
 package com.gomaa.healthy.domain.usecase
 
+import androidx.paging.PagingData
 import com.gomaa.healthy.domain.model.CombinedSteps
 import com.gomaa.healthy.domain.model.DailySteps
+import com.gomaa.healthy.domain.model.HeartRateSource
 import com.gomaa.healthy.domain.repository.StepRepository
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -25,5 +28,17 @@ class GetCombinedStepsUseCase @Inject constructor(
             myHealthSteps = myHealthSteps,
             healthConnectSteps = healthConnectSteps
         )
+    }
+}
+
+class GetPaginatedBySourceDailyStepsUseCase @Inject constructor(
+    private val stepRepository: StepRepository
+) {
+    suspend operator fun invoke(source: HeartRateSource? = null): Flow<PagingData<DailySteps>> {
+        return if (source == null)
+            stepRepository.getPaginatedDailySteps()
+        else
+            stepRepository.getPaginatedBySourceDailySteps(source)
+
     }
 }
