@@ -6,12 +6,12 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.gomaa.healthy.data.local.dto.HomeScreenDataDto
 import com.gomaa.healthy.data.local.entity.AggregatedHeartRateBucket
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
-import com.gomaa.healthy.domain.model.HomeScreenData
 
 @Dao
 interface DailyStepsDao {
@@ -306,5 +306,5 @@ interface BriefDao {
         WHERE ds.date = :epochDay
     """
     )
-    suspend fun getHomeScreenData(epochDay: Long, epochMillis: Long): HomeScreenData?
+    suspend fun getHomeScreenData(epochDay: Long, epochMillis: Long): HomeScreenDataDto?
 }

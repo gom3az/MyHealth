@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
+import com.gomaa.healthy.domain.model.GoalPeriod
+import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.usecase.GetHomeScreenDataUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,13 +39,12 @@ data class HomeUiState(
     val caloriesBurned: Int = 0,
 
     // Goals
-    val activeGoals: List<FitnessGoal> = emptyList(),
-    val primaryGoalProgress: Float = 0f,
+    val activeGoalsCount: Int = 0,
+    val activeGoal: FitnessGoal? = null,
 
     // Recent Sessions
     val recentSessions: List<ExerciseSession> = emptyList(),
-
-    )
+)
 
 sealed class HomeIntent {
     data object OnLoadData : HomeIntent()
@@ -87,9 +88,23 @@ class HomeViewModel @Inject constructor(
 
                 val homeData = getHomeScreenDataUseCase(LocalDate.now())
 
-                val stepGoal = homeData?.stepGoalTarget ?: 10000
-                val stepProgress =
-                    if (stepGoal > 0) (homeData?.totalSteps ?: 0).toFloat() / stepGoal else 0f
+                val stepGoal = if (homeData?.activeGoal?.goalType is GoalType.Steps) {
+                    (homeData.activeGoal.goalType as GoalType.Steps).target
+                } else {
+                    10000
+                }
+                val stepProgress = (homeData?.totalSteps ?: 0).toFloat() / stepGoal
+
+                val activeGoal = homeData?.activeGoal?.let { summary ->
+                    FitnessGoal(
+                        id = "1",
+                        name = summary.goalName,
+                        type = summary.goalType,
+                        period = GoalPeriod.DAILY,
+                        createdAt = System.currentTimeMillis(),
+                        isActive = true
+                    )
+                }
 
                 _uiState.value = _uiState.value.copy(
                     todaySteps = homeData?.totalSteps ?: 0,
@@ -100,7 +115,9 @@ class HomeViewModel @Inject constructor(
                     minBpm = homeData?.minBpm ?: 0,
                     readingCount = homeData?.heartRateCount ?: 0,
                     stepGoal = stepGoal,
-                    stepGoalProgress = stepProgress.coerceIn(0f, 1f)
+                    stepGoalProgress = stepProgress.coerceIn(0f, 1f),
+                    activeGoalsCount = homeData?.activeGoal?.activeGoalsCount ?: 0,
+                    activeGoal = activeGoal
                 )
 
                 val sessions = getSessionsUseCase()

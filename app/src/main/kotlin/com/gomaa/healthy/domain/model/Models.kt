@@ -76,6 +76,13 @@ enum class StepSource {
     MY_HEALTH, HEALTH_CONNECT, WEARABLE
 }
 
+data class ActiveGoalSummary(
+    val activeGoalsCount: Int,
+    val goalTarget: Int?,
+    val goalName: String,
+    val goalType: GoalType
+)
+
 data class HomeScreenData(
     val date: Long,
     val totalSteps: Int,
@@ -85,8 +92,5 @@ data class HomeScreenData(
     val minBpm: Int?,
     val maxBpm: Int?,
     val heartRateCount: Int,
-    val activeGoalsCount: Int,
-    val goalTarget: Int?,
-    val goalName: String,
-    val goalType: String
+    val activeGoal: ActiveGoalSummary
 )
