@@ -77,8 +77,8 @@ enum class StepSource {
 }
 
 data class ActiveGoalSummary(
-    val activeGoalsCount: Int,
-    val goalTarget: Int?,
+    val activeGoalsCount: Int?,
+    val goalTarget: Int,
     val goalName: String,
     val goalType: GoalType
 )
@@ -92,5 +92,5 @@ data class HomeScreenData(
     val minBpm: Int?,
     val maxBpm: Int?,
     val heartRateCount: Int,
-    val activeGoal: ActiveGoalSummary
+    val activeGoal: ActiveGoalSummary?
 )

@@ -34,6 +34,13 @@ private fun HomeScreenDataDto.toDomain(): HomeScreenData {
         "heart_rate_zone" -> GoalType.HeartRateZone(HeartRateZone.MODERATE, goalTarget ?: 0)
         else -> GoalType.Steps(goalTarget ?: 10000)
     }
+    val activeGoal =
+        if (goalType == null || goalName == null || goalTarget == null) null else ActiveGoalSummary(
+            activeGoalsCount = activeGoalsCount,
+            goalTarget = goalTarget,
+            goalName = goalName,
+            goalType = domainGoalType
+        )
 
     return HomeScreenData(
         date = date,
@@ -44,11 +51,6 @@ private fun HomeScreenDataDto.toDomain(): HomeScreenData {
         minBpm = minBpm,
         maxBpm = maxBpm,
         heartRateCount = heartRateCount,
-        activeGoal = ActiveGoalSummary(
-            activeGoalsCount = activeGoalsCount,
-            goalTarget = goalTarget,
-            goalName = goalName,
-            goalType = domainGoalType
-        )
+        activeGoal = activeGoal
     )
 }
