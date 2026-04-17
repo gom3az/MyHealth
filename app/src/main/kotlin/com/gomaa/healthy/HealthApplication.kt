@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import com.gomaa.healthy.data.preferences.AppPreferencesManager
 import com.gomaa.healthy.data.preferences.SyncPreferencesManager
 import com.gomaa.healthy.data.worker.HealthConnectSyncScheduler
+import com.gomaa.healthy.logging.CrashExceptionHandler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,9 @@ class HealthApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var crashExceptionHandler: CrashExceptionHandler
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -39,6 +43,7 @@ class HealthApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        crashExceptionHandler.initialize()
         initializeFirstRun()
         scheduleSyncWithPreferences()
         WorkManager.initialize(this, workManagerConfiguration)
