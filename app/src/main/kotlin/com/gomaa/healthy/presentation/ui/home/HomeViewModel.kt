@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -86,7 +85,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
 
-                val homeData = getHomeScreenDataUseCase(LocalDate.now())
+                val homeData = getHomeScreenDataUseCase()
 
                 val stepGoal = if (homeData?.activeGoal?.goalType is GoalType.Steps) {
                     (homeData.activeGoal.goalType as GoalType.Steps).target

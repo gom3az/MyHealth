@@ -7,17 +7,18 @@ import com.gomaa.healthy.domain.model.DistanceUnit
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.model.HeartRateZone
 import com.gomaa.healthy.domain.model.HomeScreenData
+import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
 
 class GetHomeScreenDataUseCase @Inject constructor(
-    private val briefDao: BriefDao
+    private val briefDao: BriefDao,
 ) {
-    suspend operator fun invoke(date: LocalDate): HomeScreenData? {
-        val epoch = date.toEpochDay() // 20560
-        val epochMillis =
-            date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() //1776376800000
+    suspend operator fun invoke(clock: Clock = Clock.systemDefaultZone()): HomeScreenData? {
+        val now = LocalDate.now(clock)
+        val epoch = now.toEpochDay()
+        val epochMillis = now.atStartOfDay(clock.zone).toInstant().toEpochMilli()
+
         return briefDao.getHomeScreenData(epoch, epochMillis)?.toDomain()
     }
 }
