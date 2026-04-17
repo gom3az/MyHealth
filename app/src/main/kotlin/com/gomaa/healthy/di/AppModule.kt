@@ -87,8 +87,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): HealthDatabase {
-        return HealthDatabase.getDatabase(context)
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        encryptedPrefsManager: EncryptedPreferencesManager
+    ): HealthDatabase {
+        return HealthDatabase.getDatabase(context, encryptedPrefsManager)
     }
 
     @Provides

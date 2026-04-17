@@ -42,6 +42,9 @@ class EncryptedPreferencesManager @Inject constructor(
         // Health Connect sync keys
         const val KEY_LAST_SYNC_TIME = "health_connect_last_sync"
         const val KEY_SYNC_ENABLED = "health_connect_sync_enabled"
+
+        // Database migration keys
+        const val KEY_DB_SQLCIPHER_MIGRATION_DONE = "db_sqlcipher_migration_done"
     }
 
     private val aead: Aead by lazy {

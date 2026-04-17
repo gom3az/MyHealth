@@ -1,8 +1,6 @@
 package com.gomaa.healthy.data.local
 
 import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -17,8 +15,9 @@ import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
-import java.security.KeyStore
-import javax.crypto.KeyGenerator
+import com.gomaa.healthy.data.security.EncryptedPreferencesManager
+import java.io.File
+import java.io.RandomAccessFile
 
 @Database(
     entities = [
@@ -38,76 +37,122 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
 
     companion object {
-        private const val KEYSTORE_ALIAS = "health_database_encryption_key"
-        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val DATABASE_NAME = "health_database"
+        private const val DB_PASSPHRASE_KEY = "database_passphrase"
 
         @Volatile
         private var INSTANCE: HealthDatabase? = null
 
-        /**
-         * Gets or creates the database encryption key stored in Android Keystore.
-         * The key is generated once and persists across app restarts.
-         */
-        private fun getOrCreateEncryptionKey(context: Context): ByteArray {
-            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-            keyStore.load(null)
+        fun getDatabase(
+            context: Context, encryptedPrefsManager: EncryptedPreferencesManager
+        ): HealthDatabase {
+            return INSTANCE ?: synchronized(this) {
+                if (isMigrationNeeded(context, encryptedPrefsManager)) {
+                    migrateUnencryptedToEncrypted(context, encryptedPrefsManager)
+                }
 
-            return if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
-                // Key exists - retrieve it
-                val entry = keyStore.getEntry(KEYSTORE_ALIAS, null) as KeyStore.SecretKeyEntry
-                entry.secretKey.encoded ?: generateAndStoreKey(context)
+                val passphrase = getOrCreatePassphrase(encryptedPrefsManager)
+
+                val instance = Room.databaseBuilder(
+                    context.applicationContext, HealthDatabase::class.java, DATABASE_NAME
+                ).openHelperFactory(
+                    net.sqlcipher.database.SupportFactory(passphrase)
+                ).addMigrations(
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+
+        private fun isMigrationNeeded(
+            context: Context, encryptedPrefsManager: EncryptedPreferencesManager
+        ): Boolean {
+            var migrationDone = false
+            kotlinx.coroutines.runBlocking {
+                migrationDone = encryptedPrefsManager.getEncryptedBoolean(
+                    EncryptedPreferencesManager.KEY_DB_SQLCIPHER_MIGRATION_DONE, false
+                )
+            }
+
+            if (migrationDone) return false
+
+            val dbFile = context.getDatabasePath(DATABASE_NAME)
+            return dbFile.exists() && isUnencryptedDatabase(dbFile)
+        }
+
+        private fun isUnencryptedDatabase(dbFile: File): Boolean {
+            return try {
+                RandomAccessFile(dbFile, "r").use { raf ->
+                    val header = ByteArray(16)
+                    raf.read(header)
+                    val signature = String(header, 0, 15)
+                    signature.startsWith("SQLite format 3")
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        private fun migrateUnencryptedToEncrypted(
+            context: Context, encryptedPrefsManager: EncryptedPreferencesManager
+        ) {
+            val passphrase = getOrCreatePassphrase(encryptedPrefsManager)
+
+            val instance = Room.databaseBuilder(
+                context.applicationContext, HealthDatabase::class.java, DATABASE_NAME
+            ).addMigrations(
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8,
+                MIGRATION_8_9,
+                MIGRATION_9_10
+            ).build()
+
+            instance.openHelper.writableDatabase.use { db ->
+                db.execSQL("PRAGMA rekey = '${String(passphrase, Charsets.UTF_8)}'")
+            }
+
+            kotlinx.coroutines.runBlocking {
+                encryptedPrefsManager.saveEncryptedBoolean(
+                    EncryptedPreferencesManager.KEY_DB_SQLCIPHER_MIGRATION_DONE, true
+                )
+            }
+        }
+
+        private fun getOrCreatePassphrase(
+            encryptedPrefsManager: EncryptedPreferencesManager
+        ): ByteArray {
+            var stored: String? = null
+            kotlinx.coroutines.runBlocking {
+                stored = encryptedPrefsManager.getEncryptedString(DB_PASSPHRASE_KEY)
+            }
+            return if (stored != null) {
+                android.util.Base64.decode(stored, android.util.Base64.NO_WRAP)
             } else {
-                // Key doesn't exist - generate and store it
-                generateAndStoreKey(context)
+                val passphrase = generateSecurePassphrase()
+                val encoded =
+                    android.util.Base64.encodeToString(passphrase, android.util.Base64.NO_WRAP)
+                kotlinx.coroutines.runBlocking {
+                    encryptedPrefsManager.saveEncryptedString(DB_PASSPHRASE_KEY, encoded)
+                }
+                passphrase
             }
         }
 
-        /**
-         * Generates a new encryption key and stores it in Android Keystore.
-         */
-        private fun generateAndStoreKey(context: Context): ByteArray {
-            val keyGenerator = KeyGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_AES,
-                ANDROID_KEYSTORE
-            )
-
-            val keyGenSpec = KeyGenParameterSpec.Builder(
-                KEYSTORE_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .setUserAuthenticationRequired(false) // Allow access without user auth
-                .build()
-
-            keyGenerator.init(keyGenSpec)
-            val secretKey = keyGenerator.generateKey()
-
-            // Store the key in Android Keystore - the secretKey itself is stored
-            // We just need to return a derived passphrase for SQLCipher
-            // Use the key alias as a salt identifier - actual key material stays in keystore
-            return DATABASE_NAME.toByteArray(Charsets.UTF_8)
-        }
-
-        /**
-         * Generates a deterministic passphrase from the keystore key.
-         * This ensures the passphrase is derived from the secure key material.
-         */
-        private fun getDatabasePassphrase(context: Context): ByteArray {
-            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-            keyStore.load(null)
-
-            if (!keyStore.containsAlias(KEYSTORE_ALIAS)) {
-                // Generate new key if not exists
-                generateAndStoreKey(context)
-            }
-
-            // Create a passphrase from key material - using a fixed salt + app-specific string
-            // The actual encryption happens via the keystore-stored key
-            val passphrase = "HealthDB_${context.packageName}_SecureKey2024"
-            return passphrase.toByteArray(Charsets.UTF_8)
+        private fun generateSecurePassphrase(): ByteArray {
+            val random = java.security.SecureRandom()
+            val bytes = ByteArray(32)
+            random.nextBytes(bytes)
+            return bytes
         }
 
         // Migration from v3 to v4: Add source column to daily_steps with default "myhealth"
@@ -243,34 +288,6 @@ abstract class HealthDatabase : RoomDatabase() {
                 database.execSQL(
                     "ALTER TABLE heart_rate_buckets ADD COLUMN sessionId TEXT"
                 )
-            }
-        }
-
-        fun getDatabase(context: Context): HealthDatabase {
-            return INSTANCE ?: synchronized(this) {
-                // Get passphrase from Android Keystore
-                val passphrase = getDatabasePassphrase(context)
-
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    HealthDatabase::class.java,
-                    DATABASE_NAME
-                )
-                    .openHelperFactory(
-                        net.sqlcipher.database.SupportFactory(passphrase)
-                    )
-                    .addMigrations(
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6,
-                        MIGRATION_6_7,
-                        MIGRATION_7_8,
-                        MIGRATION_8_9,
-                        MIGRATION_9_10
-                    )
-                    .build()
-                INSTANCE = instance
-                instance
             }
         }
     }
