@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
-import com.gomaa.healthy.domain.model.GoalType
-import com.gomaa.healthy.domain.usecase.GetActiveGoalsUseCase
 import com.gomaa.healthy.domain.usecase.GetHomeScreenDataUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -63,7 +61,6 @@ sealed class HomeEffect {
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getActiveGoalsUseCase: GetActiveGoalsUseCase,
     private val getSessionsUseCase: GetSessionsUseCase,
     private val getHomeScreenDataUseCase: GetHomeScreenDataUseCase
 ) : ViewModel() {
@@ -89,7 +86,11 @@ class HomeViewModel @Inject constructor(
             try {
 
                 val homeData = getHomeScreenDataUseCase(LocalDate.now())
-                // Load today's steps
+
+                val stepGoal = homeData?.stepGoalTarget ?: 10000
+                val stepProgress =
+                    if (stepGoal > 0) (homeData?.totalSteps ?: 0).toFloat() / stepGoal else 0f
+
                 _uiState.value = _uiState.value.copy(
                     todaySteps = homeData?.totalSteps ?: 0,
                     activeMinutes = homeData?.activeMinutes ?: 0,
@@ -97,24 +98,11 @@ class HomeViewModel @Inject constructor(
                     averageBpm = homeData?.avgBpm ?: 0,
                     maxBpm = homeData?.maxBpm ?: 0,
                     minBpm = homeData?.minBpm ?: 0,
-                    readingCount = homeData?.heartRateCount ?: 0
+                    readingCount = homeData?.heartRateCount ?: 0,
+                    stepGoal = stepGoal,
+                    stepGoalProgress = stepProgress.coerceIn(0f, 1f)
                 )
 
-                // Load goals and calculate progress
-                val goals = getActiveGoalsUseCase()
-                _uiState.value = _uiState.value.copy(activeGoals = goals)
-
-                val stepGoal = goals.find { it.type is GoalType.Steps }
-                if (stepGoal != null) {
-                    val target = (stepGoal.type as GoalType.Steps).target
-                    val progress =
-                        if (target > 0) (homeData?.totalSteps ?: 0).toFloat() / target else 0f
-                    _uiState.value = _uiState.value.copy(
-                        stepGoalProgress = progress.coerceIn(0f, 1f), stepGoal = target
-                    )
-                }
-
-                // Load recent sessions
                 val sessions = getSessionsUseCase()
                 _uiState.value = _uiState.value.copy(
                     recentSessions = sessions.take(2),

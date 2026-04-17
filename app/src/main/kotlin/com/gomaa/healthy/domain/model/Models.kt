@@ -84,5 +84,7 @@ data class HomeScreenData(
     val avgBpm: Int?,
     val minBpm: Int?,
     val maxBpm: Int?,
-    val heartRateCount: Int
+    val heartRateCount: Int,
+    val stepGoalTarget: Int?,
+    val activeGoalsCount: Int
 )

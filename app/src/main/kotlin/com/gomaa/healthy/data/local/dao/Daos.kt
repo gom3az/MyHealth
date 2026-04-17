@@ -11,6 +11,7 @@ import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
+import com.gomaa.healthy.domain.model.HomeScreenData
 
 @Dao
 interface DailyStepsDao {
@@ -277,7 +278,9 @@ interface BriefDao {
             hr.avgBpm as avgBpm,
             hr.minBpm as minBpm,
             hr.maxBpm as maxBpm,
-            COALESCE(hr.heartRateCount, 0) as heartRateCount
+            COALESCE(hr.heartRateCount, 0) as heartRateCount,
+            fs.targetValue as stepGoalTarget,
+            fs.fitnessGoals as activeGoalsCount
         FROM daily_steps ds
         LEFT OUTER JOIN (
             SELECT
@@ -287,13 +290,17 @@ interface BriefDao {
                 MAX(maxBpm) as maxBpm,
                 SUM(count) as heartRateCount
             FROM heart_rate_buckets
-            WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
             GROUP BY dayTimestamp
-        ) hr ON hr.dayTimestamp >= :startOfDay AND hr.dayTimestamp < :endOfDay
+        ) hr ON hr.dayTimestamp = ds.date * 86400000
+        LEFT OUTER JOIN (
+            SELECT 
+                targetValue,
+                count(*) as fitnessGoals
+            FROM fitness_goals
+            WHERE type = 'steps'
+        ) fs ON 1=1
         WHERE ds.date = :epochDay
     """
     )
-    suspend fun getHomeScreenData(
-        epochDay: Long, startOfDay: Long, endOfDay: Long
-    ): com.gomaa.healthy.domain.model.HomeScreenData?
+    suspend fun getHomeScreenData(epochDay: Long): HomeScreenData?
 }
