@@ -279,8 +279,10 @@ interface BriefDao {
             hr.minBpm as minBpm,
             hr.maxBpm as maxBpm,
             COALESCE(hr.heartRateCount, 0) as heartRateCount,
-            fs.targetValue as stepGoalTarget,
-            fs.fitnessGoals as activeGoalsCount
+            fs.fitnessGoals as activeGoalsCount,
+            fs.targetValue as goalTarget,
+            fs.name as goalName,
+            fs.type as goalType
         FROM daily_steps ds
         LEFT OUTER JOIN (
             SELECT
@@ -291,16 +293,18 @@ interface BriefDao {
                 SUM(count) as heartRateCount
             FROM heart_rate_buckets
             GROUP BY dayTimestamp
-        ) hr ON hr.dayTimestamp = ds.date * 86400000
+        ) hr ON hr.dayTimestamp = :epochMillis
         LEFT OUTER JOIN (
             SELECT 
                 targetValue,
-                count(*) as fitnessGoals
+                count(*) as fitnessGoals,
+                name,
+                type
             FROM fitness_goals
-            WHERE type = 'steps'
+            LIMIT 1
         ) fs ON 1=1
         WHERE ds.date = :epochDay
     """
     )
-    suspend fun getHomeScreenData(epochDay: Long): HomeScreenData?
+    suspend fun getHomeScreenData(epochDay: Long, epochMillis: Long): HomeScreenData?
 }

@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.presentation.ui.theme.BorderLight
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.EnergyOrange
@@ -138,9 +139,9 @@ private fun HomeContent(
 
         // Goals Progress Card
         item {
-            if (uiState.activeGoals.isNotEmpty()) {
+            if (uiState.activeGoalsCount > 0 && uiState.activeGoal != null) {
                 GoalsProgressCard(
-                    goals = uiState.activeGoals,
+                    goal = uiState.activeGoal, goalsCount = uiState.activeGoalsCount,
                     progress = uiState.stepGoalProgress,
                     onClick = onNavigateToGoals
                 )
@@ -397,9 +398,8 @@ private fun ActivityMetricsRow(
 
 @Composable
 private fun GoalsProgressCard(
-    goals: List<com.gomaa.healthy.domain.model.FitnessGoal>, progress: Float, onClick: () -> Unit
+    goal: FitnessGoal, goalsCount: Int, progress: Float, onClick: () -> Unit
 ) {
-    val primaryGoal = goals.firstOrNull { it.type is com.gomaa.healthy.domain.model.GoalType.Steps }
 
     Card(
         modifier = Modifier
@@ -421,7 +421,6 @@ private fun GoalsProgressCard(
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
 
-            primaryGoal?.let { goal ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -445,12 +444,11 @@ private fun GoalsProgressCard(
                     color = Primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-            }
 
-            if (goals.size > 1) {
+            if (goalsCount > 1) {
                 Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
-                    text = "+ ${goals.size - 1} more goals",
+                    text = "+ ${goalsCount - 1} more goals",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

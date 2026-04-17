@@ -9,6 +9,8 @@ class GetHomeScreenDataUseCase @Inject constructor(
     private val briefDao: BriefDao
 ) {
     suspend operator fun invoke(date: LocalDate): HomeScreenData? {
-        return briefDao.getHomeScreenData(date.toEpochDay())
+        val epoch = date.toEpochDay()
+        val epochMillis = epoch * 86400000
+        return briefDao.getHomeScreenData(epoch, epochMillis)
     }
 }
