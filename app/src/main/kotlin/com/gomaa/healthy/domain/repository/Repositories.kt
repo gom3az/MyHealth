@@ -45,6 +45,9 @@ interface HeartRateRepository {
     // All-time summary (date-agnostic)
     suspend fun getOverallSummary(): HeartRateSummary?
 
+    // Today's specific summary
+    suspend fun getTodaySummary(date: LocalDate): HeartRateSummary?
+
     // Bucket operations for performance optimization
     suspend fun upsertHeartRateWithBucket(
         timestamp: Long,

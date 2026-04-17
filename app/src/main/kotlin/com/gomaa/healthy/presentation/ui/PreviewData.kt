@@ -1,6 +1,5 @@
 package com.gomaa.healthy.presentation.ui
 
-import com.gomaa.healthy.domain.model.CombinedSteps
 import com.gomaa.healthy.domain.model.ConnectionState
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.DeviceInfo
@@ -14,8 +13,6 @@ import com.gomaa.healthy.domain.model.HeartRateZone
 import com.gomaa.healthy.presentation.ui.analytics.AnalyticsUiState
 import com.gomaa.healthy.presentation.ui.dashboard.DashboardUiState
 import com.gomaa.healthy.presentation.ui.goals.GoalsUiState
-import com.gomaa.healthy.presentation.ui.home.HomeUiState
-import com.gomaa.healthy.presentation.ui.home.StepSourceFilter
 import java.time.LocalDate
 
 /**
@@ -105,59 +102,9 @@ object PreviewData {
 
     // ========== Home Screen Preview States ==========
 
-    val homeLoadedState = HomeUiState(
-        isLoading = false,
-        heartRate = 142,
-        connectionState = ConnectionState.Connected,
-        connectedDeviceBrand = "Huawei",
-        availableProviders = listOf("Huawei", "Mock"),
-        hasAvailableDevices = true,
-        recentSessions = recentSessions,
-        todaySteps = todaySteps,
-        activeGoals = activeGoals,
-        stepGoalProgress = 0.85f,
-        stepSourceFilter = StepSourceFilter.ALL,
-        combinedSteps = CombinedSteps(12542, 8542, 4000),
-        healthConnectAvailable = true
-    )
 
-    val homeLoadingState = HomeUiState(
-        isLoading = true,
-        heartRate = 0,
-        connectionState = ConnectionState.Connecting,
-        connectedDeviceBrand = null,
-        availableProviders = emptyList(),
-        hasAvailableDevices = false,
-        recentSessions = emptyList(),
-        todaySteps = null,
-        activeGoals = emptyList(),
-        stepGoalProgress = 0f,
-        stepSourceFilter = StepSourceFilter.ALL,
-        combinedSteps = CombinedSteps(0, 0, 0),
-        healthConnectAvailable = false
-    )
 
-    val homeDisconnectedState = homeLoadedState.copy(
-        connectionState = ConnectionState.Disconnected,
-        connectedDeviceBrand = null,
-        heartRate = 0
-    )
 
-    val homeEmptyState = HomeUiState(
-        isLoading = false,
-        heartRate = 0,
-        connectionState = ConnectionState.Disconnected,
-        connectedDeviceBrand = null,
-        availableProviders = listOf("Huawei", "Mock"),
-        hasAvailableDevices = false,
-        recentSessions = emptyList(),
-        todaySteps = null,
-        activeGoals = emptyList(),
-        stepGoalProgress = 0f,
-        stepSourceFilter = StepSourceFilter.ALL,
-        combinedSteps = CombinedSteps(0, 0, 0),
-        healthConnectAvailable = false
-    )
 
     // ========== Dashboard Screen Preview States ==========
 

@@ -1,6 +1,6 @@
 package com.gomaa.healthy.presentation.ui.home
 
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,65 +11,51 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gomaa.healthy.domain.model.ConnectionState
+import com.gomaa.healthy.presentation.ui.theme.BorderLight
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
-import com.gomaa.healthy.presentation.ui.theme.HealthTheme
+import com.gomaa.healthy.presentation.ui.theme.EnergyOrange
+import com.gomaa.healthy.presentation.ui.theme.HealthGreen
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBar
+import com.gomaa.healthy.presentation.ui.theme.Primary
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onNavigateToDashboard: () -> Unit = {},
-    onNavigateToSteps: () -> Unit = {},
-    onNavigateToHeartRate: () -> Unit = {}
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToSteps: () -> Unit,
+    onNavigateToHeartRate: () -> Unit,
+    onNavigateToGoals: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    var showProviderSwitchDialog by remember { mutableStateOf(false) }
-    var selectedNewProvider by remember { mutableStateOf<String?>(null) }
-    var showProviderSelectionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
@@ -81,54 +67,24 @@ fun HomeScreen(
                 is HomeEffect.ShowSuccess -> {
                     snackbarHostState.showSnackbar(effect.message)
                 }
+
+                is HomeEffect.NavigateToGoals -> onNavigateToGoals()
+                is HomeEffect.NavigateToDashboard -> onNavigateToDashboard()
             }
         }
     }
 
-    if (showProviderSelectionDialog) {
-        ProviderSelectionDialog(
-            currentProvider = uiState.connectedDeviceBrand,
-            availableProviders = uiState.availableProviders,
-            onProviderSelected = { newProvider ->
-                showProviderSelectionDialog = false
-                showProviderSwitchDialog = true
-                selectedNewProvider = newProvider
-            },
-            onDismiss = { showProviderSelectionDialog = false })
-    }
-
-    if (showProviderSwitchDialog && selectedNewProvider != null) {
-        SwitchProviderConfirmationDialog(
-            currentProvider = uiState.connectedDeviceBrand ?: "",
-            newProvider = selectedNewProvider ?: "",
-            onConfirm = {
-                viewModel.processIntent(HomeIntent.OnSwitchProvider(selectedNewProvider!!))
-                showProviderSwitchDialog = false
-                selectedNewProvider = null
-            },
-            onDismiss = {
-                showProviderSwitchDialog = false
-                selectedNewProvider = null
-            })
-    }
-
     Scaffold(topBar = {
         HealthTopAppBar(
-            title = "MyHealth",
-            titleStyle = MaterialTheme.typography.displaySmall
+            title = "Today's Brief", titleStyle = MaterialTheme.typography.displaySmall
         )
     }, snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         HomeContent(
             paddingValues = paddingValues,
             uiState = uiState,
-            onProviderSelected = { viewModel.processIntent(HomeIntent.OnSelectProvider(it)) },
-            onConnect = { viewModel.processIntent(HomeIntent.OnConnect) },
-            onDisconnect = { viewModel.processIntent(HomeIntent.OnDisconnect) },
-            onNavigateToDashboard = onNavigateToDashboard,
             onNavigateToSteps = onNavigateToSteps,
-            onNavigateToHeartRate = onNavigateToHeartRate,
-            onFilterChanged = { viewModel.processIntent(HomeIntent.OnFilterChanged(it)) },
-            onChangeProvider = { showProviderSelectionDialog = true })
+            onNavigateToHeartRate = onNavigateToHeartRate, onNavigateToGoals = onNavigateToGoals
+        )
     }
 }
 
@@ -136,14 +92,8 @@ fun HomeScreen(
 private fun HomeContent(
     paddingValues: PaddingValues,
     uiState: HomeUiState,
-    onProviderSelected: (String) -> Unit,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onNavigateToDashboard: () -> Unit,
     onNavigateToSteps: () -> Unit,
-    onNavigateToHeartRate: () -> Unit,
-    onFilterChanged: (StepSourceFilter) -> Unit,
-    onChangeProvider: () -> Unit = {}
+    onNavigateToHeartRate: () -> Unit, onNavigateToGoals: () -> Unit
 ) {
     LazyColumn(
         contentPadding = paddingValues,
@@ -152,149 +102,62 @@ private fun HomeContent(
             .padding(horizontal = Dimensions.contentPadding),
         verticalArrangement = Arrangement.spacedBy(Dimensions.verticalSpacing)
     ) {
+        // Today's Steps Card
         item {
-            StepsFilterChips(
-                selectedFilter = uiState.stepSourceFilter,
-                onFilterChanged = onFilterChanged,
-                healthConnectAvailable = uiState.healthConnectAvailable
+            TodayStepsCard(
+                steps = uiState.todaySteps,
+                goal = uiState.stepGoal,
+                progress = uiState.stepGoalProgress,
+                onClick = onNavigateToSteps
             )
         }
 
+        // Heart Rate Summary Card
         item {
-            StepsProgressCard(
-                steps = getFilteredSteps(uiState),
-                goalProgress = uiState.stepGoalProgress,
-                onClick = onNavigateToSteps,
-                combinedSteps = uiState.combinedSteps,
-                selectedFilter = uiState.stepSourceFilter
-            )
-        }
-
-        item {
-            HeartRateCard(
-                latestHeartRate = uiState.latestHeartRate,
-                lastUpdate = uiState.lastHeartRateUpdate,
+            HeartRateSummaryCard(
+                summary = uiState.todayHeartRateSummary,
                 isLoading = uiState.isLoadingHeartRate,
                 onClick = onNavigateToHeartRate
             )
         }
 
+        // Activity Metrics Row
         item {
-            ConnectionStatusCard(uiState = uiState)
+            ActivityMetricsRow(
+                activeMinutes = uiState.activeMinutes, calories = uiState.caloriesBurned
+            )
         }
 
-        if (uiState.connectedDeviceBrand == null) {
-            item {
-                ProviderSelectionCard(
-                    availableProviders = uiState.availableProviders,
-                    onProviderSelected = onProviderSelected
-                )
-            }
-        } else {
-            item {
-                ActionButtonRow(
-                    isConnected = uiState.connectionState == ConnectionState.Connected,
-                    onConnect = onConnect,
-                    onDisconnect = onDisconnect,
-                    onNavigateToDashboard = onNavigateToDashboard,
-                    onChangeProvider = onChangeProvider
+        // Goals Progress Card
+        item {
+            if (uiState.activeGoals.isNotEmpty()) {
+                GoalsProgressCard(
+                    goals = uiState.activeGoals,
+                    progress = uiState.stepGoalProgress,
+                    onClick = onNavigateToGoals
                 )
             }
         }
 
+        // Recent Sessions Card
         item {
-            RecentSessionsCard(sessions = uiState.recentSessions)
+            if (uiState.recentSessions.isNotEmpty()) {
+                RecentSessionsCard(
+                    sessions = uiState.recentSessions
+                )
+            }
+        }
+
+        // Bottom spacing
+        item {
+            Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
         }
     }
 }
 
 @Composable
-private fun StepsFilterChips(
-    selectedFilter: StepSourceFilter,
-    onFilterChanged: (StepSourceFilter) -> Unit,
-    healthConnectAvailable: Boolean
-) {
-    val scrollState = rememberScrollState()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(scrollState),
-        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
-    ) {
-        FilterChip(
-            selected = selectedFilter == StepSourceFilter.ALL,
-            onClick = { onFilterChanged(StepSourceFilter.ALL) },
-            label = { Text("All") },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(Dimensions.chipRadius),
-            modifier = Modifier.padding(
-                horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
-                vertical = Dimensions.chipPaddingVertical - 10.dp
-            )
-        )
-        FilterChip(
-            selected = selectedFilter == StepSourceFilter.MY_HEALTH,
-            onClick = { onFilterChanged(StepSourceFilter.MY_HEALTH) },
-            label = { Text("MyHealth") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.DirectionsWalk,
-                    contentDescription = null,
-                    modifier = Modifier.height(18.dp)
-                )
-            },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(Dimensions.chipRadius),
-            modifier = Modifier.padding(
-                horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
-                vertical = Dimensions.chipPaddingVertical - 10.dp
-            )
-        )
-        if (healthConnectAvailable) {
-            FilterChip(
-                selected = selectedFilter == StepSourceFilter.HEALTH_CONNECT,
-                onClick = { onFilterChanged(StepSourceFilter.HEALTH_CONNECT) },
-                label = { Text("Health Connect") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        modifier = Modifier.height(18.dp)
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    labelColor = MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(Dimensions.chipRadius),
-                modifier = Modifier.padding(
-                    horizontal = Dimensions.chipPaddingHorizontal - 12.dp,
-                    vertical = Dimensions.chipPaddingVertical - 10.dp
-                )
-            )
-        }
-    }
-}
-
-@Composable
-private fun StepsProgressCard(
-    steps: Int,
-    goalProgress: Float,
-    onClick: () -> Unit,
-    combinedSteps: com.gomaa.healthy.domain.model.CombinedSteps,
-    selectedFilter: StepSourceFilter
+private fun TodayStepsCard(
+    steps: Int, goal: Int, progress: Float, onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -303,7 +166,8 @@ private fun StepsProgressCard(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),  // NO SHADOW
+        border = BorderStroke(1.dp, BorderLight)  // Design.md compliant
     ) {
         Column(
             modifier = Modifier
@@ -316,75 +180,46 @@ private fun StepsProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Today's Steps", style = MaterialTheme.typography.headlineMedium
+                    text = "Steps",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                if (combinedSteps.healthConnectSteps > 0 && selectedFilter == StepSourceFilter.ALL) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(Dimensions.chipRadius)
-                    ) {
-                        Text(
-                            text = "Combined",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(
-                                horizontal = Dimensions.spacing, vertical = 4.dp
-                            )
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.DirectionsWalk,
+                    contentDescription = null,
+                    tint = HealthGreen
+                )
             }
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             Text(
-                text = "%,d".format(steps),
+                text = steps.toString().reversed().chunked(3).joinToString(",").reversed(),
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
             LinearProgressIndicator(
-                progress = { goalProgress },
+                progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary,
+                color = HealthGreen,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${(goalProgress * 100).toInt()}% of daily goal",
+                text = "${(progress * 100).toInt()}% of ${
+                    goal.toString().reversed().chunked(3).joinToString(",").reversed()
+                }",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (selectedFilter == StepSourceFilter.ALL && combinedSteps.healthConnectSteps > 0) {
-                Spacer(modifier = Modifier.height(Dimensions.spacing))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "MyHealth: %,d".format(combinedSteps.myHealthSteps),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Health Connect: %,d".format(combinedSteps.healthConnectSteps),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
     }
 }
 
-private fun getFilteredSteps(uiState: HomeUiState): Int {
-    return when (uiState.stepSourceFilter) {
-        StepSourceFilter.ALL -> uiState.combinedSteps.totalSteps
-        StepSourceFilter.MY_HEALTH -> uiState.combinedSteps.myHealthSteps
-        StepSourceFilter.HEALTH_CONNECT -> uiState.combinedSteps.healthConnectSteps
-    }
-}
-
 @Composable
-private fun HeartRateCard(
-    latestHeartRate: Int?, lastUpdate: Long?, isLoading: Boolean, onClick: () -> Unit
+private fun HeartRateSummaryCard(
+    summary: com.gomaa.healthy.domain.model.HeartRateSummary?,
+    isLoading: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -393,7 +228,8 @@ private fun HeartRateCard(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, BorderLight)
     ) {
         Column(
             modifier = Modifier
@@ -406,7 +242,9 @@ private fun HeartRateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Heart Rate", style = MaterialTheme.typography.headlineMedium
+                    text = "Heart Rate",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Icon(
                     imageVector = Icons.Default.Favorite,
@@ -419,33 +257,33 @@ private fun HeartRateCard(
 
             if (isLoading) {
                 androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.align(Alignment.CenterHorizontally), color = Primary
                 )
-            } else if (latestHeartRate != null) {
+            } else if (summary != null) {
                 Text(
-                    text = "$latestHeartRate BPM",
+                    text = "${summary.averageBpm} BPM",
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-
-                lastUpdate?.let { timestamp ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val timeFormat =
-                        java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Min: ${summary.minBpm} | Max: ${summary.maxBpm}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (summary.readingCount > 0) {
                     Text(
-                        text = "Last updated: ${timeFormat.format(java.util.Date(timestamp))}",
+                        text = "${summary.readingCount} readings today",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 Text(
-                    text = "No heart rate data yet",
+                    text = "No data today",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Sync from Health Connect to see readings",
                     style = MaterialTheme.typography.labelLarge,
@@ -457,63 +295,156 @@ private fun HeartRateCard(
 }
 
 @Composable
-private fun ConnectionStatusCard(uiState: HomeUiState) {
+private fun ActivityMetricsRow(
+    activeMinutes: Int, calories: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
+    ) {
+        // Active Minutes Card
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(Dimensions.cardRadius)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(Dimensions.cardRadius),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = BorderStroke(1.dp, BorderLight)
+        ) {
+            Column(
+                modifier = Modifier.padding(Dimensions.cardPadding)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = EnergyOrange,
+                        modifier = Modifier.height(18.dp)
+                    )
+                    Text(
+                        text = "Active",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "$activeMinutes",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "minutes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Calories Card
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(Dimensions.cardRadius)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(Dimensions.cardRadius),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = BorderStroke(1.dp, BorderLight)
+        ) {
+            Column(
+                modifier = Modifier.padding(Dimensions.cardPadding)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = null,
+                        tint = EnergyOrange,
+                        modifier = Modifier.height(18.dp)
+                    )
+                    Text(
+                        text = "Calories",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "$calories",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "kcal", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalsProgressCard(
+    goals: List<com.gomaa.healthy.domain.model.FitnessGoal>, progress: Float, onClick: () -> Unit
+) {
+    val primaryGoal = goals.firstOrNull { it.type is com.gomaa.healthy.domain.model.GoalType.Steps }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, BorderLight)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimensions.cardPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = "Current Heart Rate", style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = if (uiState.heartRate > 0) "${uiState.heartRate} BPM" else "-- BPM",
-                style = MaterialTheme.typography.displayMedium,
+                text = "Goals Progress",
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
-            ) {
-                val (icon, text, color) = when (uiState.connectionState) {
-                    ConnectionState.Connected -> Triple(
-                        Icons.Default.CheckCircle, "Connected", MaterialTheme.colorScheme.primary
-                    )
 
-                    ConnectionState.Connecting -> Triple(
-                        Icons.Default.Sync, "Connecting...", MaterialTheme.colorScheme.tertiary
+            primaryGoal?.let { goal ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = goal.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-
-                    ConnectionState.Disconnected -> Triple(
-                        Icons.Default.CloudOff,
-                        "Disconnected",
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    is ConnectionState.Error -> Triple(
-                        Icons.Default.Error,
-                        "Error: ${uiState.connectionState.message}",
-                        MaterialTheme.colorScheme.error
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Primary
                     )
                 }
-                Icon(
-                    imageVector = icon, contentDescription = null, tint = color
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-                Text(text = text, color = color, style = MaterialTheme.typography.bodyLarge)
             }
-            uiState.connectedDeviceBrand?.let { brand ->
+
+            if (goals.size > 1) {
+                Spacer(modifier = Modifier.height(Dimensions.spacing))
                 Text(
-                    text = "Device: $brand",
+                    text = "+ ${goals.size - 1} more goals",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -523,8 +454,8 @@ private fun ConnectionStatusCard(uiState: HomeUiState) {
 }
 
 @Composable
-private fun ProviderSelectionCard(
-    availableProviders: List<String>, onProviderSelected: (String) -> Unit
+private fun RecentSessionsCard(
+    sessions: List<com.gomaa.healthy.domain.model.ExerciseSession>
 ) {
     Card(
         modifier = Modifier
@@ -532,270 +463,41 @@ private fun ProviderSelectionCard(
             .clip(RoundedCornerShape(Dimensions.cardRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(Dimensions.cardRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, BorderLight)
     ) {
         Column(
             modifier = Modifier.padding(Dimensions.cardPadding)
         ) {
             Text(
-                text = "Select Wearable Provider", style = MaterialTheme.typography.headlineMedium
+                text = "Recent Sessions",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
-            ) {
-                availableProviders.forEach { provider ->
-                    FilterChip(
-                        selected = false,
-                        onClick = { onProviderSelected(provider) },
-                        label = { Text(provider) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            labelColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(Dimensions.chipRadius)
+
+            sessions.forEach { session ->
+                val duration = (session.endTime - session.startTime) / 60000  // minutes
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Dimensions.spacing),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = java.text.SimpleDateFormat(
+                            "MMM dd, HH:mm", java.util.Locale.getDefault()
+                        ).format(java.util.Date(session.startTime)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${duration}min • ${session.avgHeartRate}bpm",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ActionButtonRow(
-    isConnected: Boolean,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onNavigateToDashboard: () -> Unit,
-    onChangeProvider: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
-        ) {
-            Button(
-                onClick = if (isConnected) onDisconnect else onConnect,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(Dimensions.buttonRadius),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                contentPadding = PaddingValues(
-                    vertical = Dimensions.buttonPaddingVertical,
-                    horizontal = Dimensions.buttonPaddingHorizontal
-                )
-            ) {
-                Text(if (isConnected) "Disconnect" else "Connect")
-            }
-            Button(
-                onClick = onNavigateToDashboard,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(Dimensions.buttonRadius),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    vertical = Dimensions.buttonPaddingVertical,
-                    horizontal = Dimensions.buttonPaddingHorizontal
-                )
-            ) {
-                Text("Start Run")
-            }
-        }
-        OutlinedButton(
-            onClick = onChangeProvider,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(Dimensions.buttonRadius),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                vertical = Dimensions.buttonPaddingVertical,
-                horizontal = Dimensions.buttonPaddingHorizontal
-            )
-        ) {
-            Text("Change Provider")
-        }
-    }
-}
-
-@Composable
-private fun RecentSessionsCard(sessions: List<com.gomaa.healthy.domain.model.ExerciseSession>) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimensions.cardRadius)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(Dimensions.cardRadius),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(Dimensions.cardPadding)
-        ) {
-            Text(
-                text = "Recent Sessions", style = MaterialTheme.typography.headlineMedium
-            )
-            if (sessions.isEmpty()) {
-                Text(
-                    text = "No sessions yet",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                sessions.forEach { session ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = Dimensions.spacing),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = java.text.SimpleDateFormat(
-                                "MMM dd, HH:mm", java.util.Locale.getDefault()
-                            ).format(java.util.Date(session.startTime)),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = "${session.avgHeartRate} BPM avg",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProviderSelectionDialog(
-    currentProvider: String?,
-    availableProviders: List<String>,
-    onProviderSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val otherProviders = availableProviders.filter { it != currentProvider }
-
-    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, title = {
-        Text(
-            text = "Select Healthcare Provider", style = MaterialTheme.typography.headlineLarge
-        )
-    }, text = {
-        if (otherProviders.isEmpty()) {
-            Text("No other providers available for switching")
-        } else {
-            Column {
-                Text(
-                    text = "Choose a new provider",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-                otherProviders.forEach { provider ->
-                    TextButton(
-                        onClick = { onProviderSelected(provider) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(provider, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-            }
-        }
-    }, confirmButton = {}, dismissButton = {
-        TextButton(onClick = onDismiss) {
-            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
-        }
-    })
-}
-
-@Composable
-private fun SwitchProviderConfirmationDialog(
-    currentProvider: String, newProvider: String, onConfirm: () -> Unit, onDismiss: () -> Unit
-) {
-    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, title = {
-        Text(
-            text = "Switch Provider?", style = MaterialTheme.typography.headlineLarge
-        )
-    }, text = {
-        Text(
-            text = "You are switching from $currentProvider to $newProvider",
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }, confirmButton = {
-        Button(
-            onClick = onConfirm,
-            shape = RoundedCornerShape(Dimensions.buttonRadius),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Text("Confirm")
-        }
-    }, dismissButton = {
-        TextButton(onClick = onDismiss) {
-            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
-        }
-    })
-}
-
-// ========== Compose Previews ==========
-
-@androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Loaded", showBackground = true, widthDp = 360, heightDp = 640
-)
-@Composable
-private fun HomeScreenLoadedPreview() {
-    HealthTheme {
-        HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
-            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeLoadedState,
-            onProviderSelected = {},
-            onConnect = {},
-            onDisconnect = {},
-            onNavigateToDashboard = {},
-            onNavigateToSteps = {},
-            onNavigateToHeartRate = {},
-            onFilterChanged = {})
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Disconnected", showBackground = true, widthDp = 360, heightDp = 640
-)
-@Composable
-private fun HomeScreenDisconnectedPreview() {
-    HealthTheme {
-        HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
-            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeDisconnectedState,
-            onProviderSelected = {},
-            onConnect = {},
-            onDisconnect = {},
-            onNavigateToDashboard = {},
-            onNavigateToSteps = {},
-            onNavigateToHeartRate = {},
-            onFilterChanged = {})
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(
-    name = "Home - Empty", showBackground = true, widthDp = 360, heightDp = 640
-)
-@Composable
-private fun HomeScreenEmptyPreview() {
-    HealthTheme {
-        HomeContent(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(Dimensions.spacingLarge),
-            uiState = com.gomaa.healthy.presentation.ui.PreviewData.homeEmptyState,
-            onProviderSelected = {},
-            onConnect = {},
-            onDisconnect = {},
-            onNavigateToDashboard = {},
-            onNavigateToSteps = {},
-            onNavigateToHeartRate = {},
-            onFilterChanged = {})
     }
 }

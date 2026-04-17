@@ -46,6 +46,14 @@ class GetHeartRateSummaryUseCase @Inject constructor(
     }
 }
 
+class GetTodayHeartRateSummaryUseCase @Inject constructor(
+    private val heartRateRepository: HeartRateRepository
+) {
+    suspend operator fun invoke(date: java.time.LocalDate = java.time.LocalDate.now()): HeartRateSummary? {
+        return heartRateRepository.getTodaySummary(date)
+    }
+}
+
 class GetAvailableSourcesUseCase @Inject constructor(
     private val heartRateRepository: HeartRateRepository
 ) {

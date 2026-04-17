@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -40,6 +41,27 @@ class HeartRateRepositoryImpl @Inject constructor(
         val min = heartRateBucketDao.getOverallMinBpm() ?: return null
         val count = heartRateBucketDao.getOverallCount()
         return HeartRateSummary(avg.toInt(), max, min, count)
+    }
+
+    override suspend fun getTodaySummary(date: LocalDate): HeartRateSummary? {
+        val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endOfDay =
+            date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+        val avg = heartRateBucketDao.getTodayAverageBpm(startOfDay, endOfDay) ?: return null
+        val max = heartRateBucketDao.getTodayMaxBpm(startOfDay, endOfDay) ?: return null
+        val min = heartRateBucketDao.getTodayMinBpm(startOfDay, endOfDay) ?: return null
+        val count = heartRateBucketDao.getTodayCount(startOfDay, endOfDay)
+
+        if (count == 0) return null
+
+        return HeartRateSummary(
+            averageBpm = avg.toInt(),
+            maxBpm = max,
+            minBpm = min,
+            readingCount = count,
+            source = null
+        )
     }
 
     override fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>> {

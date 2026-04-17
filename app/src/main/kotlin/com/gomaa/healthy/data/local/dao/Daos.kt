@@ -149,6 +149,43 @@ interface HeartRateBucketDao {
     @Query("SELECT COUNT(*) FROM heart_rate_buckets")
     suspend fun getOverallCount(): Int
 
+    // Today's summary queries
+    @Query(
+        """
+        SELECT AVG(avgBpm) 
+        FROM heart_rate_buckets 
+        WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
+    """
+    )
+    suspend fun getTodayAverageBpm(startOfDay: Long, endOfDay: Long): Double?
+
+    @Query(
+        """
+        SELECT MAX(maxBpm) 
+        FROM heart_rate_buckets 
+        WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
+    """
+    )
+    suspend fun getTodayMaxBpm(startOfDay: Long, endOfDay: Long): Int?
+
+    @Query(
+        """
+        SELECT MIN(minBpm) 
+        FROM heart_rate_buckets 
+        WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
+    """
+    )
+    suspend fun getTodayMinBpm(startOfDay: Long, endOfDay: Long): Int?
+
+    @Query(
+        """
+        SELECT COUNT(*) 
+        FROM heart_rate_buckets 
+        WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
+    """
+    )
+    suspend fun getTodayCount(startOfDay: Long, endOfDay: Long): Int
+
     @Query("SELECT * FROM heart_rate_buckets WHERE source = :source AND synced_to_hc = 0")
     suspend fun getBySourceNotSynced(source: String): List<HeartRateBucketEntity>
 

@@ -75,6 +75,8 @@ fun AppNavHost(
                     navController.navigate(Screen.DailySteps.route)
                 }, onNavigateToHeartRate = {
                     navController.navigate(Screen.HeartRate.route)
+                }, onNavigateToGoals = {
+                    navController.navigate(Screen.Goals.route)
                 })
             }
 
