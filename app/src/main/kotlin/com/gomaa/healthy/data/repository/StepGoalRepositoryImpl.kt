@@ -22,16 +22,8 @@ class StepRepositoryImpl @Inject constructor(
     private val dailyStepsDao: DailyStepsDao
 ) : StepRepository {
 
-
     override suspend fun getDailySteps(date: LocalDate): DailySteps? {
-        // Get myhealth steps (source defaults to "myhealth")
-        return dailyStepsDao.getByDateAndSource(date.toEpochDay(), "myhealth")?.toDomain()
-    }
-
-    override suspend fun getHealthConnectTotalSteps(date: LocalDate): Int {
-        // Get health connect steps using the new unified table
-        return dailyStepsDao.getByDateAndSource(date.toEpochDay(), "health_connect")?.totalSteps
-            ?: 0
+        return dailyStepsDao.getByDate(date.toEpochDay())?.toDomain()
     }
 
     override suspend fun getPaginatedDailySteps(): Flow<PagingData<DailySteps>> {

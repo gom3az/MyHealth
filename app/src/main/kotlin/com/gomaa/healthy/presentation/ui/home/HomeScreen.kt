@@ -58,6 +58,10 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
+        viewModel.processIntent(HomeIntent.OnLoadData)
+    }
+
+    LaunchedEffect(Unit) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is HomeEffect.ShowError -> {
@@ -83,7 +87,8 @@ fun HomeScreen(
             paddingValues = paddingValues,
             uiState = uiState,
             onNavigateToSteps = onNavigateToSteps,
-            onNavigateToHeartRate = onNavigateToHeartRate, onNavigateToGoals = onNavigateToGoals
+            onNavigateToHeartRate = onNavigateToHeartRate,
+            onNavigateToGoals = onNavigateToGoals
         )
     }
 }
@@ -93,7 +98,8 @@ private fun HomeContent(
     paddingValues: PaddingValues,
     uiState: HomeUiState,
     onNavigateToSteps: () -> Unit,
-    onNavigateToHeartRate: () -> Unit, onNavigateToGoals: () -> Unit
+    onNavigateToHeartRate: () -> Unit,
+    onNavigateToGoals: () -> Unit
 ) {
     LazyColumn(
         contentPadding = paddingValues,
@@ -115,8 +121,10 @@ private fun HomeContent(
         // Heart Rate Summary Card
         item {
             HeartRateSummaryCard(
-                summary = uiState.todayHeartRateSummary,
-                isLoading = uiState.isLoadingHeartRate,
+                averageBpm = uiState.averageBpm,
+                maxBpm = uiState.maxBpm,
+                minBpm = uiState.minBpm,
+                readingCount = uiState.readingCount,
                 onClick = onNavigateToHeartRate
             )
         }
@@ -217,9 +225,11 @@ private fun TodayStepsCard(
 
 @Composable
 private fun HeartRateSummaryCard(
-    summary: com.gomaa.healthy.domain.model.HeartRateSummary?,
-    isLoading: Boolean,
-    onClick: () -> Unit
+    readingCount: Int?,
+    minBpm: Int?,
+    maxBpm: Int?,
+    averageBpm: Int?,
+    onClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -255,25 +265,21 @@ private fun HeartRateSummaryCard(
 
             Spacer(modifier = Modifier.height(Dimensions.spacing))
 
-            if (isLoading) {
-                androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.CenterHorizontally), color = Primary
-                )
-            } else if (summary != null) {
+            if (averageBpm != null && minBpm != null && maxBpm != null && readingCount != null) {
                 Text(
-                    text = "${summary.averageBpm} BPM",
+                    text = "$averageBpm BPM",
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Min: ${summary.minBpm} | Max: ${summary.maxBpm}",
+                    text = "Min: $minBpm | Max: $maxBpm",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (summary.readingCount > 0) {
+                if (readingCount > 0) {
                     Text(
-                        text = "${summary.readingCount} readings today",
+                        text = "$readingCount readings today",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

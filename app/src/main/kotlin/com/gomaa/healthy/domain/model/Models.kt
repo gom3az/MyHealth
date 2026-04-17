@@ -76,10 +76,13 @@ enum class StepSource {
     MY_HEALTH, HEALTH_CONNECT, WEARABLE
 }
 
-data class StepsWithSource(
-    val source: StepSource, val steps: Int
-)
-
-data class CombinedSteps(
-    val totalSteps: Int, val myHealthSteps: Int, val healthConnectSteps: Int
+data class HomeScreenData(
+    val date: Long,
+    val totalSteps: Int,
+    val activeMinutes: Int,
+    val totalDistanceMeters: Double,
+    val avgBpm: Int?,
+    val minBpm: Int?,
+    val maxBpm: Int?,
+    val heartRateCount: Int
 )

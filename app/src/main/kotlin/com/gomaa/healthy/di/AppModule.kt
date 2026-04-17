@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.work.WorkManager
 import com.gomaa.healthy.data.local.HealthDatabase
+import com.gomaa.healthy.data.local.dao.BriefDao
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.GoalDao
@@ -82,6 +83,12 @@ object DatabaseModule {
     @Singleton
     fun provideHeartRateBucketDao(database: HealthDatabase): HeartRateBucketDao {
         return database.heartRateBucketDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideBriefDao(database: HealthDatabase): BriefDao {
+        return database.briefDao()
     }
 }
 

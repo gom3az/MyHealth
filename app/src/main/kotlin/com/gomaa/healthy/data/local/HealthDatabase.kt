@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.gomaa.healthy.data.local.dao.BriefDao
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
 import com.gomaa.healthy.data.local.dao.ExerciseSessionDao
 import com.gomaa.healthy.data.local.dao.GoalDao
@@ -28,6 +29,7 @@ import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun exerciseSessionDao(): ExerciseSessionDao
     abstract fun heartRateBucketDao(): HeartRateBucketDao
+    abstract fun briefDao(): BriefDao
     abstract fun dailyStepsDao(): DailyStepsDao
     abstract fun goalDao(): GoalDao
 

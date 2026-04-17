@@ -2,16 +2,12 @@ package com.gomaa.healthy.presentation.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gomaa.healthy.domain.model.CombinedSteps
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.GoalType
 import com.gomaa.healthy.domain.usecase.GetActiveGoalsUseCase
-import com.gomaa.healthy.domain.usecase.GetCombinedStepsUseCase
-import com.gomaa.healthy.domain.usecase.GetDailyStepsUseCase
-import com.gomaa.healthy.domain.usecase.GetLatestHeartRateUseCase
+import com.gomaa.healthy.domain.usecase.GetHomeScreenDataUseCase
 import com.gomaa.healthy.domain.usecase.GetSessionsUseCase
-import com.gomaa.healthy.domain.usecase.GetTodayHeartRateSummaryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,11 +27,12 @@ data class HomeUiState(
     val todaySteps: Int = 0,
     val stepGoal: Int = 10000,
     val stepGoalProgress: Float = 0f,
-    val combinedSteps: CombinedSteps = CombinedSteps(0, 0, 0),
 
-    // Today's Heart Rate Summary (NEW - replaces real-time HR)
-    val todayHeartRateSummary: com.gomaa.healthy.domain.model.HeartRateSummary? = null,
-    val isLoadingHeartRate: Boolean = false,
+    // Today's Heart info
+    val averageBpm: Int? = null,
+    val maxBpm: Int? = null,
+    val minBpm: Int? = null,
+    val readingCount: Int? = null,
 
     // Activity Metrics
     val activeMinutes: Int = 0,
@@ -48,8 +45,7 @@ data class HomeUiState(
     // Recent Sessions
     val recentSessions: List<ExerciseSession> = emptyList(),
 
-    val healthConnectAvailable: Boolean = false,
-)
+    )
 
 sealed class HomeIntent {
     data object OnLoadData : HomeIntent()
@@ -68,11 +64,8 @@ sealed class HomeEffect {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getActiveGoalsUseCase: GetActiveGoalsUseCase,
-    private val getCombinedStepsUseCase: GetCombinedStepsUseCase,
-    private val getDailyStepsUseCase: GetDailyStepsUseCase,
     private val getSessionsUseCase: GetSessionsUseCase,
-    private val getTodayHeartRateSummaryUseCase: GetTodayHeartRateSummaryUseCase,
-    private val getLatestHeartRateUseCase: GetLatestHeartRateUseCase
+    private val getHomeScreenDataUseCase: GetHomeScreenDataUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -80,10 +73,6 @@ class HomeViewModel @Inject constructor(
 
     private val _effect = MutableSharedFlow<HomeEffect>()
     val effect: SharedFlow<HomeEffect> = _effect.asSharedFlow()
-
-    init {
-        processIntent(HomeIntent.OnLoadData)
-    }
 
     fun processIntent(intent: HomeIntent) {
         when (intent) {
@@ -98,17 +87,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                // Load steps
-                val combinedSteps = getCombinedStepsUseCase(LocalDate.now())
-                _uiState.value = _uiState.value.copy(
-                    combinedSteps = combinedSteps, todaySteps = combinedSteps.totalSteps
-                )
 
-                // Load today's activity metrics (active minutes, calories)
-                val todaySteps = getDailyStepsUseCase(LocalDate.now())
+                val homeData = getHomeScreenDataUseCase(LocalDate.now())
+                // Load today's steps
                 _uiState.value = _uiState.value.copy(
-                    activeMinutes = todaySteps?.activeMinutes ?: 0,
-                    caloriesBurned = calculateCaloriesFromSteps(combinedSteps.totalSteps)
+                    todaySteps = homeData?.totalSteps ?: 0,
+                    activeMinutes = homeData?.activeMinutes ?: 0,
+                    caloriesBurned = calculateCaloriesFromSteps(homeData?.totalSteps ?: 0),
+                    averageBpm = homeData?.avgBpm ?: 0,
+                    maxBpm = homeData?.maxBpm ?: 0,
+                    minBpm = homeData?.minBpm ?: 0,
+                    readingCount = homeData?.heartRateCount ?: 0
                 )
 
                 // Load goals and calculate progress
@@ -119,20 +108,16 @@ class HomeViewModel @Inject constructor(
                 if (stepGoal != null) {
                     val target = (stepGoal.type as GoalType.Steps).target
                     val progress =
-                        if (target > 0) combinedSteps.totalSteps.toFloat() / target else 0f
+                        if (target > 0) (homeData?.totalSteps ?: 0).toFloat() / target else 0f
                     _uiState.value = _uiState.value.copy(
                         stepGoalProgress = progress.coerceIn(0f, 1f), stepGoal = target
                     )
                 }
 
-                // Load today's heart rate summary
-                loadTodayHeartRateSummary()
-
                 // Load recent sessions
                 val sessions = getSessionsUseCase()
                 _uiState.value = _uiState.value.copy(
                     recentSessions = sessions.take(2),
-                    healthConnectAvailable = combinedSteps.healthConnectSteps > 0
                 )
 
                 _uiState.value = _uiState.value.copy(isLoading = false)
@@ -146,35 +131,6 @@ class HomeViewModel @Inject constructor(
     private fun calculateCaloriesFromSteps(steps: Int): Int {
         // Rough estimate: ~0.04 kcal per step
         return (steps * 0.04).toInt()
-    }
-
-    private fun loadTodayHeartRateSummary() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingHeartRate = true)
-            try {
-                // Try to get today's summary first
-                val summary = getTodayHeartRateSummaryUseCase()
-                _uiState.value = _uiState.value.copy(
-                    todayHeartRateSummary = summary, isLoadingHeartRate = false
-                )
-            } catch (e: Exception) {
-                // Fallback to latest if today's not available
-                val latest = getLatestHeartRateUseCase()
-                if (latest != null) {
-                    _uiState.value = _uiState.value.copy(
-                        todayHeartRateSummary = com.gomaa.healthy.domain.model.HeartRateSummary(
-                            averageBpm = latest.bpm,
-                            maxBpm = latest.bpm,
-                            minBpm = latest.bpm,
-                            readingCount = 1,
-                            source = latest.source
-                        ), isLoadingHeartRate = false
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(isLoadingHeartRate = false)
-                }
-            }
-        }
     }
 
     private fun syncData() {

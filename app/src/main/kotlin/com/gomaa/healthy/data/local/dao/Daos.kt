@@ -23,6 +23,9 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps WHERE date = :date AND source = :source")
     suspend fun getByDateAndSource(date: Long, source: String): DailyStepsEntity?
 
+    @Query("SELECT * FROM daily_steps WHERE date = :date")
+    suspend fun getByDate(date: Long): DailyStepsEntity?
+
     @Query("SELECT * FROM daily_steps ORDER BY date DESC")
     suspend fun getAll(): List<DailyStepsEntity>
 
@@ -259,4 +262,38 @@ interface HeartRateBucketDao {
             }
         }
     }
+}
+
+@Dao
+interface BriefDao {
+
+    @Query(
+        """
+        SELECT
+            ds.date as date,
+            ds.totalSteps as totalSteps,
+            ds.activeMinutes as activeMinutes,
+            ds.totalDistanceMeters as totalDistanceMeters,
+            hr.avgBpm as avgBpm,
+            hr.minBpm as minBpm,
+            hr.maxBpm as maxBpm,
+            COALESCE(hr.heartRateCount, 0) as heartRateCount
+        FROM daily_steps ds
+        LEFT OUTER JOIN (
+            SELECT
+                dayTimestamp,
+                AVG(avgBpm) as avgBpm,
+                MIN(minBpm) as minBpm,
+                MAX(maxBpm) as maxBpm,
+                SUM(count) as heartRateCount
+            FROM heart_rate_buckets
+            WHERE dayTimestamp >= :startOfDay AND dayTimestamp < :endOfDay
+            GROUP BY dayTimestamp
+        ) hr ON hr.dayTimestamp >= :startOfDay AND hr.dayTimestamp < :endOfDay
+        WHERE ds.date = :epochDay
+    """
+    )
+    suspend fun getHomeScreenData(
+        epochDay: Long, startOfDay: Long, endOfDay: Long
+    ): com.gomaa.healthy.domain.model.HomeScreenData?
 }
