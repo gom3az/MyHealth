@@ -2,7 +2,6 @@ package com.gomaa.healthy.data.repository
 
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.core.content.edit
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -22,6 +21,7 @@ import com.gomaa.healthy.data.mapper.SOURCE_MY_HEALTH
 import com.gomaa.healthy.data.mapper.mapExerciseSessionRecordToEntity
 import com.gomaa.healthy.data.mapper.mapHeartRateRecordToEntity
 import com.gomaa.healthy.data.mapper.mapStepsRecordToEntity
+import com.gomaa.healthy.data.security.EncryptedPreferencesManager
 import com.gomaa.healthy.data.sync.DataMerger
 import com.gomaa.healthy.domain.model.DailySteps
 import com.gomaa.healthy.domain.model.ExerciseSession
@@ -98,6 +98,7 @@ data class SyncResult(val newRecordsCount: Int, val latestRecordTime: Long?)
 @Singleton
 class HealthConnectRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val encryptedPrefsManager: EncryptedPreferencesManager,
     private val dailyStepsDao: DailyStepsDao,
     private val heartRateBucketDao: HeartRateBucketDao,
     private val exerciseSessionDao: ExerciseSessionDao,
@@ -126,19 +127,19 @@ class HealthConnectRepository @Inject constructor(
 
         const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
 
-        /** SharedPreferences key for last sync timestamp */
-        private const val PREFS_NAME = "health_connect_sync"
+        // SharedPreferences key constants (kept for reference, now using EncryptedPreferencesManager)
         private const val KEY_LAST_STEPS_SYNC = "last_steps_sync"
         private const val KEY_LAST_EXERCISE_SYNC = "last_exercise_sync"
         private const val KEY_LAST_HEART_RATE_SYNC = "last_heart_rate_sync"
+
+        // Key names for encrypted preferences (stored in EncryptedPreferencesManager)
+        private const val ENC_KEY_LAST_STEPS_SYNC = "hc_last_steps_sync"
+        private const val ENC_KEY_LAST_EXERCISE_SYNC = "hc_last_exercise_sync"
+        private const val ENC_KEY_LAST_HEART_RATE_SYNC = "hc_last_heart_rate_sync"
     }
 
     private val healthConnectClient: HealthConnectClient by lazy {
         HealthConnectClient.getOrCreate(context)
-    }
-
-    private val sharedPreferences by lazy {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     /**
@@ -485,34 +486,34 @@ class HealthConnectRepository @Inject constructor(
         return SyncResult(totalNewRecords, latestRecordTime)
     }
 
-    private fun getLastStepsSyncTime(): Long? {
-        val time = sharedPreferences.getLong(KEY_LAST_STEPS_SYNC, -1L)
+    private suspend fun getLastStepsSyncTime(): Long? {
+        val time = encryptedPrefsManager.getEncryptedLong(ENC_KEY_LAST_STEPS_SYNC, -1L)
         return if (time == -1L) null else time
     }
 
-    private fun saveLastStepsSyncTime(time: Long) {
-        sharedPreferences.edit { putLong(KEY_LAST_STEPS_SYNC, time) }
+    private suspend fun saveLastStepsSyncTime(time: Long) {
+        encryptedPrefsManager.saveEncryptedLong(ENC_KEY_LAST_STEPS_SYNC, time)
     }
 
-    private fun getLastHeartRateSyncTime(): Long? {
-        val time = sharedPreferences.getLong(KEY_LAST_HEART_RATE_SYNC, -1L)
+    private suspend fun getLastHeartRateSyncTime(): Long? {
+        val time = encryptedPrefsManager.getEncryptedLong(ENC_KEY_LAST_HEART_RATE_SYNC, -1L)
         return if (time == -1L) null else time
     }
 
-    private fun saveLastHeartRateSyncTime(time: Long) {
-        sharedPreferences.edit { putLong(KEY_LAST_HEART_RATE_SYNC, time) }
+    private suspend fun saveLastHeartRateSyncTime(time: Long) {
+        encryptedPrefsManager.saveEncryptedLong(ENC_KEY_LAST_HEART_RATE_SYNC, time)
     }
 
-    private fun getLastExerciseSyncTime(): Long? {
-        val time = sharedPreferences.getLong(KEY_LAST_EXERCISE_SYNC, -1L)
+    private suspend fun getLastExerciseSyncTime(): Long? {
+        val time = encryptedPrefsManager.getEncryptedLong(ENC_KEY_LAST_EXERCISE_SYNC, -1L)
         return if (time == -1L) null else time
     }
 
-    private fun saveLastExerciseSyncTime(time: Long) {
-        sharedPreferences.edit { putLong(KEY_LAST_EXERCISE_SYNC, time) }
+    private suspend fun saveLastExerciseSyncTime(time: Long) {
+        encryptedPrefsManager.saveEncryptedLong(ENC_KEY_LAST_EXERCISE_SYNC, time)
     }
 
-    fun getLastSyncTime(): Long? {
+    suspend fun getLastSyncTime(): Long? {
         val stepsTime = getLastStepsSyncTime()
         val exerciseTime = getLastExerciseSyncTime()
         val heartRateTime = getLastHeartRateSyncTime()

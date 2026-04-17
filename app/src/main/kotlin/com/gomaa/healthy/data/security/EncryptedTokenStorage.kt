@@ -1,104 +1,104 @@
 package com.gomaa.healthy.data.security
 
-import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.gomaa.healthy.data.healthkit.AuthState
 import com.gomaa.healthy.data.healthkit.AuthTokens
 import com.gomaa.healthy.di.TokenStorage
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import javax.inject.Inject
 
-private const val PREFS_NAME = "huawei_healthkit_auth"
-
-private const val KEY_ACCESS_TOKEN = "huawei_access_token"
-private const val KEY_REFRESH_TOKEN = "huawei_refresh_token"
-private const val KEY_TOKEN_EXPIRY = "huawei_token_expiry"
-private const val KEY_USER_ID = "huawei_user_id"
-private const val KEY_SCOPES = "huawei_scopes"
-
-class EncryptedTokenStorage(
-    context: Context, masterKey: MasterKey
+/**
+ * Encrypted token storage using DataStore + Tink encryption.
+ * Replaces deprecated EncryptedSharedPreferences with modern encryption.
+ */
+class EncryptedTokenStorage @Inject constructor(
+    private val encryptedPrefsManager: EncryptedPreferencesManager
 ) : TokenStorage {
 
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        PREFS_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
-    override fun saveTokens(tokens: AuthTokens) {
-        encryptedPrefs.edit().putString(KEY_ACCESS_TOKEN, tokens.accessToken)
-            .putString(KEY_REFRESH_TOKEN, tokens.refreshToken)
-            .putLong(KEY_TOKEN_EXPIRY, tokens.tokenExpiry).putString(KEY_USER_ID, tokens.userId)
-            .putString(KEY_SCOPES, tokens.scopes).apply()
+    override suspend fun saveTokens(tokens: AuthTokens) {
+        encryptedPrefsManager.saveEncryptedString(
+            EncryptedPreferencesManager.KEY_ACCESS_TOKEN,
+            tokens.accessToken
+        )
+        encryptedPrefsManager.saveEncryptedString(
+            EncryptedPreferencesManager.KEY_REFRESH_TOKEN,
+            tokens.refreshToken
+        )
+        encryptedPrefsManager.saveEncryptedLong(
+            EncryptedPreferencesManager.KEY_TOKEN_EXPIRY,
+            tokens.tokenExpiry
+        )
+        encryptedPrefsManager.saveEncryptedString(
+            EncryptedPreferencesManager.KEY_USER_ID,
+            tokens.userId
+        )
+        encryptedPrefsManager.saveEncryptedString(
+            EncryptedPreferencesManager.KEY_SCOPES,
+            tokens.scopes
+        )
     }
 
-    override fun loadTokens(): AuthTokens? {
-        val accessToken = encryptedPrefs.getString(KEY_ACCESS_TOKEN, null)
-        val refreshToken = encryptedPrefs.getString(KEY_REFRESH_TOKEN, null)
-        val tokenExpiry = encryptedPrefs.getLong(KEY_TOKEN_EXPIRY, 0L)
-        val userId = encryptedPrefs.getString(KEY_USER_ID, null)
-        val scopes = encryptedPrefs.getString(KEY_SCOPES, null)
+    override suspend fun loadTokens(): AuthTokens? {
+        val accessToken = encryptedPrefsManager.getEncryptedString(
+            EncryptedPreferencesManager.KEY_ACCESS_TOKEN
+        )
+        val refreshToken = encryptedPrefsManager.getEncryptedString(
+            EncryptedPreferencesManager.KEY_REFRESH_TOKEN
+        )
 
         if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
             return null
         }
 
+        val tokenExpiry = encryptedPrefsManager.getEncryptedLong(
+            EncryptedPreferencesManager.KEY_TOKEN_EXPIRY
+        )
+        val userId = encryptedPrefsManager.getEncryptedString(
+            EncryptedPreferencesManager.KEY_USER_ID
+        ) ?: ""
+        val scopes = encryptedPrefsManager.getEncryptedString(
+            EncryptedPreferencesManager.KEY_SCOPES
+        ) ?: ""
+
         return AuthTokens(
             accessToken = accessToken,
             refreshToken = refreshToken,
             tokenExpiry = tokenExpiry,
-            userId = userId ?: "",
-            scopes = scopes ?: ""
+            userId = userId,
+            scopes = scopes
         )
     }
 
-    override fun clearTokens() {
-        val success = encryptedPrefs.edit().remove(KEY_ACCESS_TOKEN).remove(KEY_REFRESH_TOKEN)
-            .remove(KEY_TOKEN_EXPIRY).remove(KEY_USER_ID).remove(KEY_SCOPES).commit()
-        if (!success) {
-            android.util.Log.w("EncryptedTokenStorage", "Failed to clear tokens")
+    override suspend fun clearTokens() {
+        encryptedPrefsManager.removeEncryptedString(EncryptedPreferencesManager.KEY_ACCESS_TOKEN)
+        encryptedPrefsManager.removeEncryptedString(EncryptedPreferencesManager.KEY_REFRESH_TOKEN)
+        encryptedPrefsManager.removeEncryptedString(EncryptedPreferencesManager.KEY_TOKEN_EXPIRY)
+        encryptedPrefsManager.removeEncryptedString(EncryptedPreferencesManager.KEY_USER_ID)
+        encryptedPrefsManager.removeEncryptedString(EncryptedPreferencesManager.KEY_SCOPES)
+    }
+
+    override suspend fun getAccessToken(): String? {
+        return encryptedPrefsManager.getEncryptedString(EncryptedPreferencesManager.KEY_ACCESS_TOKEN)
+    }
+
+    override suspend fun getTokenExpiry(): Long {
+        return encryptedPrefsManager.getEncryptedLong(EncryptedPreferencesManager.KEY_TOKEN_EXPIRY)
+    }
+
+    override suspend fun getRefreshToken(): String? {
+        return encryptedPrefsManager.getEncryptedString(EncryptedPreferencesManager.KEY_REFRESH_TOKEN)
+    }
+
+    override fun authStateFlow(): Flow<AuthState> {
+        return combine(
+            encryptedPrefsManager.observeEncryptedString(EncryptedPreferencesManager.KEY_ACCESS_TOKEN),
+            encryptedPrefsManager.observeEncryptedLong(EncryptedPreferencesManager.KEY_TOKEN_EXPIRY)
+        ) { accessToken, tokenExpiry ->
+            computeAuthState(accessToken, tokenExpiry)
         }
     }
 
-    override fun getAccessToken(): String? {
-        return encryptedPrefs.getString(KEY_ACCESS_TOKEN, null)
-    }
-
-    override fun getTokenExpiry(): Long {
-        return encryptedPrefs.getLong(KEY_TOKEN_EXPIRY, 0L)
-    }
-
-    override fun getRefreshToken(): String? {
-        return encryptedPrefs.getString(KEY_REFRESH_TOKEN, null)
-    }
-
-    override fun authStateFlow(): Flow<AuthState> = callbackFlow {
-        val listener =
-            android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                if (key == KEY_ACCESS_TOKEN || key == KEY_TOKEN_EXPIRY) {
-                    trySend(computeAuthState())
-                }
-            }
-
-        // Emit initial state
-        trySend(computeAuthState())
-
-        encryptedPrefs.registerOnSharedPreferenceChangeListener(listener)
-
-        awaitClose {
-            encryptedPrefs.unregisterOnSharedPreferenceChangeListener(listener)
-        }
-    }
-
-    private fun computeAuthState(): AuthState {
-        val accessToken = encryptedPrefs.getString(KEY_ACCESS_TOKEN, null)
-        val tokenExpiry = encryptedPrefs.getLong(KEY_TOKEN_EXPIRY, 0L)
-
+    private fun computeAuthState(accessToken: String?, tokenExpiry: Long): AuthState {
         return when {
             accessToken.isNullOrBlank() -> AuthState.NOT_SIGNED_IN
             System.currentTimeMillis() >= tokenExpiry -> AuthState.TOKEN_EXPIRED

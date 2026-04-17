@@ -488,6 +488,7 @@ private fun RecentSessionsCard(
                         .padding(vertical = Dimensions.spacing),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    @Suppress("NonObservableLocale")
                     Text(
                         text = java.text.SimpleDateFormat(
                             "MMM dd, HH:mm", java.util.Locale.getDefault()

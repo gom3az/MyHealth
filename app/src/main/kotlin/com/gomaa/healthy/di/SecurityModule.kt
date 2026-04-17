@@ -1,12 +1,10 @@
 package com.gomaa.healthy.di
 
-import android.content.Context
-import androidx.security.crypto.MasterKey
+import com.gomaa.healthy.data.security.EncryptedPreferencesManager
 import com.gomaa.healthy.data.security.EncryptedTokenStorage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -16,15 +14,17 @@ object SecurityModule {
 
     @Provides
     @Singleton
-    fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
-        return MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    fun provideEncryptedPreferencesManager(
+        encryptedPrefsManager: EncryptedPreferencesManager
+    ): EncryptedPreferencesManager {
+        return encryptedPrefsManager
     }
 
     @Provides
     @Singleton
     fun provideTokenStorage(
-        @ApplicationContext context: Context, masterKey: MasterKey
+        encryptedTokenStorage: EncryptedTokenStorage
     ): TokenStorage {
-        return EncryptedTokenStorage(context, masterKey)
+        return encryptedTokenStorage
     }
 }

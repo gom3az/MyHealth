@@ -1,6 +1,7 @@
 package com.gomaa.healthy.data.healthkit
 
 import android.content.Context
+import com.gomaa.healthy.BuildConfig
 import com.gomaa.healthy.data.local.entity.DailyStepsEntity
 import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
@@ -106,10 +107,6 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
 
     companion object {
         private const val TAG = "HealthKitDataSource"
-
-        // Flag to enable mock data for development
-        // Set to false when Health Kit SDK is properly configured
-        private const val USE_MOCK_DATA = true
     }
 
     /**
@@ -164,10 +161,10 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 //     .map { HealthKitStepsData(...) }
 
                 // For development: return mock data
-                if (USE_MOCK_DATA) {
+                if (BuildConfig.USE_MOCK_HEALTH_DATA) {
                     appLogger.d(
                         TAG,
-                        "readSteps: Using mock data (set USE_MOCK_DATA=false for production)"
+                        "readSteps: Using mock data (set BuildConfig.USE_MOCK_HEALTH_DATA=false for production)"
                     )
                     return@withContext generateMockStepsData(startTime, endTime)
                 }
@@ -224,7 +221,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 // val hrData = response.getData(DataType.DT_CONTINUOUS_HEART_RATE_STATISTICS)
                 //     .map { HealthKitHeartRateData(...) }
 
-                if (USE_MOCK_DATA) {
+                if (BuildConfig.USE_MOCK_HEALTH_DATA) {
                     appLogger.d(TAG, "readHeartRate: Using mock data")
                     return@withContext generateMockHeartRateData(startTime, endTime)
                 }
@@ -279,7 +276,7 @@ class HuaweiHealthKitDataSourceImpl @Inject constructor(
                 // val workoutData = response.getData(DataType.DT_CONTINUOUS_WORKOUTS)
                 //     .map { HealthKitWorkoutData(...) }
 
-                if (USE_MOCK_DATA) {
+                if (BuildConfig.USE_MOCK_HEALTH_DATA) {
                     appLogger.d(TAG, "readWorkouts: Using mock data")
                     return@withContext generateMockWorkoutData(startTime, endTime)
                 }

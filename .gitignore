@@ -15,3 +15,5 @@
 local.properties
 /.idea/*
 /gradle/wrapper/gradle-wrapper.jar
+# Huawei HMS credentials - NEVER commit to version control
+app/agconnect-services.json

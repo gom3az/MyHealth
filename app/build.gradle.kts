@@ -13,10 +13,10 @@ android {
 
     defaultConfig {
         applicationId = "net.gomaa.healthy"
-        minSdk = 33
+        minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.0.1"
+        versionCode = 2
+        versionName = "0.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,10 +25,14 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("boolean", "USE_MOCK_HEALTH_DATA", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            buildConfigField("boolean", "USE_MOCK_HEALTH_DATA", "true")
         }
     }
     compileOptions {
@@ -37,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     kotlinOptions {
         jvmTarget = "21"
@@ -62,6 +67,8 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.room.paging)
     ksp(libs.room.compiler)
+    // SQLCipher for database encryption
+    implementation(libs.room.sqlcipher)
     implementation(libs.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
@@ -80,8 +87,10 @@ dependencies {
     implementation(libs.wearengine)
     // DataStore Preferences
     implementation(libs.datastore.preferences)
-    // Security - Encrypted SharedPreferences for OAuth tokens
+    // Security - Encrypted SharedPreferences for OAuth tokens (deprecated - migrating to Tink)
     implementation(libs.security.crypto)
+    // Google Tink for modern encryption
+    implementation(libs.tink.android)
     // Health Connect
     implementation(libs.health.connect.client)
     // Paging3

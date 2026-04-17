@@ -20,9 +20,11 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Huawei Wear Engine SDK - prevent obfuscation
--keepattributes *Annotation*
--keepattributes Signature
--keepattributes InnerClasses
--keepattributes EnclosingMethod
--keep class com.huawei.wearengine.**{*;}
+# Huawei Wear Engine SDK - narrow the keep rules
+# Only keep specific classes that are actually used at runtime
+
+# Keep only the WearEngine auth manager that we directly reference
+-keep class com.huawei.wearengine.auth.AuthManager { *; }
+
+# HMS core utilities that may be needed at runtime (keep minimal set)
+-keep class com.huawei.hms.support.api.entity.auth.Scope { *; }

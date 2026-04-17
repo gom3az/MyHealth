@@ -1,8 +1,8 @@
 package com.gomaa.healthy.di
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.work.WorkManager
+import com.gomaa.healthy.BuildConfig
 import com.gomaa.healthy.data.local.HealthDatabase
 import com.gomaa.healthy.data.local.dao.BriefDao
 import com.gomaa.healthy.data.local.dao.DailyStepsDao
@@ -15,6 +15,7 @@ import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
 import com.gomaa.healthy.data.repository.HeartRateRepositoryImpl
 import com.gomaa.healthy.data.repository.SessionRepositoryImpl
 import com.gomaa.healthy.data.repository.StepRepositoryImpl
+import com.gomaa.healthy.data.security.EncryptedPreferencesManager
 import com.gomaa.healthy.data.sync.DataMerger
 import com.gomaa.healthy.data.sync.DataMergerImpl
 import com.gomaa.healthy.domain.repository.GoalRepository
@@ -28,6 +29,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Named
 import javax.inject.Singleton
 
 
@@ -42,12 +45,39 @@ object ApplicationModule {
         return WorkManager.getInstance(context)
     }
 
+    /**
+     * Provides a Flow for Health Connect sync enabled status.
+     * This replaces the deprecated EncryptedSharedPreferences for sync settings.
+     */
     @Provides
     @Singleton
-    fun provideSharedPreferences(
-        @ApplicationContext context: Context
-    ): SharedPreferences {
-        return context.getSharedPreferences("health_prefs", Context.MODE_PRIVATE)
+    @Named("health_connect_sync_enabled")
+    fun provideHealthConnectSyncEnabledFlow(
+        encryptedPrefsManager: EncryptedPreferencesManager
+    ): Flow<Boolean> {
+        return encryptedPrefsManager.observeEncryptedBoolean(
+            EncryptedPreferencesManager.KEY_SYNC_ENABLED
+        )
+    }
+
+    /**
+     * Provides a Flow for Health Connect last sync time.
+     * This replaces the deprecated EncryptedSharedPreferences for sync metadata.
+     */
+    @Provides
+    @Singleton
+    @Named("health_connect_last_sync")
+    fun provideHealthConnectLastSyncFlow(
+        encryptedPrefsManager: EncryptedPreferencesManager
+    ): Flow<Long> {
+        return encryptedPrefsManager.observeEncryptedLong(
+            EncryptedPreferencesManager.KEY_LAST_SYNC_TIME
+        )
+    }
+
+    @Provides
+    fun provideEnableFileLogging(): Boolean {
+        return BuildConfig.DEBUG
     }
 }
 

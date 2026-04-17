@@ -5,11 +5,11 @@ import com.gomaa.healthy.data.healthkit.AuthTokens
 import kotlinx.coroutines.flow.Flow
 
 interface TokenStorage {
-    fun saveTokens(tokens: AuthTokens)
-    fun loadTokens(): AuthTokens?
-    fun clearTokens()
-    fun getAccessToken(): String?
-    fun getTokenExpiry(): Long
-    fun getRefreshToken(): String?
+    suspend fun saveTokens(tokens: AuthTokens)
+    suspend fun loadTokens(): AuthTokens?
+    suspend fun clearTokens()
+    suspend fun getAccessToken(): String?
+    suspend fun getTokenExpiry(): Long
+    suspend fun getRefreshToken(): String?
     fun authStateFlow(): Flow<AuthState>
 }
