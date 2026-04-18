@@ -16,16 +16,12 @@ import com.gomaa.healthy.data.local.entity.ExerciseSessionEntity
 import com.gomaa.healthy.data.local.entity.FitnessGoalEntity
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.security.EncryptedPreferencesManager
+import com.gomaa.healthy.BuildConfig
 import java.io.File
 import java.io.RandomAccessFile
 
 @Database(
-    entities = [
-        ExerciseSessionEntity::class,
-        HeartRateBucketEntity::class,
-        DailyStepsEntity::class,
-        FitnessGoalEntity::class
-    ],
+    entities = [ExerciseSessionEntity::class, HeartRateBucketEntity::class, DailyStepsEntity::class, FitnessGoalEntity::class],
     version = 10,
     exportSchema = false
 )

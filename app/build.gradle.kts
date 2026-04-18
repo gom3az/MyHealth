@@ -43,6 +43,7 @@ android {
         compose = true
         buildConfig = true
     }
+    @Suppress("DEPRECATION")
     kotlinOptions {
         jvmTarget = "21"
     }
