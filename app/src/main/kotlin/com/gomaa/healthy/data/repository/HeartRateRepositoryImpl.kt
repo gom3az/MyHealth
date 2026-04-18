@@ -7,6 +7,7 @@ import androidx.paging.map
 import com.gomaa.healthy.data.local.dao.HeartRateBucketDao
 import com.gomaa.healthy.data.local.entity.HeartRateBucketEntity
 import com.gomaa.healthy.data.mapper.toDomainReadings
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.HeartRateReading
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.model.ReadingSource
@@ -95,6 +96,72 @@ class HeartRateRepositoryImpl @Inject constructor(
                 prefetchDistance = 5
             ), pagingSourceFactory = {
                 heartRateBucketDao.getAggregatedBucketsBySourcePaged(sourceString)
+            }
+        ).flow.map { pagingData ->
+            pagingData.map { bucket ->
+                val hour = bucket.bucketId.takeLast(2).toIntOrNull() ?: 0
+                val date = formatBucketIdToDate(bucket.bucketId)
+                HourHeader(
+                    hour = hour,
+                    date = date,
+                    minBpm = bucket.minBpm,
+                    avgBpm = bucket.avgBpm,
+                    maxBpm = bucket.maxBpm,
+                )
+            }
+        }
+    }
+
+    override fun getAggregatedBucketsByDateRange(dateRange: DateRangeFilter): Flow<PagingData<HourHeader>> {
+        val (startDate, endDate) = dateRange.toDateRange()
+        val startTimestamp =
+            startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endTimestamp =
+            endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ), pagingSourceFactory = {
+                heartRateBucketDao.getAggregatedBucketsByDateRange(startTimestamp, endTimestamp)
+            }
+        ).flow.map { pagingData ->
+            pagingData.map { bucket ->
+                val hour = bucket.bucketId.takeLast(2).toIntOrNull() ?: 0
+                val date = formatBucketIdToDate(bucket.bucketId)
+                HourHeader(
+                    hour = hour,
+                    date = date,
+                    minBpm = bucket.minBpm,
+                    avgBpm = bucket.avgBpm,
+                    maxBpm = bucket.maxBpm,
+                )
+            }
+        }
+    }
+
+    override fun getAggregatedBucketsBySourceAndDateRange(
+        source: ReadingSource,
+        dateRange: DateRangeFilter
+    ): Flow<PagingData<HourHeader>> {
+        val (startDate, endDate) = dateRange.toDateRange()
+        val startTimestamp =
+            startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endTimestamp =
+            endDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val sourceString = source.dbString
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5
+            ), pagingSourceFactory = {
+                heartRateBucketDao.getAggregatedBucketsBySourceAndDateRange(
+                    sourceString,
+                    startTimestamp,
+                    endTimestamp
+                )
             }
         ).flow.map { pagingData ->
             pagingData.map { bucket ->

@@ -48,6 +48,19 @@ interface DailyStepsDao {
     @Query("SELECT * FROM daily_steps ORDER BY date DESC")
     fun getPaginatedDailySteps(): PagingSource<Int, DailyStepsEntity>
 
+    @Query("SELECT * FROM daily_steps WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    fun getPaginatedDailyStepsByDateRange(
+        startDate: Long,
+        endDate: Long
+    ): PagingSource<Int, DailyStepsEntity>
+
+    @Query("SELECT * FROM daily_steps WHERE source = :source AND date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    fun getPaginatedDailyStepsBySourceAndDateRange(
+        source: String,
+        startDate: Long,
+        endDate: Long
+    ): PagingSource<Int, DailyStepsEntity>
+
     @Query("SELECT DISTINCT source FROM daily_steps ORDER BY source")
     suspend fun getDistinctSources(): List<String>
 }
@@ -232,6 +245,33 @@ interface HeartRateBucketDao {
     """
     )
     fun getAggregatedBucketsBySourcePaged(source: String): PagingSource<Int, AggregatedHeartRateBucket>
+
+    @Query(
+        """
+        SELECT bucketId, source, dayTimestamp, minBpm, avgBpm, maxBpm, count
+        FROM heart_rate_buckets
+        WHERE dayTimestamp >= :startDate AND dayTimestamp <= :endDate AND bucketId LIKE '____-__-__-__'
+        ORDER BY bucketId DESC
+    """
+    )
+    fun getAggregatedBucketsByDateRange(
+        startDate: Long,
+        endDate: Long
+    ): PagingSource<Int, AggregatedHeartRateBucket>
+
+    @Query(
+        """
+        SELECT bucketId, source, dayTimestamp, minBpm, avgBpm, maxBpm, count
+        FROM heart_rate_buckets
+        WHERE source = :source AND dayTimestamp >= :startDate AND dayTimestamp <= :endDate AND bucketId LIKE '____-__-__-__'
+        ORDER BY bucketId DESC
+    """
+    )
+    fun getAggregatedBucketsBySourceAndDateRange(
+        source: String,
+        startDate: Long,
+        endDate: Long
+    ): PagingSource<Int, AggregatedHeartRateBucket>
 
     @Transaction
     @Query("SELECT 1")

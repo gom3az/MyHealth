@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
 import com.gomaa.healthy.data.repository.HealthConnectResult
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.model.SourceFilterOption
@@ -34,6 +35,7 @@ sealed class HeartRateUiState {
     data class Loaded(
         val overallSummary: HeartRateSummary?,
         val sourceFilter: String? = null,
+        val dateFilter: DateRangeFilter = DateRangeFilter.All,
         val availableFilters: List<SourceFilterOption> = emptyList(),
         val isSyncing: Boolean = false,
     ) : HeartRateUiState()
@@ -47,6 +49,7 @@ sealed class HeartRateIntent {
     data object OnRefresh : HeartRateIntent()
     data object OnSync : HeartRateIntent()
     data class OnSourceFilterChanged(val filter: String?) : HeartRateIntent()
+    data class OnDateFilterChanged(val filter: DateRangeFilter) : HeartRateIntent()
 }
 
 sealed class HeartRateEffect {
@@ -66,10 +69,13 @@ class HeartRateViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagingData: Flow<PagingData<HourHeader>> = _internalState
-        .map { it.selectedSource }
+        .map { it.selectedSource to it.selectedDateRange }
         .distinctUntilChanged()
-        .flatMapLatest { source ->
-            getRecentHeartRateReadingsUseCase(source = source?.let { parseSource(it) })
+        .flatMapLatest { (source, dateRange) ->
+            getRecentHeartRateReadingsUseCase(
+                source = source?.let { parseSource(it) },
+                dateRange = dateRange
+            )
         }
         .cachedIn(viewModelScope) // Caches the raw data from the DB
 
@@ -100,6 +106,10 @@ class HeartRateViewModel @Inject constructor(
 
                 is HeartRateIntent.OnSourceFilterChanged -> {
                     current.copy(selectedSource = intent.filter)
+                }
+
+                is HeartRateIntent.OnDateFilterChanged -> {
+                    current.copy(selectedDateRange = intent.filter)
                 }
             }
         }
@@ -177,6 +187,7 @@ class HeartRateViewModel @Inject constructor(
 
     private data class InternalState(
         val selectedSource: String? = null,
+        val selectedDateRange: DateRangeFilter = DateRangeFilter.All,
         val overallSummary: HeartRateSummary? = null,
         val availableFilters: List<SourceFilterOption> = emptyList(),
         val isSyncing: Boolean = false,
@@ -189,6 +200,7 @@ class HeartRateViewModel @Inject constructor(
             is LoadingState.Loaded -> HeartRateUiState.Loaded(
                 overallSummary = overallSummary,
                 sourceFilter = selectedSource,
+                dateFilter = selectedDateRange,
                 availableFilters = availableFilters,
                 isSyncing = isSyncing,
             )

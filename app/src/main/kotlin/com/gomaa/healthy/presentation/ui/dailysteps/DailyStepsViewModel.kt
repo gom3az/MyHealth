@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gomaa.healthy.data.worker.HealthConnectSyncScheduler
 import com.gomaa.healthy.domain.model.DailySteps
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.GetPaginatedBySourceDailyStepsUseCase
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +29,7 @@ sealed interface DailyStepsState {
     object Loading : DailyStepsState
     data class Loaded(
         val sourceFilter: String? = null,
+        val dateFilter: DateRangeFilter = DateRangeFilter.All,
         val isSyncing: Boolean = false,
         val availableFilters: List<SourceFilterOption> = emptyList(),
     ) : DailyStepsState
@@ -41,6 +42,7 @@ sealed interface DailyStepsIntent {
     data object LoadData : DailyStepsIntent
     data object Refresh : DailyStepsIntent
     data class SourceFilterChanged(val filter: String?) : DailyStepsIntent
+    data class DateFilterChanged(val filter: DateRangeFilter) : DailyStepsIntent
 }
 
 sealed interface DailyStepsEffect {
@@ -49,7 +51,7 @@ sealed interface DailyStepsEffect {
 }
 
 private data class DailyStepsFilter(
-    val sourceFilter: String? = null
+    val sourceFilter: String? = null, val dateRange: DateRangeFilter = DateRangeFilter.All
 )
 
 @HiltViewModel
@@ -68,13 +70,11 @@ class DailyStepsViewModel @Inject constructor(
     private val _filter = MutableStateFlow(DailyStepsFilter())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val pagingData: Flow<PagingData<DailySteps>> =
-        _filter.map { it.sourceFilter } // Convert filter to a Flow
-            .flatMapLatest { source ->
-                getPaginatedBySourceDailyStepsUseCase(source?.let {
-                    ReadingSource.fromDbString(it) // Convert String to ReadingSource
-                })
-            }.cachedIn(viewModelScope)
+    val pagingData: Flow<PagingData<DailySteps>> = _filter.flatMapLatest { (source, dateRange) ->
+        getPaginatedBySourceDailyStepsUseCase(
+            source = source?.let { ReadingSource.fromDbString(it) }, dateRange = dateRange
+        )
+    }.cachedIn(viewModelScope)
 
     fun handleIntent(intent: DailyStepsIntent) {
         when (intent) {
@@ -82,17 +82,22 @@ class DailyStepsViewModel @Inject constructor(
             is DailyStepsIntent.Refresh -> refreshData()
             is DailyStepsIntent.SourceFilterChanged -> {
                 _filter.value = _filter.value.copy(sourceFilter = intent.filter)
-                updateStateWithFilter(intent.filter)
+                updateStateWithFilter(intent.filter, _filter.value.dateRange)
+            }
+
+            is DailyStepsIntent.DateFilterChanged -> {
+                _filter.value = _filter.value.copy(dateRange = intent.filter)
+                updateStateWithFilter(_filter.value.sourceFilter, intent.filter)
             }
         }
     }
 
-    private fun updateStateWithFilter(filter: String?) {
+    private fun updateStateWithFilter(filter: String?, dateRange: DateRangeFilter) {
         _uiState.update { current ->
             if (current is DailyStepsState.Loaded) {
-                current.copy(sourceFilter = filter)
+                current.copy(sourceFilter = filter, dateFilter = dateRange)
             } else {
-                DailyStepsState.Loaded(sourceFilter = filter)
+                DailyStepsState.Loaded(sourceFilter = filter, dateFilter = dateRange)
             }
         }
     }

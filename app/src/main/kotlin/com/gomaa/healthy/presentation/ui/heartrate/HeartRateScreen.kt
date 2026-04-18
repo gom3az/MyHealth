@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -42,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.HourHeader
@@ -176,6 +179,10 @@ private fun HeartRateContent(
                     availableFilters = uiState.availableFilters,
                     onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
 
+                DateFilterChip(
+                    selectedFilter = uiState.dateFilter,
+                    onFilterChanged = { onIntent(HeartRateIntent.OnDateFilterChanged(it)) })
+
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                 ) {
@@ -301,6 +308,41 @@ private fun SourceFilterChips(
                 shape = RoundedCornerShape(Dimensions.chipRadius)
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateFilterChip(
+    selectedFilter: DateRangeFilter, onFilterChanged: (DateRangeFilter) -> Unit
+) {
+    // For simplicity, we'll show a text button that cycles through preset date ranges
+    TextButton(
+        onClick = {
+            // Cycle through preset date ranges
+            val newFilter = when (selectedFilter) {
+                DateRangeFilter.Today -> DateRangeFilter.Last7Days
+                DateRangeFilter.Last7Days -> DateRangeFilter.Last30Days
+                DateRangeFilter.Last30Days -> DateRangeFilter.All
+                DateRangeFilter.All -> DateRangeFilter.Today
+                // For Custom, we'll just go to Today for simplicity
+                is DateRangeFilter.Custom -> DateRangeFilter.Today
+            }
+            onFilterChanged(newFilter)
+        }, modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = selectedFilter.displayName(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        // Simple indicator that this is clickable
+        Icon(
+            imageVector = Icons.Default.ArrowDropDown,
+            contentDescription = "Select date range",
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 

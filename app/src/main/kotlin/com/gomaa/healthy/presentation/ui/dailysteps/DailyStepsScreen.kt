@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -28,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
@@ -265,8 +269,11 @@ private fun DailyStepsLoadedContent(
             SourceFilterChips(
                 selectedFilter = uiState.sourceFilter,
                 availableFilters = uiState.availableFilters,
-                onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) }
-            )
+                onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) })
+
+            DateFilterChip(
+                selectedFilter = uiState.dateFilter,
+                onFilterChanged = { onIntent(DailyStepsIntent.DateFilterChanged(it)) })
 
             if (uiState.isSyncing) {
                 Box(
@@ -338,6 +345,43 @@ private fun SourceFilterChips(
                 shape = RoundedCornerShape(Dimensions.chipRadius)
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateFilterChip(
+    selectedFilter: DateRangeFilter,
+    onFilterChanged: (DateRangeFilter) -> Unit
+) {
+    // For simplicity, we'll show a text button that cycles through preset date ranges
+    TextButton(
+        onClick = {
+            // Cycle through preset date ranges
+            val newFilter = when (selectedFilter) {
+                DateRangeFilter.Today -> DateRangeFilter.Last7Days
+                DateRangeFilter.Last7Days -> DateRangeFilter.Last30Days
+                DateRangeFilter.Last30Days -> DateRangeFilter.All
+                DateRangeFilter.All -> DateRangeFilter.Today
+                // For Custom, we'll just go to Today for simplicity
+                is DateRangeFilter.Custom -> DateRangeFilter.Today
+            }
+            onFilterChanged(newFilter)
+        },
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = selectedFilter.displayName(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        // Simple indicator that this is clickable
+        Icon(
+            imageVector = Icons.Default.ArrowDropDown,
+            contentDescription = "Select date range",
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 

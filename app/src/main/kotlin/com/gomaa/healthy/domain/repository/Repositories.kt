@@ -2,6 +2,7 @@ package com.gomaa.healthy.domain.repository
 
 import androidx.paging.PagingData
 import com.gomaa.healthy.domain.model.DailySteps
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.ExerciseSession
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.HeartRateReading
@@ -15,6 +16,11 @@ interface StepRepository {
     suspend fun getDailySteps(date: LocalDate): DailySteps?
     suspend fun getPaginatedDailySteps(): Flow<PagingData<DailySteps>>
     suspend fun getPaginatedBySourceDailySteps(source: ReadingSource): Flow<PagingData<DailySteps>>
+    suspend fun getPaginatedByDateRange(dateRange: DateRangeFilter): Flow<PagingData<DailySteps>>
+    suspend fun getPaginatedBySourceAndDateRange(
+        source: ReadingSource,
+        dateRange: DateRangeFilter
+    ): Flow<PagingData<DailySteps>>
     suspend fun getAvailableSources(): List<ReadingSource>
 }
 
@@ -40,6 +46,11 @@ interface HeartRateRepository {
 
     fun getAggregatedBucketsPaged(): Flow<PagingData<HourHeader>>
     fun getAggregatedBucketsBySourcePaged(source: ReadingSource): Flow<PagingData<HourHeader>>
+    fun getAggregatedBucketsByDateRange(dateRange: DateRangeFilter): Flow<PagingData<HourHeader>>
+    fun getAggregatedBucketsBySourceAndDateRange(
+        source: ReadingSource,
+        dateRange: DateRangeFilter
+    ): Flow<PagingData<HourHeader>>
 
     // All-time summary (date-agnostic)
     suspend fun getOverallSummary(): HeartRateSummary?
