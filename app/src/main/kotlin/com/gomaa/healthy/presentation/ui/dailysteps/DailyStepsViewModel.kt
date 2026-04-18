@@ -40,7 +40,6 @@ sealed interface DailyStepsState {
 
 sealed interface DailyStepsIntent {
     data object LoadData : DailyStepsIntent
-    data object Refresh : DailyStepsIntent
     data class SourceFilterChanged(val filter: String?) : DailyStepsIntent
     data class DateFilterChanged(val filter: DateRangeFilter) : DailyStepsIntent
 }
@@ -79,7 +78,6 @@ class DailyStepsViewModel @Inject constructor(
     fun handleIntent(intent: DailyStepsIntent) {
         when (intent) {
             is DailyStepsIntent.LoadData -> loadData()
-            is DailyStepsIntent.Refresh -> refreshData()
             is DailyStepsIntent.SourceFilterChanged -> {
                 _filter.value = _filter.value.copy(sourceFilter = intent.filter)
                 updateStateWithFilter(intent.filter, _filter.value.dateRange)
@@ -115,31 +113,6 @@ class DailyStepsViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 _uiState.value = DailyStepsState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    private fun refreshData() {
-        viewModelScope.launch {
-            _uiState.update { current ->
-                if (current is DailyStepsState.Loaded) current.copy(isSyncing = true)
-                else DailyStepsState.Loaded(isSyncing = true)
-            }
-            try {
-                healthConnectSyncScheduler.enqueueImmediateSync(
-                    masterSyncEnabled = true,
-                    syncStepsEnabled = true,
-                    syncExerciseEnabled = false,
-                    syncHeartRateEnabled = false
-                )
-                _effect.emit(DailyStepsEffect.ShowSuccess("Sync started"))
-            } catch (e: Exception) {
-                _effect.emit(DailyStepsEffect.ShowError(e.message ?: "Failed to start sync"))
-            } finally {
-                _uiState.update { current ->
-                    if (current is DailyStepsState.Loaded) current.copy(isSyncing = false)
-                    else DailyStepsState.Loaded(isSyncing = false)
-                }
             }
         }
     }

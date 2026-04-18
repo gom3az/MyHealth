@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.gomaa.healthy.data.repository.HealthConnectRepositoryInterface
-import com.gomaa.healthy.data.repository.HealthConnectResult
 import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.model.ReadingSource
@@ -47,7 +46,6 @@ sealed class HeartRateUiState {
 sealed class HeartRateIntent {
     data object OnLoadData : HeartRateIntent()
     data object OnRefresh : HeartRateIntent()
-    data object OnSync : HeartRateIntent()
     data class OnSourceFilterChanged(val filter: String?) : HeartRateIntent()
     data class OnDateFilterChanged(val filter: DateRangeFilter) : HeartRateIntent()
 }
@@ -99,11 +97,6 @@ class HeartRateViewModel @Inject constructor(
                     current
                 }
 
-                is HeartRateIntent.OnSync -> {
-                    syncData()
-                    current
-                }
-
                 is HeartRateIntent.OnSourceFilterChanged -> {
                     current.copy(selectedSource = intent.filter)
                 }
@@ -142,34 +135,6 @@ class HeartRateViewModel @Inject constructor(
                         e.message ?: "Failed to load heart rate data"
                     )
                 )
-            }
-        }
-    }
-
-    private fun syncData() {
-        viewModelScope.launch {
-            val currentState = _internalState.value.loadingState
-            if (currentState == LoadingState.Loaded) {
-                _internalState.update { it.copy(isSyncing = true) }
-                try {
-                    when (val result = healthConnectRepository.syncHeartRates()) {
-                        is HealthConnectResult.Success -> {
-                            _effect.emit(HeartRateEffect.ShowSuccess("Synced ${result.data} heart rate records"))
-                        }
-                        is HealthConnectResult.Error -> {
-                            _effect.emit(
-                                HeartRateEffect.ShowError(
-                                    result.exception.message ?: "Sync failed"
-                                )
-                            )
-                        }
-                    }
-                    loadData()
-                } catch (e: Exception) {
-                    _effect.emit(HeartRateEffect.ShowError(e.message ?: "Sync failed"))
-                } finally {
-                    _internalState.update { it.copy(isSyncing = false) }
-                }
             }
         }
     }

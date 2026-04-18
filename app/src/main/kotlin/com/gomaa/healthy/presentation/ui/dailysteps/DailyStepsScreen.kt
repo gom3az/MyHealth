@@ -10,13 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,11 +23,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.SourceFilterOption
+import com.gomaa.healthy.presentation.ui.shared.DateFilterChip
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 
@@ -67,16 +62,7 @@ fun DailyStepsScreen(
                 title = "Daily Steps",
                 onBack = onNavigateBack,
                 titleStyle = MaterialTheme.typography.displaySmall,
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.handleIntent(DailyStepsIntent.Refresh) }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Sync",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                })
+            )
         }) { paddingValues ->
         DailyStepsContent(
             paddingValues = paddingValues,
@@ -110,7 +96,7 @@ private fun DailyStepsContent(
         }
 
         is DailyStepsState.Empty -> {
-            DailyStepsEmptyContent(paddingValues = paddingValues, onIntent = onIntent)
+            DailyStepsEmptyContent(paddingValues = paddingValues)
         }
 
         is DailyStepsState.Loaded -> {
@@ -157,7 +143,7 @@ private fun DailyStepsContent(
 
 @Composable
 private fun DailyStepsEmptyContent(
-    paddingValues: PaddingValues, onIntent: (DailyStepsIntent) -> Unit
+    paddingValues: PaddingValues
 ) {
     Column(
         modifier = Modifier
@@ -176,34 +162,10 @@ private fun DailyStepsEmptyContent(
         Text(
             text = "No steps data yet", style = MaterialTheme.typography.headlineLarge
         )
-        Spacer(modifier = Modifier.height(Dimensions.spacing))
-        Text(
-            text = "Sync from Health Connect to see your daily steps",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-        Button(
-            onClick = { onIntent(DailyStepsIntent.Refresh) },
-            shape = RoundedCornerShape(Dimensions.buttonRadius),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = StepsPrimary, contentColor = Color.White
-            ),
-            contentPadding = PaddingValues(
-                vertical = Dimensions.buttonPaddingVertical,
-                horizontal = Dimensions.buttonPaddingHorizontal
-            )
-        ) {
-            Icon(
-                Icons.Default.Refresh, contentDescription = null, tint = Color.White
-            )
-            Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
-            Text("Sync from Health Connect")
-        }
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DailyStepsLoadedContent(
     paddingValues: PaddingValues,
@@ -230,29 +192,6 @@ private fun DailyStepsLoadedContent(
                 text = "No steps data yet", style = MaterialTheme.typography.headlineLarge
             )
             Spacer(modifier = Modifier.height(Dimensions.spacing))
-            Text(
-                text = "Sync from Health Connect to see your daily steps",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-            Button(
-                onClick = { onIntent(DailyStepsIntent.Refresh) },
-                shape = RoundedCornerShape(Dimensions.buttonRadius),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = StepsPrimary, contentColor = Color.White
-                ),
-                contentPadding = PaddingValues(
-                    vertical = Dimensions.buttonPaddingVertical,
-                    horizontal = Dimensions.buttonPaddingHorizontal
-                )
-            ) {
-                Icon(
-                    Icons.Default.Refresh, contentDescription = null, tint = Color.White
-                )
-                Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
-                Text("Sync from Health Connect")
-            }
         }
     } else {
         Column(
@@ -266,14 +205,22 @@ private fun DailyStepsLoadedContent(
                 text = "Steps by Day", style = MaterialTheme.typography.headlineMedium
             )
 
-            SourceFilterChips(
-                selectedFilter = uiState.sourceFilter,
-                availableFilters = uiState.availableFilters,
-                onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) })
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SourceFilterChips(
+                    selectedFilter = uiState.sourceFilter,
+                    availableFilters = uiState.availableFilters,
+                    onFilterChanged = { onIntent(DailyStepsIntent.SourceFilterChanged(it)) },
+                    modifier = Modifier.weight(1f)
+                )
 
-            DateFilterChip(
-                selectedFilter = uiState.dateFilter,
-                onFilterChanged = { onIntent(DailyStepsIntent.DateFilterChanged(it)) })
+                DateFilterChip(
+                    selectedFilter = uiState.dateFilter,
+                    onFilterChanged = { onIntent(DailyStepsIntent.DateFilterChanged(it)) })
+            }
 
             if (uiState.isSyncing) {
                 Box(
@@ -310,12 +257,13 @@ private fun DailyStepsLoadedContent(
 private fun SourceFilterChips(
     selectedFilter: String?,
     availableFilters: List<SourceFilterOption>,
-    onFilterChanged: (String?) -> Unit
+    onFilterChanged: (String?) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (availableFilters.isEmpty()) return
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         FilterChip(
@@ -345,43 +293,6 @@ private fun SourceFilterChips(
                 shape = RoundedCornerShape(Dimensions.chipRadius)
             )
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DateFilterChip(
-    selectedFilter: DateRangeFilter,
-    onFilterChanged: (DateRangeFilter) -> Unit
-) {
-    // For simplicity, we'll show a text button that cycles through preset date ranges
-    TextButton(
-        onClick = {
-            // Cycle through preset date ranges
-            val newFilter = when (selectedFilter) {
-                DateRangeFilter.Today -> DateRangeFilter.Last7Days
-                DateRangeFilter.Last7Days -> DateRangeFilter.Last30Days
-                DateRangeFilter.Last30Days -> DateRangeFilter.All
-                DateRangeFilter.All -> DateRangeFilter.Today
-                // For Custom, we'll just go to Today for simplicity
-                is DateRangeFilter.Custom -> DateRangeFilter.Today
-            }
-            onFilterChanged(newFilter)
-        },
-        modifier = Modifier.padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = selectedFilter.displayName(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        // Simple indicator that this is clickable
-        Icon(
-            imageVector = Icons.Default.ArrowDropDown,
-            contentDescription = "Select date range",
-            tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(24.dp)
-        )
     }
 }
 
