@@ -2,6 +2,7 @@ package com.gomaa.healthy.domain.usecase
 
 import androidx.paging.PagingData
 import com.gomaa.healthy.domain.model.DailySteps
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.repository.StepRepository
@@ -20,12 +21,13 @@ class GetDailyStepsUseCase @Inject constructor(
 class GetPaginatedBySourceDailyStepsUseCase @Inject constructor(
     private val stepRepository: StepRepository
 ) {
-    suspend operator fun invoke(source: ReadingSource? = null): Flow<PagingData<DailySteps>> {
-        return if (source == null)
-            stepRepository.getPaginatedDailySteps()
-        else
-            stepRepository.getPaginatedBySourceDailySteps(source)
-
+    suspend operator fun invoke(
+        source: ReadingSource? = null, dateRange: DateRangeFilter = DateRangeFilter.All
+    ): Flow<PagingData<DailySteps>> {
+        return when {
+            source == null -> stepRepository.getPaginatedByDateRange(dateRange)
+            else -> stepRepository.getPaginatedBySourceAndDateRange(source, dateRange)
+        }
     }
 }
 

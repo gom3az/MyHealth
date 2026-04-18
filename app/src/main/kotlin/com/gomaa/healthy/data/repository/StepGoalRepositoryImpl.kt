@@ -9,6 +9,7 @@ import com.gomaa.healthy.data.local.dao.GoalDao
 import com.gomaa.healthy.data.mapper.toDomain
 import com.gomaa.healthy.data.mapper.toEntity
 import com.gomaa.healthy.domain.model.DailySteps
+import com.gomaa.healthy.domain.model.DateRangeFilter
 import com.gomaa.healthy.domain.model.FitnessGoal
 import com.gomaa.healthy.domain.model.ReadingSource
 import com.gomaa.healthy.domain.repository.GoalRepository
@@ -45,6 +46,43 @@ class StepRepositoryImpl @Inject constructor(
                 prefetchDistance = 5,
             ),
             pagingSourceFactory = { dailyStepsDao.getPaginatedDailyStepsBySource(sourceString) }).flow.map { it.map { entity -> entity.toDomain() } }
+    }
+
+    override suspend fun getPaginatedByDateRange(dateRange: DateRangeFilter): Flow<PagingData<DailySteps>> {
+        val (startDate, endDate) = dateRange.toDateRange()
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5,
+            ),
+            pagingSourceFactory = {
+                dailyStepsDao.getPaginatedDailyStepsByDateRange(
+                    startDate.toEpochDay(),
+                    endDate.toEpochDay()
+                )
+            }).flow.map { it.map { entity -> entity.toDomain() } }
+    }
+
+    override suspend fun getPaginatedBySourceAndDateRange(
+        source: ReadingSource,
+        dateRange: DateRangeFilter
+    ): Flow<PagingData<DailySteps>> {
+        val (startDate, endDate) = dateRange.toDateRange()
+        val sourceString = source.dbString
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 5,
+            ),
+            pagingSourceFactory = {
+                dailyStepsDao.getPaginatedDailyStepsBySourceAndDateRange(
+                    sourceString,
+                    startDate.toEpochDay(),
+                    endDate.toEpochDay()
+                )
+            }).flow.map { it.map { entity -> entity.toDomain() } }
     }
 
     override suspend fun getAvailableSources(): List<ReadingSource> {

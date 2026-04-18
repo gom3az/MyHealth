@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -25,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +43,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.gomaa.healthy.domain.model.HeartRateSummary
 import com.gomaa.healthy.domain.model.SourceFilterOption
 import com.gomaa.healthy.domain.usecase.HourHeader
+import com.gomaa.healthy.presentation.ui.shared.DateFilterChip
 import com.gomaa.healthy.presentation.ui.theme.Dimensions
 import com.gomaa.healthy.presentation.ui.theme.HealthTopAppBarWithBack
 
@@ -64,16 +63,7 @@ fun HeartRateScreen(
             title = "Heart Rate",
             onBack = onNavigateBack,
             titleStyle = MaterialTheme.typography.displaySmall,
-            actions = {
-                IconButton(
-                    onClick = { viewModel.processIntent(HeartRateIntent.OnSync) }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Sync",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            })
+        )
     }) { paddingValues ->
         HeartRateContent(
             paddingValues = paddingValues,
@@ -123,33 +113,6 @@ private fun HeartRateContent(
                 Text(
                     text = "No heart rate data yet", style = MaterialTheme.typography.headlineLarge
                 )
-                Spacer(modifier = Modifier.height(Dimensions.spacing))
-                Text(
-                    text = "Sync from Health Connect to see your heart rate readings",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(Dimensions.spacingLarge))
-                Button(
-                    onClick = { onIntent(HeartRateIntent.OnSync) },
-                    shape = RoundedCornerShape(Dimensions.buttonRadius),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        vertical = Dimensions.buttonPaddingVertical,
-                        horizontal = Dimensions.buttonPaddingHorizontal
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.padding(Dimensions.spacingSmall))
-                    Text("Sync from Health Connect")
-                }
             }
         }
 
@@ -171,10 +134,22 @@ private fun HeartRateContent(
                     text = "Readings by Hour", style = MaterialTheme.typography.headlineMedium
                 )
 
-                SourceFilterChips(
-                    selectedFilter = uiState.sourceFilter,
-                    availableFilters = uiState.availableFilters,
-                    onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) })
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SourceFilterChips(
+                        selectedFilter = uiState.sourceFilter,
+                        availableFilters = uiState.availableFilters,
+                        onFilterChanged = { onIntent(HeartRateIntent.OnSourceFilterChanged(it)) },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    DateFilterChip(
+                        selectedFilter = uiState.dateFilter,
+                        onFilterChanged = { onIntent(HeartRateIntent.OnDateFilterChanged(it)) })
+                }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -266,10 +241,11 @@ private fun HeartRateContent(
 private fun SourceFilterChips(
     selectedFilter: String?,
     availableFilters: List<SourceFilterOption>,
-    onFilterChanged: (String?) -> Unit
+    onFilterChanged: (String?) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(Dimensions.horizontalSpacing)
     ) {
         // ALL option - shows combined data from all sources
